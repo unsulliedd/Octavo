@@ -15,12 +15,14 @@ import {
   NO_TABS,
   openPaths,
   openTab,
+  otherTabIds,
   renamePath,
   reopenTab,
   replaceCurrent,
   samePath,
   setScroll,
   shownTab,
+  tabIdsRightOf,
   toStored,
   type Tabs,
 } from "./tabs";
@@ -71,6 +73,16 @@ test("a dragged tab moves to its new place and is shown", () => {
   expect(moveTab(s, 99, 0)).toBe(s);
   // The order is kept for the next launch.
   expect(openPaths(fromStored(JSON.parse(JSON.stringify(toStored(moved)))))).toEqual(["/b.md", "/a.md", "/c.md"]);
+});
+
+test("the tabs Close others and Close tabs to the right close", () => {
+  const s = open("/a.md", "/b.md", "/c.md", "/d.md");
+  const [a, b, c, d] = s.tabs.map((t) => t.id);
+  expect(otherTabIds(s, b)).toEqual([a, c, d]);
+  expect(tabIdsRightOf(s, b)).toEqual([c, d]);
+  expect(tabIdsRightOf(s, d)).toEqual([]);
+  expect(otherTabIds(open("/a.md"), 1)).toEqual([]);
+  expect(tabIdsRightOf(s, 99)).toEqual([]);
 });
 
 test("a dragged tab goes past every other tab whose middle the pointer has passed", () => {

@@ -93,6 +93,15 @@ export function moveTab(s: Tabs, id: number, to: number): Tabs {
   return { ...s, tabs: [...rest.slice(0, at), s.tabs[i], ...rest.slice(at)], active: id, home: false };
 }
 
+/** The tabs Close others closes: every tab but `id`, left to right. */
+export const otherTabIds = (s: Tabs, id: number) => s.tabs.filter((t) => t.id !== id).map((t) => t.id);
+
+/** The tabs Close tabs to the right closes: those after `id`, left to right. */
+export function tabIdsRightOf(s: Tabs, id: number) {
+  const i = s.tabs.findIndex((t) => t.id === id);
+  return i < 0 ? [] : s.tabs.slice(i + 1).map((t) => t.id);
+}
+
 /** Where a dragged tab goes with the pointer at `x`: past every other tab whose middle (`mids`, left to right) is left of it. */
 export const dropIndex = (mids: number[], x: number) => mids.filter((m) => m < x).length;
 
