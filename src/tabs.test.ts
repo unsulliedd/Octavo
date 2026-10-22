@@ -5,11 +5,13 @@ import {
   closeTab,
   currentEntry,
   cycle,
+  dropIndex,
   fromStored,
   go,
   goHome,
   historyTarget,
   MAX_CLOSED,
+  moveTab,
   NO_TABS,
   openPaths,
   openTab,
@@ -54,6 +56,30 @@ test("closing activates the right neighbor, or the left one at the end", () => {
   expect(empty.tabs).toEqual([]);
   expect(empty.active).toBeUndefined();
   expect(closeTab(s, 99)).toBe(s);
+});
+
+test("a dragged tab moves to its new place and is shown", () => {
+  const s = open("/a.md", "/b.md", "/c.md");
+  const [a, b, c] = s.tabs.map((t) => t.id);
+  const moved = moveTab(goHome(s), b, 0);
+  expect(openPaths(moved)).toEqual(["/b.md", "/a.md", "/c.md"]);
+  expect(shownTab(moved)?.id).toBe(b);
+  expect(openPaths(moveTab(s, a, 2))).toEqual(["/b.md", "/c.md", "/a.md"]);
+  expect(openPaths(moveTab(s, a, 99))).toEqual(["/b.md", "/c.md", "/a.md"]); // past the end goes last
+  expect(openPaths(moveTab(s, c, -1))).toEqual(["/c.md", "/a.md", "/b.md"]);
+  expect(moveTab(s, c, 2)).toBe(s); // already there and shown
+  expect(moveTab(s, 99, 0)).toBe(s);
+  // The order is kept for the next launch.
+  expect(openPaths(fromStored(JSON.parse(JSON.stringify(toStored(moved)))))).toEqual(["/b.md", "/a.md", "/c.md"]);
+});
+
+test("a dragged tab goes past every other tab whose middle the pointer has passed", () => {
+  const mids = [50, 150, 250]; // the other tabs, left to right
+  expect(dropIndex(mids, 10)).toBe(0);
+  expect(dropIndex(mids, 149)).toBe(1);
+  expect(dropIndex(mids, 151)).toBe(2);
+  expect(dropIndex(mids, 900)).toBe(3);
+  expect(dropIndex([], 100)).toBe(0);
 });
 
 test("a closed tab reopens where it was, with its history and scroll position", () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -45,9 +45,11 @@ import {
   closeTab,
   currentEntry,
   cycle,
+  dropIndex,
   go as goInTab,
   goHome,
   historyTarget,
+  moveTab,
   openPaths,
   openTab,
   renamePath,
@@ -78,6 +80,8 @@ const imageRef = (doc: string, file: string) => ({ src: relativePath(dirname(doc
 const IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"];
 const IMAGE_FILE = new RegExp(`\\.(${IMAGE_TYPES.join("|")})$`, "i");
 const WIDTHS: Record<LineWidth, string> = { narrow: "600px", medium: "720px", default: "920px", wide: "1120px", wider: "1320px" };
+/** How far the pointer moves on a pressed tab before the tab is dragged instead of clicked, in pixels. */
+const TAB_DRAG_START = 5;
 
 type Doc = { path: string; text: string; html: string };
 /**
@@ -211,6 +215,8 @@ export default function App() {
   const article = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLElement>(null);
   const tabStrip = useRef<HTMLElement>(null);
+  // The tab being dragged to a new place in the strip.
+  const [draggedTab, setDraggedTab] = useState<number>();
   const appRoot = useRef<HTMLDivElement>(null);
   const windowShown = useRef(false);
   const systemDark = useSystemDark();
@@ -758,6 +764,45 @@ export default function App() {
   }
 
   /**
+   * Dragging a tab, from a press on it: once the pointer has moved a few pixels, the tab is shown and moves past
+   * every other tab whose middle the pointer passes, so the others make room. Releasing keeps the new order;
+   * Escape puts the tab back and shows what was shown before.
+   */
+  function startTabDrag(e: ReactPointerEvent, id: number) {
+    const startX = e.clientX;
+    const from = tabs.tabs.findIndex((t) => t.id === id);
+    const { active, home } = tabs;
+    let dragging = false;
+    const move = (ev: PointerEvent) => {
+      if (!dragging && Math.abs(ev.clientX - startX) < TAB_DRAG_START) return;
+      dragging = true;
+      setDraggedTab(id);
+      const others = [...(tabStrip.current?.querySelectorAll<HTMLElement>("[data-tab-id]") ?? [])].filter((el) => el.dataset.tabId !== String(id));
+      const mids = others.map((el) => {
+        const r = el.getBoundingClientRect();
+        return r.left + r.width / 2;
+      });
+      changeTabs((s) => moveTab(s, id, dropIndex(mids, ev.clientX)));
+    };
+    const key = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (dragging) changeTabs((s) => ({ ...moveTab(s, id, from), active, home }));
+      end();
+    };
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("keydown", key, true);
+      setDraggedTab(undefined);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("keydown", key, true);
+  }
+
+  /**
    * Closes a tab; unsaved edits are saved first (with autosave off, after asking). If saving fails, the
    * user decides whether to close anyway.
    */
@@ -1177,10 +1222,13 @@ export default function App() {
                     key={t.id}
                     className="tab"
                     title={tabPath}
+                    data-tab-id={t.id}
+                    data-dragging={draggedTab === t.id || undefined}
                     aria-current={t.id === tab?.id ? "page" : undefined}
                     onMouseDown={(e) => {
                       if (e.button === 1) e.preventDefault();
                     }}
+                    onPointerDown={(e) => e.button === 0 && !(e.target as HTMLElement).closest(".icon-btn") && startTabDrag(e, t.id)}
                     onAuxClick={(e) => e.button === 1 && closeTabById(t.id)}
                   >
                     <button className="tab-open" onClick={() => changeTabs((s) => activate(s, t.id))}>
