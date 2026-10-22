@@ -1,0 +1,43 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+<style>
+html,body{margin:0}
+.shot{--chrome:#1B1E22;--line:#30353C;--ink:#E6E8EB;--muted:#9BA3AD;--doc:#131518;--soft:color-mix(in srgb,#5A0E27 55%,#131518);--soft-ink:#F3D9E1;--link:#75B7E5;--code:#1B1E22;--kw:#F28BAA;--str:#8FD6A6;--fn:#86AEFF;width:1200px;height:760px;display:flex;flex-direction:column;overflow:hidden;background:var(--chrome);color:var(--ink);font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;font-size:13px}
+svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bar{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
+.d{max-width:680px;margin:0 auto;padding:34px 40px;font-size:16px;line-height:1.7}
+.d h1{font-family:Literata,Georgia,serif;font-size:32px;line-height:1.2;margin:0 0 16px;font-weight:600}
+.d h2{font-family:Literata,Georgia,serif;font-size:21px;margin:30px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);font-weight:600}
+.d p{margin:0 0 14px}
+.d table{border-collapse:collapse;width:100%;font-size:15px;margin-bottom:16px}
+.d td,.d th{border:1px solid var(--line);padding:6px 12px;text-align:left}
+.d th{background:var(--code);font-weight:600}
+.mono{font-family:"JetBrains Mono",Consolas,monospace}
+.ol span{padding:5px 10px 5px 24px}
+</style></head><body>
+<div class="shot">
+<div style="height:40px;flex:none;display:flex;align-items:center;gap:4px;padding:0 10px;border-bottom:1px solid var(--line)">
+<span class="bar"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 3v18"/></svg></span>
+<span style="display:flex;align-items:center;height:28px;margin-left:8px;padding:0 14px;border-radius:7px;background:var(--doc);box-shadow:0 0 0 1px var(--line)">field-guide.md</span>
+<span style="padding:0 14px;color:var(--muted)">changelog.md</span>
+<span style="flex:1"></span>
+<span class="bar"><svg viewBox="0 0 24 24"><path d="M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0zM21 21l-4.3-4.3"/></svg></span>
+<span class="bar"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>
+<span style="display:inline-flex;align-items:center;height:28px;margin-left:6px;padding:0 12px;border:1px solid var(--line);border-radius:7px;background:var(--doc)">Edit</span>
+</div>
+<div style="flex:1;min-height:0;display:flex">
+<div class="ol" style="width:220px;flex:none;padding:16px 10px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;color:var(--muted)">
+<span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:0 10px 8px">Outline</span>
+<span style="padding:5px 10px;color:var(--ink);font-weight:600">A field guide to Markdown</span>
+<span style="border-radius:6px;background:var(--soft);color:var(--soft-ink);font-weight:600">Reading</span>
+<span>Tables</span><span>Code</span><span>Editing</span>
+</div>
+<div style="flex:1;min-width:0;background:var(--doc);overflow:hidden"><div class="d">
+<h1>A field guide to Markdown</h1>
+<p>Open a <code class="mono" style="font-size:.86em;padding:1px 5px;border:1px solid var(--line);border-radius:4px;background:var(--code)">.md</code> file and read it as a document: headings, tables, code and diagrams, laid out for reading. Switch to editing when something needs a change.</p>
+<h2>Reading</h2>
+<p>The outline follows where you are; <a href="#" style="color:var(--link)">links to other files</a> open in a new tab.</p>
+<table><thead><tr><th>Element</th><th>Shown as</th></tr></thead><tbody><tr><td>Tables</td><td>Resizable columns</td></tr><tr><td>Code</td><td>Highlighted, with Copy</td></tr></tbody></table>
+<div class="mono" style="font-size:13px;line-height:1.6;padding:12px 16px;border:1px solid var(--line);border-radius:8px;background:var(--code)"><span style="color:var(--kw)">const</span> doc = <span style="color:var(--fn)">open</span>(<span style="color:var(--str)">"field-guide.md"</span>);</div>
+</div></div></div></div>
+</body></html>

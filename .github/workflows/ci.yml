@@ -1,0 +1,39 @@
+name: CI
+
+# Pull requests from outside contributors (from a fork): unit tests, type check and production bundle. The project's own
+# members run these checks locally before every commit (CONTRIBUTING.md), and can start this workflow by hand
+# from the Actions tab. The Rust tests are in rust.yml and run for everyone when the Rust side changes. Merged
+# commits aren't checked again; every release is built in full by release.yml.
+on:
+  workflow_dispatch:
+  pull_request:
+    # Pull requests that only change images or documentation need no check.
+    paths-ignore:
+      - "media/**"
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "CONTRIBUTING.md"
+
+# A newer push to the same pull request stops the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Test and build
+    # Outside contributors open pull requests from a fork; members push branches to this repository.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # Type check + production bundle.
+      - run: npm run build

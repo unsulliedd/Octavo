@@ -1,0 +1,2373 @@
+/* Brand colors: primary #5A0E27, secondary #75B7E5, accent #D39D3F. Every role derives from these three,
+   so a future color setting only swaps them. Text uses adjusted shades where a brand color is too light or dark. */
+.app {
+  --brand-primary: #5a0e27;
+  --brand-secondary: #75b7e5;
+  --brand-accent: #d39d3f;
+  --chrome: #f3f4f6;
+  --chrome-2: #e8eaee;
+  --line: #dde1e6;
+  --ink: #1b1f24;
+  --muted: #57606a;
+  --doc: #ffffff;
+  --code-bg: #f6f8fa;
+  /* Syntax colors tuned to the identity: keywords red, names blue, types brown */
+  --code-kw: #a3204a;
+  --code-str: #0b7a55;
+  --code-num: #a04e00;
+  --code-com: #6a737d;
+  --code-fn: #1f5f99;
+  --code-type: #7a4e0c;
+  --code-attr: #0e6e78;
+  --accent: var(--brand-primary); /* icons, toggles, outlines */
+  --accent-fill: var(--brand-primary); /* primary buttons */
+  --accent-ink: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--brand-primary) 9%, var(--doc)); /* active outline item */
+  --accent-soft-ink: var(--brand-primary);
+  --link: color-mix(in srgb, var(--brand-secondary) 50%, #003a70); /* the secondary color is too light for text on white */
+  --brand-accent-ink: color-mix(in srgb, var(--brand-accent) 72%, black);
+  --select: color-mix(in srgb, var(--brand-secondary) 35%, white);
+  --find-match: color-mix(in srgb, var(--brand-accent) 38%, white);
+  --find-current: var(--brand-accent);
+  --drop-soft: color-mix(in srgb, var(--brand-secondary) 18%, var(--doc));
+  --danger: #c4302b;
+  --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --doc-font: var(--ui);
+  --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+.app[data-theme="dark"] {
+  --chrome: #1b1e22;
+  --chrome-2: #262a30;
+  --line: #30353c;
+  --ink: #e6e8eb;
+  --muted: #9ba3ad;
+  --doc: #131518;
+  --code-bg: #1b1e22;
+  --code-kw: #f28baa;
+  --code-str: #8fd6a6;
+  --code-num: #f2b77a;
+  --code-com: #8b939d;
+  --code-fn: #8ec8f0;
+  --code-type: #e6c079;
+  --code-attr: #7fd6d0;
+  --accent: var(--brand-secondary);
+  --accent-fill: color-mix(in srgb, var(--brand-primary) 78%, white); /* primary lifted so buttons read on dark */
+  --accent-soft: color-mix(in srgb, var(--brand-primary) 55%, var(--doc));
+  --accent-soft-ink: #f3d9e1;
+  --link: var(--brand-secondary);
+  --brand-accent-ink: var(--brand-accent);
+  --select: color-mix(in srgb, var(--brand-secondary) 35%, var(--doc));
+  --find-match: color-mix(in srgb, var(--brand-accent) 40%, var(--doc));
+  --drop-soft: color-mix(in srgb, var(--brand-secondary) 16%, var(--doc));
+  --danger: #ff7b72;
+  color-scheme: dark;
+}
+/* Limitation: system serif stack; bundle a reading serif (e.g. Literata) if this looks off on some machines */
+.app[data-font="serif"] {
+  --doc-font: Charter, "Iowan Old Style", Georgia, serif;
+}
+
+/* Only the reading area, outline and panels scroll; the window itself never does. */
+html,
+body {
+  overflow: hidden;
+}
+body {
+  margin: 0;
+  background: #f3f4f6;
+}
+/* Mermaid adds its tooltip element to the end of the page with an inline position; fixed to the window,
+   it can't make the page taller. Mermaid sets its top and left when it shows the tooltip. */
+body > .mermaidTooltip {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+}
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  color: var(--ink);
+  font: 13px/1.4 var(--ui);
+}
+.app button {
+  font: inherit;
+  color: inherit;
+}
+.app ::selection {
+  background: var(--select);
+}
+.app ::highlight(find) {
+  background-color: var(--find-match);
+}
+.app ::highlight(find-current) {
+  background-color: var(--find-current);
+  color: #1b1f24;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: var(--danger);
+}
+.section-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Buttons */
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted) !important;
+  cursor: pointer;
+}
+.icon-btn:hover:not(:disabled),
+.icon-btn[aria-expanded="true"] {
+  background: var(--chrome-2);
+  color: var(--ink) !important;
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.icon-btn.small {
+  width: 22px;
+  height: 22px;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 1px;
+}
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent-fill);
+  color: var(--accent-ink) !important;
+  font-size: 14px !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+.primary:hover {
+  background: color-mix(in srgb, var(--accent-fill) 85%, black);
+}
+
+/* Toolbar */
+.toolbar {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  padding-left: 8px;
+  font-weight: 600;
+}
+.spacer {
+  flex: 1;
+}
+.tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  max-width: 220px;
+  padding: 0 4px 0 0;
+  border-radius: 7px;
+  color: var(--muted);
+}
+.tab:hover {
+  background: var(--chrome-2);
+}
+.tab[aria-current="page"] {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.tab-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+}
+.tab-open span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Layout */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+}
+.sidebar {
+  width: 252px;
+  flex: none;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 8px 18px;
+}
+.count {
+  font-size: 12px;
+  color: var(--muted);
+}
+.outline {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 8px 16px;
+}
+.outline p {
+  margin: 4px 10px;
+}
+.outline a {
+  display: block;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1.35;
+}
+.outline a:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.outline a[data-level="1"] {
+  font-weight: 600;
+  color: var(--ink);
+}
+.outline a[data-level="3"] {
+  padding-left: 24px;
+}
+.outline a[data-level="4"] {
+  padding-left: 38px;
+}
+.outline a[aria-current] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+  font-weight: 600;
+}
+.reader {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--doc);
+}
+.doc-column {
+  max-width: var(--doc-width);
+  margin: 0 auto;
+  padding: 28px 40px 96px;
+}
+.breadcrumb {
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.banner {
+  margin: 0;
+  padding: 10px 40px;
+  border-bottom: 1px solid var(--line);
+}
+/* A conflict with a change on disk stays in view while the document scrolls. */
+.banner.conflict {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 24px;
+  border-bottom-color: color-mix(in srgb, var(--brand-accent) 55%, var(--doc));
+  background: color-mix(in srgb, var(--brand-accent) 14%, var(--doc));
+  color: var(--ink);
+}
+.banner.conflict > .icon {
+  color: var(--brand-accent-ink);
+}
+.conflict-text {
+  flex: 1 1 320px;
+  line-height: 1.45;
+}
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Compare a file on disk with unsaved edits */
+.compare-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  padding: 24px;
+  background: color-mix(in srgb, var(--chrome) 70%, transparent);
+}
+.compare {
+  flex: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--doc);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.18);
+  overflow: hidden;
+}
+.compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.compare-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.compare-title .muted,
+.compare-foot .muted {
+  font-size: 12px;
+}
+.compare-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+}
+.compare-foot .muted {
+  flex: 1 1 240px;
+}
+.compare-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+.compare-legend span {
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.compare-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.compare-body > p {
+  margin: 8px 16px;
+}
+.diff-line {
+  padding: 0 16px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff-mark {
+  display: inline-block;
+  width: 28px;
+  text-align: center;
+  color: var(--muted);
+  user-select: none;
+}
+.diff-del {
+  background: color-mix(in srgb, var(--danger) 14%, var(--doc));
+}
+.diff-add {
+  background: color-mix(in srgb, var(--link) 16%, var(--doc));
+}
+.diff-skip {
+  margin: 4px 0;
+  padding: 2px 28px;
+  color: var(--muted);
+  background: var(--chrome);
+  font-family: inherit;
+  font-size: 11.5px;
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--brand-secondary);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--doc) 85%, transparent);
+  color: var(--link);
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .sidebar,
+  .status-right > :not(.save-state) {
+    display: none !important;
+  }
+  .doc-column {
+    padding: 20px 20px 64px;
+  }
+}
+
+/* Status bar */
+.statusbar {
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.status-right {
+  display: flex;
+  gap: 16px;
+}
+.save-state[data-state="unsaved"],
+.save-state[data-state="saving"] {
+  color: var(--ink);
+}
+.save-state[data-state="error"] {
+  color: var(--danger);
+  font-weight: 600;
+}
+button.save-state {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* Loading indicator, over the reading area while a document is read and rendered. Over a document it
+   fades in after a short delay, so fast documents don't flash it; with nothing open it covers the home
+   screen at once. The animations run on the compositor and keep moving while rendering blocks the main
+   thread. */
+.loading {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: color-mix(in srgb, var(--doc) 80%, transparent);
+  color: var(--muted);
+  font-size: 13px;
+  opacity: 0;
+  animation: loading-in 0.15s ease 0.15s forwards;
+  will-change: opacity;
+}
+.loading[data-solid] {
+  background: var(--doc);
+  animation: none;
+  opacity: 1;
+}
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  will-change: transform;
+}
+@keyframes loading-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* Distraction-free mode */
+.app[data-focus] .toolbar,
+.app[data-focus] .sidebar,
+.app[data-focus] .statusbar {
+  display: none;
+}
+.focus-hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 8;
+  margin: 0;
+  padding: 6px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--chrome);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: focus-hint 3s ease forwards;
+}
+@keyframes focus-hint {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-hint {
+    animation-timing-function: steps(1, end);
+  }
+}
+
+/* Edit mode. Toolbar controls share one height (30px) and radius (7px); Done stands out in the primary color. */
+.app .icon-btn,
+.app .edit-btn,
+.app .done-btn,
+.app .mode-switch button {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.app .icon-btn:active:not(:disabled),
+.app .edit-btn:active:not(:disabled),
+.app .done-btn:active,
+.app .mode-switch button:active {
+  transform: translateY(1px);
+}
+/* Reading: Edit is a quiet button, the same weight as the icons beside it. */
+.app .edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--chrome-2);
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+.app .edit-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--chrome-2) 80%, var(--ink));
+}
+.app .edit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Editing: Edit and Preview as a two-way switch, then Done. */
+.mode-switch {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  height: 30px;
+  margin: 0 4px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 7px;
+  background: var(--chrome-2);
+}
+.app .mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.app .mode-switch button:hover {
+  color: var(--ink);
+}
+.app .mode-switch button[aria-pressed="true"] {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+}
+.app .mode-switch button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.app .mode-switch button:disabled:hover {
+  color: var(--muted);
+}
+/* Source mode: the editor is as tall as its text, so the reading area scrolls it. */
+.source-input {
+  min-height: 60vh;
+}
+.app .done-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.app .done-btn:hover {
+  background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent));
+}
+.notice {
+  color: var(--muted);
+}
+/* The editor uses the reading view's document styles; these are what ProseMirror needs on top. */
+.doc.editor {
+  visibility: hidden;
+}
+.doc.editor[data-shown] {
+  visibility: visible;
+}
+.doc.editor .ProseMirror {
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-variant-ligatures: none;
+}
+/* Table cells and list items hold a paragraph in the editor; the reading view shows their text directly. */
+.doc.editor :is(td, th) > p {
+  margin: 0;
+}
+.doc.editor .ProseMirror > :first-child {
+  margin-top: 0;
+}
+/* A tight list's items hold a paragraph in the editor; the reading view shows them without its margins. */
+.doc.editor :is(ul, ol)[data-spread="false"]:not(:has(> li[data-spread="true"])) > li > p,
+.doc.editor :is(ul, ol)[data-spread="false"]:not(:has(> li[data-spread="true"])) > li > .task-content > p {
+  margin: 0;
+}
+/* A task item while editing: its checkbox, then its content. */
+.doc.editor li[data-item-type="task"] {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.doc.editor li[data-item-type="task"] > input {
+  flex: none;
+  margin: 0.4em 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.doc.editor .task-content {
+  flex: 1;
+  min-width: 0;
+}
+.doc.editor li[data-checked="true"] > .task-content {
+  color: var(--muted);
+}
+.doc.editor .ProseMirror-selectednode {
+  outline: 2px solid var(--link);
+}
+.doc.editor [data-type="math_inline"],
+.doc.editor [data-type="math_block"] {
+  cursor: pointer;
+  border-radius: 4px;
+}
+.doc.editor [data-type="math_inline"]:hover,
+.doc.editor [data-type="math_block"]:hover {
+  background: var(--chrome);
+}
+.doc.editor [data-type="math_block"] {
+  margin: 0 0 14px;
+  text-align: center;
+}
+.doc.editor [data-type^="math_"][data-empty] {
+  padding: 0 6px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.86em;
+}
+/* The frontmatter above the document while reading */
+.doc-properties {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 22px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.doc-properties dt {
+  color: var(--muted);
+}
+.doc-properties dd {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.property-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--chrome-2);
+  font-size: 12px;
+}
+.doc pre.doc-properties-yaml {
+  margin-bottom: 22px;
+}
+[data-hide-properties] :is(.doc-properties, .doc-properties-yaml) {
+  display: none;
+}
+
+/* The frontmatter as a properties panel */
+.doc.editor .properties {
+  margin: 0 0 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--code-bg);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.properties-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.properties-head .setting-label {
+  flex: 1;
+}
+.properties-head .setting-hint {
+  margin: 0;
+}
+.properties-rows {
+  padding: 4px 0;
+}
+.properties-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 170px) 1fr 24px;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 4px;
+}
+.properties input,
+.properties textarea {
+  min-width: 0;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+.properties input:hover,
+.properties textarea:hover {
+  border-color: var(--line);
+}
+.properties input:focus,
+.properties textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--doc);
+}
+.properties input.key {
+  color: var(--muted);
+  font-weight: 600;
+}
+.properties textarea {
+  display: block;
+  width: calc(100% - 12px);
+  height: auto;
+  margin: 6px;
+  padding: 8px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  resize: vertical;
+}
+.properties-foot {
+  padding: 0 6px 6px;
+}
+
+/* Formatting bar, a row under the toolbar while editing */
+.format-slot {
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.format-slot:empty {
+  display: none;
+}
+.format-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 2px 10px;
+}
+.format-tools {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+}
+/* Centred buttons stay centred in the window: the save buttons sit at the right edge, out of the flow. */
+.format-bar[data-align="center"] {
+  position: relative;
+}
+.format-bar[data-align="center"] .format-tools {
+  justify-content: center;
+  padding: 0 240px;
+}
+.format-bar[data-align="center"] .format-end {
+  position: absolute;
+  right: 10px;
+}
+@media (max-width: 1100px) {
+  .format-bar[data-align="center"] .format-tools {
+    padding: 0;
+  }
+  .format-bar[data-align="center"] .format-end {
+    position: static;
+  }
+}
+.format-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* The document's Save, Save as… and Revert in the toolbar: plain icons like the others. */
+.toolbar-actions {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.toolbar-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--line);
+}
+/* Between the editing controls and the search and settings buttons at the right end. */
+.toolbar-sep.wide {
+  height: 20px;
+  margin: 0 6px;
+}
+
+.toolbar-status {
+  margin-left: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.unsaved-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.text-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--doc);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.text-btn:hover:not(:disabled) {
+  background: var(--chrome-2);
+}
+.text-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.text-btn.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.text-btn.quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.text-btn.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 340px;
+  padding: 0 2px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--doc);
+}
+.link-address {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+.format-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.format-group + .format-group {
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.format-bar .icon-btn[aria-pressed="true"] {
+  background: var(--chrome-2);
+  color: var(--ink) !important;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.format-bar .icon-btn:disabled {
+  opacity: 0.35;
+}
+.link-field input {
+  width: 280px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--doc);
+  color: var(--ink);
+  font: inherit;
+}
+
+/* The language of the code block at the cursor, above its top right corner */
+.code-lang-anchor {
+  position: absolute;
+  z-index: 6;
+  width: 0;
+  height: 0;
+}
+.code-lang-button {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--doc);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
+  font-family: var(--ui);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.app .code-lang-button {
+  color: var(--muted);
+}
+.app .code-lang-button:hover,
+.app .code-lang-button[aria-expanded="true"] {
+  color: var(--ink);
+}
+.code-lang-menu {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--doc);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  font-family: var(--ui);
+  font-size: 13px;
+  overflow: hidden;
+}
+.code-lang-menu input {
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+.code-lang-list {
+  max-height: 260px;
+  overflow: auto;
+  padding: 4px;
+}
+.app .code-lang-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.app .code-lang-list button:hover,
+.app .code-lang-list button[data-active] {
+  background: var(--chrome-2);
+}
+.app .code-lang-list button[aria-selected="true"] {
+  color: var(--accent-soft-ink);
+  font-weight: 600;
+}
+.code-lang-id {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* The source of the selected formula, under it, with a live preview */
+.math-editor {
+  position: absolute;
+  z-index: 8;
+  width: min(460px, 90%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--doc);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  font-family: var(--ui);
+  font-size: 13px;
+}
+.math-editor textarea {
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: none;
+  background: var(--code-bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.math-editor textarea:focus {
+  border-color: var(--accent);
+}
+.image-editor {
+  width: min(360px, 90%);
+}
+.image-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.image-editor input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: none;
+  background: var(--doc);
+  color: var(--ink);
+  font: inherit;
+}
+.image-editor input:focus {
+  border-color: var(--accent);
+}
+.image-editor .math-editor-foot .muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.math-preview {
+  min-height: 28px;
+  padding: 6px 4px;
+  overflow-x: auto;
+  color: var(--ink);
+  font-size: 16px;
+}
+.math-preview:empty::before {
+  content: "Preview";
+  color: var(--muted);
+  font-size: 13px;
+}
+.math-editor-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.math-editor-foot .muted {
+  flex: 1;
+  font-size: 12px;
+}
+
+/* Table actions, above the document while the cursor is in a table */
+.editor-pane {
+  position: relative;
+}
+.editor-pane:not([data-shown]) {
+  height: 0;
+  overflow: hidden;
+}
+.table-bar-anchor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  height: 0;
+}
+.table-bar {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--doc);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
+}
+.table-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.table-bar-group + .table-bar-group {
+  padding-left: 4px;
+  border-left: 1px solid var(--line);
+}
+.table-bar .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+.table-bar .icon-btn[aria-pressed="true"] {
+  background: var(--chrome-2);
+  color: var(--ink) !important;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* Down the table's left side: the anchor is as tall as the table, and the bar sticks to the top of the view inside it. */
+.table-bar-anchor[data-side] {
+  right: auto;
+  width: 36px;
+  margin-left: -46px;
+}
+.table-bar-anchor[data-side] .table-bar {
+  position: sticky;
+  top: 8px;
+  bottom: auto;
+  left: auto;
+  flex-direction: column;
+}
+.table-bar-anchor[data-side] .table-bar-group {
+  flex-direction: column;
+}
+.table-bar-anchor[data-side] .table-bar-group + .table-bar-group {
+  padding: 4px 0 0;
+  border-left: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* The formatting bar over selected text, and the link popover */
+.floating {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--doc);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.floating .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+.floating .icon-btn[aria-pressed="true"] {
+  background: var(--chrome-2);
+  color: var(--ink) !important;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.floating .link-chip {
+  border: 0;
+}
+.floating-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--line);
+}
+.floating-menu-anchor {
+  position: relative;
+}
+.floating .floating-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.floating .floating-text:hover,
+.floating .floating-text[aria-expanded="true"] {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.floating-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--doc);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+}
+.floating-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.floating-menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+.floating-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.floating-menu button:hover:not(:disabled) {
+  background: var(--chrome-2);
+}
+.floating-menu button[aria-checked="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+  font-weight: 600;
+}
+.icon-btn.danger:hover:not(:disabled),
+.table-bar .icon-btn.danger:hover:not(:disabled) {
+  color: var(--danger) !important;
+}
+
+/* Find bar */
+.find {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 12px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  color: var(--muted);
+}
+.find input {
+  width: 200px;
+  height: 28px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.find:focus-within {
+  border-color: var(--accent);
+}
+.find-count {
+  padding: 0 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Reading settings popover */
+.popover {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 10;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+/* Update ready: a quiet toolbar button and its popover */
+.app .update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.app .update-btn:hover,
+.app .update-btn[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent));
+}
+.app .update-btn:active {
+  transform: translateY(1px);
+}
+.update-btn .unsaved-dot {
+  margin: 0;
+}
+.update-popover {
+  width: 280px;
+  gap: 12px;
+}
+.update-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.update-text strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+.link-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+.update-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.setting-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.setting-value {
+  font-weight: 400;
+}
+.setting input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.setting-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.setting-toggle.plain {
+  padding-top: 0;
+  border-top: 0;
+}
+.setting-toggle kbd {
+  margin-left: 4px;
+}
+.setting-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Settings: everything that isn't about reading */
+.dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(10 12 16 / 0.38);
+}
+/* Sized from the window, so it fits an HD screen and still fills a larger one. */
+.settings {
+  width: min(clamp(720px, 70vw, 1280px), 100%);
+  height: min(clamp(520px, 75vh, 900px), 100%);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--chrome);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3);
+  overflow: hidden;
+}
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 12px 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+.settings-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.settings-nav {
+  flex: none;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 8px;
+  border-right: 1px solid var(--line);
+}
+.settings-nav button {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+.settings-nav button:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.settings-nav button[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+  font-weight: 600;
+}
+.settings-body {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 22px 32px 28px;
+  background: var(--doc);
+}
+.settings-title-row {
+  max-width: 640px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.settings-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.settings-section {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+.setting-row input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+/* Shortcuts: one bordered list per group, a row per action */
+.settings-section.shortcuts {
+  gap: 18px;
+}
+.settings-section.shortcuts > .setting-hint {
+  margin: 0;
+}
+.shortcut-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcut-group h3 {
+  margin: 0;
+}
+.shortcut-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
+  font-size: 13px;
+}
+.shortcut-row + .shortcut-row {
+  border-top: 1px solid var(--line);
+}
+.shortcut-row[data-conflict] {
+  background: color-mix(in srgb, var(--brand-accent) 14%, var(--doc));
+}
+.shortcut-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.shortcut-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+.shortcut-note svg {
+  color: var(--brand-accent-ink);
+}
+.shortcut-note.muted {
+  color: var(--muted);
+}
+.shortcut-keys {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 132px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.shortcut-keys:hover {
+  border-color: var(--line);
+  background: var(--chrome);
+}
+.shortcut-keys[data-recording] {
+  border-color: var(--accent);
+  background: var(--doc);
+  color: var(--accent-soft-ink);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.shortcut-row[data-conflict] kbd {
+  border-color: color-mix(in srgb, var(--brand-accent) 55%, var(--doc));
+}
+.shortcut-row .icon-btn {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+/* An unchanged action keeps the reset button's place, so the keys line up. */
+.shortcut-row .icon-btn[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+}
+@media (max-width: 640px) {
+  .settings-nav {
+    display: none;
+  }
+}
+.setting-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.seg {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--chrome-2);
+}
+.seg button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--doc);
+  color: var(--ink) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.seg button[data-value="serif"] {
+  font-family: Charter, "Iowan Old Style", Georgia, serif !important;
+}
+
+/* Home */
+.home {
+  flex: 1;
+  overflow: auto;
+  background: var(--doc);
+}
+.home-inner {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 72px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.home-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.home-intro h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.home-intro p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.home-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.shortcut {
+  font-size: 12px;
+  color: var(--muted);
+}
+kbd {
+  font: 11px var(--ui);
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--chrome);
+}
+.drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 88px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+}
+.drop-zone[data-active="true"] {
+  border-color: var(--brand-secondary);
+  background: var(--drop-soft);
+  color: var(--link);
+}
+.file-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+.file-row:hover {
+  background: var(--chrome-2);
+}
+.file-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--muted) !important;
+}
+.file-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.file-name {
+  font-size: 14px;
+  color: var(--ink);
+}
+.file-folder {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-when {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pin {
+  margin-right: 4px;
+  opacity: 0;
+}
+.file-row:hover .pin,
+.pin:focus-visible,
+.pin[aria-pressed="true"] {
+  opacity: 1;
+}
+.pin[aria-pressed="true"] {
+  color: var(--brand-accent-ink) !important;
+}
+
+/* Document */
+.doc {
+  font-family: var(--doc-font);
+  font-size: var(--doc-size);
+  line-height: 1.7;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+.doc h1 {
+  font-size: 1.85em;
+  line-height: 1.25;
+  margin: 0 0 18px;
+  letter-spacing: -0.01em;
+}
+.doc h2 {
+  font-size: 1.3em;
+  line-height: 1.3;
+  margin: 40px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.doc h3 {
+  font-size: 1.07em;
+  margin: 28px 0 8px;
+}
+.doc p {
+  margin: 0 0 14px;
+}
+.doc a {
+  color: var(--link);
+}
+.doc [id] {
+  scroll-margin-top: 16px;
+}
+.doc img {
+  max-width: 100%;
+}
+.doc .img-missing {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.4;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.doc .img-missing strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.doc blockquote {
+  margin: 0 0 16px;
+  padding: 2px 18px;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+}
+.doc ul,
+.doc ol {
+  margin: 0 0 14px;
+  padding-left: 24px;
+}
+.doc li {
+  margin: 4px 0;
+}
+.doc li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+.doc input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+/* A table scrolls sideways in its box when it's wider than the column. */
+.doc .table-scroll {
+  margin: 0 0 18px;
+  overflow-x: auto;
+}
+.doc table {
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+/* The editor's tables have no box of their own. */
+.doc.editor table {
+  display: block;
+  overflow-x: auto;
+  margin: 0 0 18px;
+}
+/* Columns resized by hand: the table is as wide as its columns, and every column keeps its width. */
+.doc table.sized {
+  table-layout: fixed;
+}
+.doc table.sized :is(th, td) {
+  box-sizing: border-box;
+  white-space: normal;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.doc th,
+.doc td {
+  border: 1px solid var(--line);
+  padding: 7px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.doc th {
+  background: var(--code-bg);
+  font-weight: 600;
+}
+/* A handle on the right edge of each header cell resizes its column in the reading view. */
+.doc th {
+  position: relative;
+}
+.doc .col-resize {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 1;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+/* Inside the last column, so the handle never makes the table scroll. */
+.doc th:last-child > .col-resize {
+  right: 0;
+}
+.doc .col-resize:hover,
+.doc table.resizing .col-resize {
+  background: linear-gradient(to right, transparent 3px, var(--link) 3px, var(--link) 5px, transparent 5px);
+}
+.doc table.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Short cells never wrap and long ones keep a readable width (cell classes are set in render.ts), so a
+   wide table scrolls sideways instead of squeezing its columns. */
+.doc .cell-short {
+  white-space: nowrap;
+}
+.doc .cell-long {
+  min-width: 14em;
+}
+.doc code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.doc pre {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+.doc code {
+  font-variant-ligatures: none; /* show => and != as typed, not as joined symbols */
+}
+.doc pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 1em;
+}
+.code-block {
+  margin: 0 0 18px;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.code-block pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 0 6px 0 14px;
+  border-bottom: 1px solid var(--line);
+  font: 12px var(--ui);
+  color: var(--muted);
+}
+.code-copy {
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted) !important;
+  font: 12px var(--ui) !important;
+  cursor: pointer;
+}
+.code-copy:hover {
+  background: var(--chrome-2);
+  color: var(--ink) !important;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-deletion {
+  color: var(--code-kw);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-meta .hljs-string {
+  color: var(--code-str);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--code-num);
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-com);
+  font-style: italic;
+}
+.hljs-meta {
+  color: var(--code-com);
+}
+.hljs-title,
+.hljs-section {
+  color: var(--code-fn);
+}
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_ {
+  color: var(--code-type);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-name,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--code-attr);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
+}
+.doc hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 28px 0;
+}
+.doc .mermaid {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: center;
+}
+.doc .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Mermaid diagrams while editing, and their dialog */
+.doc.editor .mermaid-block {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+.doc.editor .mermaid-block:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.doc.editor .mermaid-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.doc.editor .mermaid-block[data-error] {
+  color: var(--danger);
+  text-align: left;
+  white-space: pre-wrap;
+}
+.dialog-backdrop.fixed {
+  position: fixed;
+}
+.mermaid-editor {
+  width: min(1400px, 100%);
+  height: min(900px, 100%);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--doc);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3);
+  overflow: hidden;
+}
+.mermaid-editor .settings-head {
+  background: var(--chrome);
+}
+.mermaid-editor-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.code-input {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  border-right: 1px solid var(--line);
+  background: var(--code-bg);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.code-gutter {
+  flex: none;
+  min-width: 3ch;
+  /* Room below the last number, so it scrolls as far as the source does past its sideways scrollbar. */
+  padding: 14px 10px 40px 12px;
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+  text-align: right;
+  user-select: none;
+}
+.code-gutter span {
+  display: block;
+}
+.code-input textarea {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px 14px 10px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  white-space: pre;
+  overflow: auto;
+}
+.mermaid-preview {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Scrolls when the zoomed drawing is bigger than the preview; centred when it is smaller. */
+.mermaid-canvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 16px;
+  overflow: auto;
+}
+.mermaid-canvas > * {
+  margin: auto;
+}
+.mermaid-canvas[data-pannable] {
+  cursor: grab;
+}
+.mermaid-canvas[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+.mermaid-drawing {
+  flex: none;
+}
+.mermaid-drawing svg {
+  display: block;
+  width: 100%;
+  max-width: none !important;
+  height: auto;
+}
+.mermaid-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.mermaid-zoom input {
+  width: 200px;
+  accent-color: var(--accent);
+}
+.mermaid-zoom output {
+  min-width: 4ch;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mermaid-error {
+  margin: 0;
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+}
+.mermaid-editor-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+  font-size: 12.5px;
+}
+.mermaid-editor-foot .muted {
+  flex: 1;
+}
