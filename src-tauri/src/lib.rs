@@ -196,3 +196,19 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    /// The uninstaller's Delete app data option removes the folder the app keeps its data in.
+    #[test]
+    fn uninstaller_removes_the_data_folder() {
+        let dir = env!("CARGO_MANIFEST_DIR");
+        let read = |file: &str| std::fs::read_to_string(format!("{dir}/{file}")).unwrap();
+        let config: serde_json::Value = serde_json::from_str(&read("tauri.conf.json")).unwrap();
+        let data = config["app"]["appDirectoriesOverride"].as_str().unwrap();
+        let folder = data
+            .strip_prefix("$DATA/")
+            .expect("the data folder is in the roaming data folder");
+        assert!(read("installer/hooks.nsh").contains(&format!(r#"RmDir /r "$APPDATA\{folder}""#)));
+    }
+}
