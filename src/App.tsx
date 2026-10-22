@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask, message, open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { EditorPane } from "./editor/EditorPane";
 import { DocButtons, type DocActions } from "./editor/FormatBar";
 import { editorLayout } from "./editor/layout";
@@ -26,6 +26,7 @@ import { ReadingSettings } from "./ReadingSettings";
 import { Settings } from "./Settings";
 import { SourcePane } from "./SourcePane";
 import { UpdatePopover } from "./UpdatePopover";
+import { TabMenu, type TabMenuItem } from "./TabMenu";
 import { releaseUrl } from "./links";
 import { useUpdates } from "./useUpdates";
 import { changelogSection, notesPage, showAfterUpdate } from "./whatsNew";
@@ -52,12 +53,14 @@ import {
   moveTab,
   openPaths,
   openTab,
+  otherTabIds,
   renamePath,
   reopenTab,
   replaceCurrent,
   samePath,
   setScroll,
   shownTab,
+  tabIdsRightOf,
   tabFor,
   toStored,
   type Tabs,
@@ -217,6 +220,8 @@ export default function App() {
   const tabStrip = useRef<HTMLElement>(null);
   // The tab being dragged to a new place in the strip.
   const [draggedTab, setDraggedTab] = useState<number>();
+  // The tab a right-click menu is open for, and where the pointer was.
+  const [tabMenu, setTabMenu] = useState<{ id: number; x: number; y: number }>();
   const appRoot = useRef<HTMLDivElement>(null);
   const windowShown = useRef(false);
   const systemDark = useSystemDark();
@@ -804,15 +809,15 @@ export default function App() {
 
   /**
    * Closes a tab; unsaved edits are saved first (with autosave off, after asking). If saving fails, the
-   * user decides whether to close anyway.
+   * user decides whether to close anyway. Resolves to whether the tab was closed.
    */
   async function closeTabById(id: number) {
     const t = tabs.tabs.find((x) => x.id === id);
-    if (!t) return;
+    if (!t) return false;
     const file = currentEntry(t).path;
     if (hasEdits(file)) {
       const choice = await askToSave(basename(file));
-      if (choice === "cancel") return;
+      if (choice === "cancel") return false;
       const message = choice === "discard" ? undefined : await saveDoc(file);
       if (choice === "discard") discardEdits(file);
       else if (message) {
@@ -822,12 +827,37 @@ export default function App() {
           okLabel: "Close without saving",
           cancelLabel: "Keep open",
         });
-        if (!discard) return;
+        if (!discard) return false;
         discardEdits(file);
       }
     }
     endSession(file);
     changeTabs((s) => closeTab(s, id));
+    return true;
+  }
+
+  /** Closes these tabs one after another, each as Close does; a tab kept open (Cancel) stops the rest. */
+  async function closeTabsById(ids: number[]) {
+    for (const id of ids) if (!(await closeTabById(id))) return;
+  }
+
+  const closeTabMenu = useCallback(() => setTabMenu(undefined), []);
+
+  /** The tab menu's items for tab `id`. */
+  function tabMenuItems(id: number): TabMenuItem[] {
+    const t = tabs.tabs.find((x) => x.id === id);
+    if (!t) return [];
+    const file = currentEntry(t).path;
+    return [
+      { label: "Open containing folder", run: () => void revealItemInDir(file).catch((e) => setError(String(e))) },
+      { label: "Copy path", run: () => void navigator.clipboard.writeText(file).catch((e) => setError(String(e))) },
+      "separator",
+      { label: "Close", keys: keyLabel(bindings, "closeTab"), run: () => void closeTabById(id) },
+      { label: "Close others", disabled: !otherTabIds(tabs, id).length, run: () => void closeTabsById(otherTabIds(tabs, id)) },
+      { label: "Close tabs to the right", disabled: !tabIdsRightOf(tabs, id).length, run: () => void closeTabsById(tabIdsRightOf(tabs, id)) },
+      "separator",
+      { label: "Reopen closed tab", keys: keyLabel(bindings, "reopenTab"), disabled: !tabs.closed?.length, run: () => changeTabs(reopenTab) },
+    ];
   }
 
   /** Before the first edit of a loaded file: the editor's Markdown for it must render like the file. */
@@ -1224,6 +1254,11 @@ export default function App() {
                     title={tabPath}
                     data-tab-id={t.id}
                     data-dragging={draggedTab === t.id || undefined}
+                    data-menu={tabMenu?.id === t.id || undefined}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setTabMenu({ id: t.id, x: e.clientX, y: e.clientY });
+                    }}
                     aria-current={t.id === tab?.id ? "page" : undefined}
                     onMouseDown={(e) => {
                       if (e.button === 1) e.preventDefault();
@@ -1536,6 +1571,15 @@ export default function App() {
               setShowAppSettings(false);
               void openWhatsNew(version);
             }}
+          />
+        )}
+        {tabMenu && tabs.tabs.some((t) => t.id === tabMenu.id) && (
+          <TabMenu
+            name={basename(currentEntry(tabs.tabs.find((t) => t.id === tabMenu.id)!).path)}
+            x={tabMenu.x}
+            y={tabMenu.y}
+            items={tabMenuItems(tabMenu.id)}
+            onClose={closeTabMenu}
           />
         )}
         {showUpdate && updates.offered && updateReady && (
