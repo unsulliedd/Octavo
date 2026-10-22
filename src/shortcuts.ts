@@ -8,6 +8,7 @@ import type { FormatAction } from "./editor/formatInfo";
 export type AppAction =
   | "open"
   | "closeTab"
+  | "reopenTab"
   | "nextTab"
   | "previousTab"
   | "back"
@@ -35,6 +36,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { id: ShortcutId; label: s
     items: [
       { id: "open", label: "Open file", keys: ["Ctrl+O"] },
       { id: "closeTab", label: "Close tab", keys: ["Ctrl+W"] },
+      { id: "reopenTab", label: "Reopen closed tab", keys: ["Ctrl+Shift+T"] },
       { id: "nextTab", label: "Next tab", keys: ["Ctrl+Tab", "Ctrl+PageDown"] },
       { id: "previousTab", label: "Previous tab", keys: ["Ctrl+Shift+Tab", "Ctrl+PageUp"] },
       { id: "back", label: "Back", keys: ["Alt+Left"] },
@@ -100,7 +102,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { id: ShortcutId; label: s
 const ITEMS = SHORTCUT_GROUPS.flatMap((g) => g.items);
 const ITEM = new Map(ITEMS.map((i) => [i.id, i]));
 
-const APP_ACTIONS: AppAction[] = ["open", "closeTab", "nextTab", "previousTab", "back", "forward", "find", "toggleFocus", "toggleEdit", "preview", "source", "save", "saveAs"];
+const APP_ACTIONS: AppAction[] = ["open", "closeTab", "reopenTab", "nextTab", "previousTab", "back", "forward", "find", "toggleFocus", "toggleEdit", "preview", "source", "save", "saveAs"];
 const isAppAction = (id: ShortcutId): id is AppAction => (APP_ACTIONS as string[]).includes(id);
 const EDITOR_ACTIONS = ITEMS.map((i) => i.id).filter((id): id is FormatAction => !isAppAction(id));
 

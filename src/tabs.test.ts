@@ -9,10 +9,12 @@ import {
   go,
   goHome,
   historyTarget,
+  MAX_CLOSED,
   NO_TABS,
   openPaths,
   openTab,
   renamePath,
+  reopenTab,
   replaceCurrent,
   samePath,
   setScroll,
@@ -52,6 +54,51 @@ test("closing activates the right neighbor, or the left one at the end", () => {
   expect(empty.tabs).toEqual([]);
   expect(empty.active).toBeUndefined();
   expect(closeTab(s, 99)).toBe(s);
+});
+
+test("a closed tab reopens where it was, with its history and scroll position", () => {
+  let s = open("/a.md", "/b.md", "/c.md");
+  const b = s.tabs[1].id;
+  s = setScroll(openTab(activate(s, b), "/b2.md", b), s.nextId, 300); // /b2.md opened from /b.md, scrolled
+  const linked = s.tabs[2].id;
+  s = closeTab(s, linked);
+  expect(openPaths(s)).toEqual(["/a.md", "/b.md", "/c.md"]);
+  s = reopenTab(goHome(s));
+  expect(openPaths(s)).toEqual(["/a.md", "/b.md", "/b2.md", "/c.md"]);
+  expect(shownTab(s)?.entries).toEqual([
+    { path: "/b.md", scroll: 0 },
+    { path: "/b2.md", scroll: 300 },
+  ]);
+  expect(historyTarget(s, -1)).toBe("/b.md");
+});
+
+test("reopening goes back through the closed tabs, most recent first", () => {
+  let s = open("/a.md", "/b.md", "/c.md");
+  const [a, , c] = s.tabs.map((t) => t.id);
+  s = closeTab(closeTab(s, c), a);
+  s = reopenTab(s);
+  expect(openPaths(s)).toEqual(["/a.md", "/b.md"]);
+  s = reopenTab(s);
+  expect(openPaths(s)).toEqual(["/a.md", "/b.md", "/c.md"]);
+  expect(activePath(s)).toBe("/c.md");
+  expect(reopenTab(s)).toBe(s); // nothing left to reopen
+});
+
+test("reopening a document another tab shows switches to that tab", () => {
+  let s = open("/a.md", "/b.md");
+  s = openTab(closeTab(s, s.tabs[0].id), "/a.md");
+  const reopened = reopenTab(activate(s, s.tabs[0].id));
+  expect(reopened.tabs).toHaveLength(2);
+  expect(activePath(reopened)).toBe("/a.md");
+  expect(reopened.closed).toEqual([]);
+});
+
+test("only the latest closed tabs are kept, and none across launches", () => {
+  let s = open(...Array.from({ length: MAX_CLOSED + 5 }, (_, i) => `/${i}.md`));
+  for (const t of [...s.tabs]) s = closeTab(s, t.id);
+  expect(s.closed).toHaveLength(MAX_CLOSED);
+  expect(s.closed![s.closed!.length - 1].entries[0].path).toBe(`/${MAX_CLOSED + 4}.md`);
+  expect(fromStored(JSON.parse(JSON.stringify(toStored(s)))).closed).toBeUndefined();
 });
 
 test("cycling wraps around", () => {
