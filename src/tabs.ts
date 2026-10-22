@@ -83,6 +83,19 @@ export function reopenTab(s: Tabs): Tabs {
   return { ...s, tabs: [...s.tabs.slice(0, at), tab, ...s.tabs.slice(at)], active: tab.id, nextId: s.nextId + 1, home: false, closed };
 }
 
+/** Moves tab `id` to place `to` among the other tabs (0 is first) and shows it. */
+export function moveTab(s: Tabs, id: number, to: number): Tabs {
+  const i = s.tabs.findIndex((t) => t.id === id);
+  if (i < 0) return s;
+  const rest = s.tabs.filter((t) => t.id !== id);
+  const at = Math.max(0, Math.min(to, rest.length));
+  if (at === i && s.active === id && !s.home) return s;
+  return { ...s, tabs: [...rest.slice(0, at), s.tabs[i], ...rest.slice(at)], active: id, home: false };
+}
+
+/** Where a dragged tab goes with the pointer at `x`: past every other tab whose middle (`mids`, left to right) is left of it. */
+export const dropIndex = (mids: number[], x: number) => mids.filter((m) => m < x).length;
+
 /** Activates the tab `step` places away from the active one, wrapping around. */
 export function cycle(s: Tabs, step: number): Tabs {
   const n = s.tabs.length;

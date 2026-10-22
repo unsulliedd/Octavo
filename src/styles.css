@@ -233,6 +233,22 @@ input:focus-visible {
   color: var(--ink);
   box-shadow: 0 0 0 1px var(--line);
 }
+/* Dragged to a new place: lifted above the others, which make room for it. */
+.tab[data-dragging] {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 6px 16px rgb(0 0 0 / 0.18);
+}
+.tab[data-dragging],
+.tab[data-dragging] .tab-open {
+  cursor: grabbing;
+}
+.tabs:has(.tab[data-dragging]) {
+  user-select: none;
+}
 .tab-open {
   display: flex;
   align-items: center;
