@@ -4,6 +4,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+### Fixed
+- Octavo keeps its settings, open tabs, recent files, backups and What's new pages in a folder named Octavo (`%APPDATA%\Octavo`) instead of one named after its internal identifier. Settings, tabs and recent files start fresh once. Uninstalling with "Delete the application data" removes this folder too
+
 ## [0.5.1] - 2026-10-22
 
 ### Fixed
