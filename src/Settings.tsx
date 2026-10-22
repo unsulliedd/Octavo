@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { message } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
-import { Icon } from "./icons";
+import { Icon, Logo } from "./icons";
+import { LINKS } from "./links";
 import { Segmented } from "./ReadingSettings";
 import { ShortcutSettings } from "./ShortcutSettings";
 import type { Prefs } from "./storage";
@@ -19,11 +21,18 @@ type Props = {
   onWhatsNew: () => void;
 };
 
-const SECTIONS = { editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", updates: "Updates" } as const;
+const SECTIONS = { editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
+
+/** The About section's links that open in the browser. */
+const ABOUT_LINKS = [
+  ["Release notes", LINKS.releases],
+  ["Source code", LINKS.repository],
+  ["Report a problem", LINKS.newIssue],
+] as const;
 
 /**
- * The settings that aren't about reading: where the editing tools go, saving, keyboard shortcuts and updates. A list of sections
- * on the left picks the one shown. Closes on Escape or a click beside it.
+ * The settings that aren't about reading: where the editing tools go, saving, keyboard shortcuts, and About with updates. A list
+ * of sections on the left picks the one shown. Closes on Escape or a click beside it.
  */
 export function Settings({ prefs, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew }: Props) {
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
@@ -157,35 +166,53 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
               </div>
             )}
             {section === "shortcuts" && <ShortcutSettings bindings={prefs.shortcuts} onChange={(shortcuts) => set({ shortcuts })} />}
-            {section === "updates" && (
+            {section === "about" && (
               <div className="settings-section">
-                <label className="setting-row">
+                <div className="about-head">
+                  <Logo size={48} />
                   <span>
-                    Check for updates when Octavo starts
-                    <span className="setting-hint">A newer release downloads in the background and installs when you restart Octavo.</span>
+                    <strong>Octavo</strong>
+                    <span className="setting-hint">Version {version} · Markdown reader and editor for Windows</span>
                   </span>
-                  <input type="checkbox" checked={prefs.checkUpdates} onChange={(e) => set({ checkUpdates: e.target.checked })} />
-                </label>
-                <div className="setting-row">
-                  <span aria-live="polite">
-                    Octavo {version}
-                    {statusLine(update) && <span className="setting-hint">{statusLine(update)}</span>}
-                  </span>
-                  {update.state === "ready" || update.state === "installing" ? (
-                    <button className="text-btn primary" disabled={update.state === "installing"} onClick={onRestart}>
-                      Restart now
-                    </button>
-                  ) : (
-                    <button className="text-btn" disabled={busy(update)} onClick={onCheckUpdate}>
-                      Check now
-                    </button>
-                  )}
                 </div>
-                <div className="setting-row">
-                  <span className="setting-hint">The changes in this version, as a document.</span>
+                <div className="about-links" role="group" aria-label="Links">
                   <button className="text-btn" onClick={onWhatsNew}>
                     What's new
                   </button>
+                  {ABOUT_LINKS.map(([label, url]) => (
+                    <button key={label} className="text-btn with-icon" onClick={() => void openUrl(url)}>
+                      {label}
+                      <Icon name="external" size={12} />
+                    </button>
+                  ))}
+                </div>
+                <span className="setting-hint">
+                  Free and open source under the MIT license. © 2026 unsulliedd.{" "}
+                  <button className="link-btn" onClick={() => void openUrl(LINKS.license)}>
+                    License
+                  </button>
+                </span>
+                <div className="about-updates">
+                  <span className="setting-label">Updates</span>
+                  <label className="setting-row">
+                    <span>
+                      Check for updates when Octavo starts
+                      <span className="setting-hint">A newer release downloads in the background and installs when you restart Octavo.</span>
+                    </span>
+                    <input type="checkbox" checked={prefs.checkUpdates} onChange={(e) => set({ checkUpdates: e.target.checked })} />
+                  </label>
+                  <div className="setting-row">
+                    <span aria-live="polite">{statusLine(update) || "Look for a newer release now."}</span>
+                    {update.state === "ready" || update.state === "installing" ? (
+                      <button className="text-btn primary" disabled={update.state === "installing"} onClick={onRestart}>
+                        Restart now
+                      </button>
+                    ) : (
+                      <button className="text-btn" disabled={busy(update)} onClick={onCheckUpdate}>
+                        Check now
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

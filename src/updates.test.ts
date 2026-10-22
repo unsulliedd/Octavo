@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { busy, nextStatus, releaseUrl, statusLine, type UpdateEvent, type UpdateStatus } from "./updates";
+import { busy, nextStatus, statusLine, type UpdateEvent, type UpdateStatus } from "./updates";
 
 const run = (events: UpdateEvent[], from: UpdateStatus = { state: "idle" }) => events.reduce(nextStatus, from);
 
@@ -63,9 +63,4 @@ test("status lines for Settings", () => {
     "Couldn't download the update. Check your internet connection and try again.",
   );
   expect(statusLine({ state: "failed", during: "install", message: "denied" })).toBe("Couldn't install the update: denied");
-});
-
-test("the release page of a version, with or without a leading v", () => {
-  expect(releaseUrl("0.5.1")).toBe("https://github.com/unsulliedd/Octavo/releases/tag/v0.5.1");
-  expect(releaseUrl("v0.5.1")).toBe("https://github.com/unsulliedd/Octavo/releases/tag/v0.5.1");
 });

@@ -4,6 +4,12 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+### Added
+- Settings has an About section: Octavo's version, What's new, links to the release notes, the source code and a new problem report on GitHub, and the license
+
+### Changed
+- The update settings (Check for updates when Octavo starts, Check now and Restart now) are at the bottom of About; the Updates section is gone
+
 ## [0.5.2] - 2026-10-22
 
 ### Fixed
