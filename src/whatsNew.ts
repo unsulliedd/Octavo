@@ -1,6 +1,6 @@
 // What's new: the release notes of a version as a document, opened after an update or from the update popover.
 
-const RELEASES = "https://github.com/unsulliedd/Octavo/releases";
+import { LINKS } from "./links";
 
 /**
  * The body of `version`'s section in a Keep a Changelog file (`## [0.5.0] - 2026-10-22` up to the next
@@ -21,7 +21,7 @@ export function changelogSection(changelog: string, version: string): { date?: s
 export function notesPage(version: string, notes: string, date?: string): string {
   const parts = [`# What's new in Octavo ${version}`];
   if (date) parts.push(`Released ${date}`);
-  parts.push(notes.trim() || "No notes for this release.", `[All releases](${RELEASES})`);
+  parts.push(notes.trim() || "No notes for this release.", `[All releases](${LINKS.releases})`);
   return parts.join("\n\n") + "\n";
 }
 

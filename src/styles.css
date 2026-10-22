@@ -1659,6 +1659,30 @@ button.save-state {
   height: 16px;
   accent-color: var(--accent);
 }
+/* About: the mark and version, links, then the updates below a line */
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.about-head strong {
+  font-size: 16px;
+}
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.setting-hint .link-btn {
+  font-size: inherit;
+}
+.about-updates {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
 /* Shortcuts: one bordered list per group, a row per action */
 .settings-section.shortcuts {
   gap: 18px;

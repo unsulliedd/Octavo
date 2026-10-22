@@ -26,7 +26,7 @@ import { ReadingSettings } from "./ReadingSettings";
 import { Settings } from "./Settings";
 import { SourcePane } from "./SourcePane";
 import { UpdatePopover } from "./UpdatePopover";
-import { releaseUrl } from "./updates";
+import { releaseUrl } from "./links";
 import { useUpdates } from "./useUpdates";
 import { changelogSection, notesPage, showAfterUpdate } from "./whatsNew";
 import type { SourceEditor } from "./sourceEditor";

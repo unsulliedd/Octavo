@@ -3,8 +3,6 @@
 /** How long after launch the first check waits, so it doesn't compete with opening documents. */
 export const CHECK_DELAY_MS = 5000;
 
-const RELEASES = "https://github.com/unsulliedd/Octavo/releases";
-
 /**
  * `manual` marks a check started from Settings: its outcome is shown there. A check on launch that finds
  * nothing, or fails, says nothing.
@@ -73,6 +71,3 @@ export function statusLine(status: UpdateStatus): string {
       return `Couldn't install the update: ${status.message}`;
   }
 }
-
-/** The release page of `version`, with its notes. */
-export const releaseUrl = (version: string) => `${RELEASES}/tag/v${version.replace(/^v/, "")}`;
