@@ -4,6 +4,8 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-22
+
 ### Fixed
 - An image added from inside the document's repository or folder is linked where it is, also when its path is written with different capital letters; it was copied into the image folder before
 
