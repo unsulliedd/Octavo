@@ -3,8 +3,16 @@
 
 export type Entry = { path: string; scroll: number };
 export type Tab = { id: number; entries: Entry[]; index: number };
-/** `home` shows the home screen while tabs stay open; showing any tab leaves it. */
-export type Tabs = { tabs: Tab[]; active?: number; nextId: number; home?: boolean };
+/** A closed tab, kept so it can be reopened: its history and the place it had in the tab strip. */
+export type ClosedTab = { entries: Entry[]; index: number; at: number };
+/**
+ * `home` shows the home screen while tabs stay open; showing any tab leaves it. `closed` holds the tabs closed
+ * since launch, the most recent last.
+ */
+export type Tabs = { tabs: Tab[]; active?: number; nextId: number; home?: boolean; closed?: ClosedTab[] };
+
+/** How many closed tabs can be reopened. */
+export const MAX_CLOSED = 20;
 
 export const NO_TABS: Tabs = { tabs: [], nextId: 1 };
 
@@ -41,18 +49,38 @@ export function openTab(s: Tabs, path: string, from?: number): Tabs {
   const entries = [...(source ? source.entries.slice(0, source.index + 1) : []), { path, scroll: 0 }];
   const tab: Tab = { id: s.nextId, entries, index: entries.length - 1 };
   const at = s.tabs.findIndex((t) => t.id === s.active) + 1 || s.tabs.length;
-  return { tabs: [...s.tabs.slice(0, at), tab, ...s.tabs.slice(at)], active: tab.id, nextId: s.nextId + 1, home: false };
+  return { ...s, tabs: [...s.tabs.slice(0, at), tab, ...s.tabs.slice(at)], active: tab.id, nextId: s.nextId + 1, home: false };
 }
 
 export const activate = (s: Tabs, id: number): Tabs => (s.tabs.some((t) => t.id === id) ? { ...s, active: id, home: false } : s);
 
-/** Closes a tab. Closing the active tab activates its right neighbor, or the left one at the end. */
+/**
+ * Closes a tab and keeps it for `reopenTab`. Closing the active tab activates its right neighbor, or the left one
+ * at the end.
+ */
 export function closeTab(s: Tabs, id: number): Tabs {
   const i = s.tabs.findIndex((t) => t.id === id);
   if (i < 0) return s;
+  const { entries, index } = s.tabs[i];
+  const closed = [...(s.closed ?? []), { entries, index, at: i }].slice(-MAX_CLOSED);
   const tabs = s.tabs.filter((t) => t.id !== id);
   const active = s.active === id ? tabs[Math.min(i, tabs.length - 1)]?.id : s.active;
-  return { ...s, tabs, active };
+  return { ...s, tabs, active, closed };
+}
+
+/**
+ * Reopens the most recently closed tab where it was, with its history and scroll positions, and shows it. When
+ * another tab already shows its document, that tab is shown instead.
+ */
+export function reopenTab(s: Tabs): Tabs {
+  const last = s.closed?.[s.closed.length - 1];
+  if (!last) return s;
+  const closed = s.closed!.slice(0, -1);
+  const existing = tabFor(s, last.entries[last.index].path);
+  if (existing) return { ...s, active: existing.id, home: false, closed };
+  const tab: Tab = { id: s.nextId, entries: last.entries, index: last.index };
+  const at = Math.min(last.at, s.tabs.length);
+  return { ...s, tabs: [...s.tabs.slice(0, at), tab, ...s.tabs.slice(at)], active: tab.id, nextId: s.nextId + 1, home: false, closed };
 }
 
 /** Activates the tab `step` places away from the active one, wrapping around. */

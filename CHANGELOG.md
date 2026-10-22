@@ -6,6 +6,7 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ### Added
 - Settings has an About section: Octavo's version, What's new, links to the release notes, the source code and a new problem report on GitHub, and the license
+- Reopen closed tab (Ctrl+Shift+T) brings back the last closed tab where it was, with its back and forward history and scroll position; pressing it again goes further back. It can be given other keys in Settings › Shortcuts
 - Octavo opens at the size and position its window had when it was closed, maximized again if it was; a window that would land on a monitor that's no longer connected opens centered instead
 
 ### Changed
