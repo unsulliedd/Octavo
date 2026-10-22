@@ -90,6 +90,16 @@ fn link_root(doc_dir: &Path) -> &Path {
         .unwrap_or(doc_dir)
 }
 
+/// Whether `file` is inside `dir`. With `ignore_case`, letters compare without regard to case, as Windows
+/// paths do.
+fn is_inside(file: &Path, dir: &Path, ignore_case: bool) -> bool {
+    if !ignore_case {
+        return file.starts_with(dir);
+    }
+    let lower = |p: &Path| PathBuf::from(p.to_string_lossy().to_lowercase());
+    lower(file).starts_with(lower(dir))
+}
+
 /// The image file a document in `doc_dir` links for `file`: `file` itself when it is inside the document's
 /// repository (or folder), otherwise a copy of it in the document's image folder.
 pub fn place(doc_dir: &Path, file: &Path) -> io::Result<PathBuf> {
@@ -99,8 +109,7 @@ pub fn place(doc_dir: &Path, file: &Path) -> io::Result<PathBuf> {
             "not an image file",
         ));
     }
-    // Limitation: paths compare by their text, so a different letter case on Windows copies instead of linking
-    if file.starts_with(link_root(doc_dir)) {
+    if is_inside(file, link_root(doc_dir), cfg!(windows)) {
         return Ok(file.to_path_buf());
     }
     let name = file.file_name().unwrap_or_default().to_string_lossy();
@@ -184,6 +193,57 @@ mod tests {
         assert_eq!(again, docs.join("images").join("b.png"));
         assert_eq!(std::fs::read(&again).unwrap(), b"b");
         assert!(place(&docs, &docs.join("notes.md")).is_err());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn inside_a_folder_by_case_only_when_asked() {
+        let repo = Path::new("/Users/Me/Notes");
+        assert!(is_inside(
+            Path::new("/Users/Me/Notes/img/a.png"),
+            repo,
+            false
+        ));
+        assert!(!is_inside(
+            Path::new("/users/me/notes/img/a.png"),
+            repo,
+            false
+        ));
+        assert!(is_inside(
+            Path::new("/users/me/notes/img/a.png"),
+            repo,
+            true
+        ));
+        assert!(is_inside(Path::new("/USERS/ME/NOTES/a.png"), repo, true));
+        // A folder whose name only starts the same isn't inside.
+        assert!(!is_inside(
+            Path::new("/users/me/notes-old/a.png"),
+            repo,
+            true
+        ));
+        assert!(!is_inside(Path::new("/users/me/a.png"), repo, true));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn links_an_image_whose_path_differs_only_in_letter_case() {
+        let root = std::env::temp_dir().join(format!("octavo-case-{}", std::process::id()));
+        let docs = root.join("Notes");
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(docs.join("img")).unwrap();
+        std::fs::write(docs.join("img").join("a.png"), b"a").unwrap();
+        let other_case = PathBuf::from(
+            docs.join("img")
+                .join("A.PNG")
+                .to_string_lossy()
+                .to_uppercase(),
+        );
+        assert_eq!(place(&docs, &other_case).unwrap(), other_case);
+        assert_eq!(
+            std::fs::read_dir(docs.join("img")).unwrap().count(),
+            1,
+            "nothing was copied"
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 

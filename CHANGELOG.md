@@ -4,6 +4,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+### Fixed
+- An image added from inside the document's repository or folder is linked where it is, also when its path is written with different capital letters; it was copied into the image folder before
+
 ## [0.5.0] - 2026-10-22
 
 The first release of Octavo, a Markdown reader and editor for Windows. Free and open source under the MIT license.
