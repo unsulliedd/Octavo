@@ -8,6 +8,7 @@ use std::path::Path;
 use std::time::Duration;
 use tauri::{Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
+use tauri_plugin_window_state::StateFlags;
 
 #[derive(serde::Serialize)]
 struct Doc {
@@ -148,6 +149,12 @@ fn initial_file() -> Option<String> {
     file_arg(&args, &std::env::current_dir().ok()?)
 }
 
+/// What the window keeps between launches: its size, position and whether it was maximized. Not whether
+/// it is shown, since the webview shows it after its first render, and not full screen.
+fn window_state_flags() -> StateFlags {
+    StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -164,6 +171,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(window_state_flags())
+                .build(),
+        )
         .manage(watch::DocWatcher::default())
         // The window starts hidden and the webview shows it after its first render. If that never
         // happens, it is shown anyway.
@@ -199,6 +211,18 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn the_window_keeps_its_size_position_and_maximized_state_only() {
+        let flags = window_state_flags();
+        assert!(flags.contains(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED));
+        assert!(
+            !flags
+                .intersects(StateFlags::VISIBLE | StateFlags::FULLSCREEN | StateFlags::DECORATIONS)
+        );
+    }
+
     /// The uninstaller's Delete app data option removes the folder the app keeps its data in.
     #[test]
     fn uninstaller_removes_the_data_folder() {

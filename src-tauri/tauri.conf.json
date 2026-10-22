@@ -16,6 +16,7 @@
         "title": "Octavo",
         "width": 960,
         "height": 900,
+        "center": true,
         "visible": false,
         "backgroundColor": "#f3f4f6"
       }
