@@ -21,7 +21,7 @@ type Props = {
   onWhatsNew: () => void;
 };
 
-const SECTIONS = { editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
+const SECTIONS = { reading: "Reading", editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
 
 /** The About section's links that open in the browser. */
 const ABOUT_LINKS = [
@@ -31,12 +31,13 @@ const ABOUT_LINKS = [
 ] as const;
 
 /**
- * The settings that aren't about reading: where the editing tools go, saving, keyboard shortcuts, and About with updates. A list
- * of sections on the left picks the one shown. Closes on Escape or a click beside it.
+ * The settings beyond the quick reading ones in Reading settings: reading, where the editing tools go, saving, keyboard
+ * shortcuts, and About with updates. A list of sections on the left picks the one shown. Closes on Escape or a click
+ * beside it.
  */
 export function Settings({ prefs, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew }: Props) {
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
-  const [section, setSection] = useState<keyof typeof SECTIONS>("editing");
+  const [section, setSection] = useState<keyof typeof SECTIONS>("reading");
 
   return (
     <div
@@ -72,6 +73,21 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                 </button>
               )}
             </div>
+            {section === "reading" && (
+              <div className="settings-section">
+                <Segmented
+                  label="Open diagrams and images large"
+                  value={prefs.openLarge}
+                  onPick={(openLarge) => set({ openLarge })}
+                  options={[
+                    { value: "button", label: "Button" },
+                    { value: "click", label: "Click" },
+                    { value: "both", label: "Both" },
+                  ]}
+                  hint="With a button at their top right, a click on them, or both. Tables open from their button."
+                />
+              </div>
+            )}
             {section === "editing" && (
               <div className="settings-section">
                 <Segmented

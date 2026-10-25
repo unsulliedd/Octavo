@@ -8,6 +8,9 @@ import type { TableWidths } from "./tableWidths";
 export type Theme = "light" | "dark" | "system";
 export const LINE_WIDTHS = ["narrow", "medium", "default", "wide", "wider"] as const;
 export type LineWidth = (typeof LINE_WIDTHS)[number];
+/** How diagrams and images open large from the reading view: from a button on them, a click on them, or both. */
+export const OPEN_LARGE = ["button", "click", "both"] as const;
+export type OpenLarge = (typeof OPEN_LARGE)[number];
 export type Prefs = {
   theme: Theme;
   font: "sans" | "serif";
@@ -22,6 +25,8 @@ export type Prefs = {
   backups: boolean;
   /** Tables and code blocks wider than the text column grow into the space beside it. */
   wideBlocks: boolean;
+  /** How diagrams and images open large; tables always open from their button. */
+  openLarge: OpenLarge;
   /** Where the formatting buttons sit in their row while editing. */
   formatBarAlign: "left" | "center";
   /** The formatting bar: a row under the toolbar, floating over selected text, both, or none. */
@@ -41,7 +46,7 @@ export type Prefs = {
 };
 export type RecentFile = { path: string; at: number };
 
-export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, properties: true, autosave: true, backups: true, wideBlocks: false, formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true };
+export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true };
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -61,9 +66,12 @@ export function save(key: "prefs" | "recent" | "pinned" | "tabs" | "tableWidths"
 /** A stored line width, or the default one for anything that isn't a line width. */
 export const lineWidth = (v: unknown): LineWidth => (LINE_WIDTHS.includes(v as LineWidth) ? (v as LineWidth) : DEFAULT_PREFS.width);
 
+/** A stored way of opening diagrams and images large, or the default one for anything else. */
+export const openLarge = (v: unknown): OpenLarge => (OPEN_LARGE.includes(v as OpenLarge) ? (v as OpenLarge) : DEFAULT_PREFS.openLarge);
+
 export const loadPrefs = (): Prefs => {
   const stored = load<Partial<Prefs>>("prefs", {});
-  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), shortcuts: sanitizeBindings(stored.shortcuts) };
+  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), shortcuts: sanitizeBindings(stored.shortcuts) };
 };
 export const loadTabs = () => fromStored(load<unknown>("tabs", null));
 export const loadTableWidths = () => {

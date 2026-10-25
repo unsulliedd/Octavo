@@ -19,6 +19,8 @@ import { FindBar } from "./FindBar";
 import { basename, folderTrail, Home } from "./Home";
 import { Icon } from "./icons";
 import { pastedName, watchBrokenImages } from "./images";
+import { addOpenButtons, largeContent, type LargeContent } from "./largeView";
+import { LargeViewer } from "./LargeViewer";
 import { widenBlocks } from "./breakout";
 import { afterPaint } from "./paint";
 import { shareInFlight } from "./shared";
@@ -167,6 +169,8 @@ export default function App() {
   const [showUpdate, setShowUpdate] = useState(false);
   const updates = useUpdates(prefs.checkUpdates);
   const [focusMode, setFocusMode] = useState(false);
+  // The diagram, image or table open large over the window.
+  const [large, setLarge] = useState<LargeContent>();
   const [find, setFind] = useState({ open: false, query: "", focusKey: 0 });
   // Counts finished renders of the document (after diagrams), so find searches the final DOM.
   const [rendered, setRendered] = useState(0);
@@ -938,8 +942,8 @@ export default function App() {
   /** A tooltip with the action's current keys after it. */
   const tip = (label: string, id: ShortcutId) => withKeys(label, bindings, id);
   const focusKey = keyLabel(bindings, "toggleFocus");
-  const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages });
-  latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages };
+  const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large });
+  latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large };
 
   useEffect(() => {
     // The first launch after an update opens What's new; a file passed on the command line opens after it.
@@ -972,6 +976,8 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       // A key the editor used for one of its shortcuts is not the window's too.
       if (e.defaultPrevented) return;
+      // The large view takes the keys while it is open.
+      if (latest.current.largeOpen) return;
       const action = shortcut(e, latest.current.bindings, latest.current.state);
       if (!action) return;
       e.preventDefault();
@@ -1071,6 +1077,14 @@ export default function App() {
     };
   }, [shownHtml, editing, dark, doc?.path, prefs.size, prefs.font, prefs.width, prefs.wideBlocks]);
 
+  // Buttons that open tables, and with the reading settings' option diagrams and images, large. Added again once
+  // the diagrams are drawn, since they come after the rest of the document.
+  useLayoutEffect(() => {
+    const root = article.current;
+    if (!root || editing || shownHtml === undefined) return;
+    return addOpenButtons(root, prefs.openLarge !== "click");
+  }, [shownHtml, editing, rendered, prefs.openLarge]);
+
   // Back in a tab, or switching tabs, returns to where that document was scrolled to.
   const entryKey = tab && doc ? `${tab.id}:${tab.index}:${doc.path}` : undefined;
   useLayoutEffect(() => {
@@ -1144,7 +1158,12 @@ export default function App() {
     setActiveId(current);
   }, [headings]);
 
-  // Links never navigate the webview: fragments scroll, URLs go to the browser, .md links open here.
+  // The large view closes when another document is shown.
+  useEffect(() => setLarge(undefined), [path, tab?.id]);
+
+  // Links never navigate the webview: fragments scroll, URLs go to the browser, .md links open here. An open button
+  // opens its table, diagram or image large; so does a click on a diagram or an image that isn't a link, when the
+  // reading settings say so.
   function onDocClick(e: React.MouseEvent) {
     const copy = (e.target as HTMLElement).closest<HTMLButtonElement>(".code-copy");
     if (copy) {
@@ -1154,6 +1173,16 @@ export default function App() {
         () => (copy.textContent = "Copy failed"),
       );
       setTimeout(() => (copy.textContent = "Copy"), 1500);
+      return;
+    }
+    const opened = article.current && largeContent(e.target as Element, article.current, {
+        editing,
+        selecting: window.getSelection()?.isCollapsed === false,
+        click: prefs.openLarge !== "button",
+      });
+    if (opened) {
+      e.preventDefault();
+      setLarge(opened);
       return;
     }
     const href = (e.target as HTMLElement).closest("a")?.getAttribute("href");
@@ -1443,6 +1472,7 @@ export default function App() {
                     <article
                       key={`${doc.path}:${dark}:${draft ? "draft" : "file"}`}
                       className="doc"
+                      data-click-large={prefs.openLarge !== "button" || undefined}
                       ref={article}
                       onClick={onDocClick}
                       dangerouslySetInnerHTML={{ __html: shownHtml }}
@@ -1631,6 +1661,7 @@ export default function App() {
           </>
         )}
       </footer>
+      {large && <LargeViewer content={large} onClose={() => setLarge(undefined)} />}
     </div>
   );
 

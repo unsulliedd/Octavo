@@ -1,4 +1,8 @@
 // Lucide icon paths (ISC license), inlined so the app needs no icon package.
+
+/** The "expand" icon's path, also drawn by the buttons added to tables in the reading view. */
+export const EXPAND_PATH = "M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7";
+
 const paths = {
   sidebar: (
     <>
@@ -203,6 +207,7 @@ const paths = {
   ),
   warning: <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" />,
   external: <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />,
+  expand: <path d={EXPAND_PATH} />,
   folder: <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />,
 };
 
