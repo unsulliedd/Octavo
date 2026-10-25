@@ -2108,6 +2108,7 @@ kbd {
 }
 /* A table scrolls sideways in its box when it's wider than the column. */
 .doc .table-scroll {
+  position: relative;
   margin: 0 0 18px;
   overflow-x: auto;
 }
@@ -2400,20 +2401,24 @@ kbd {
   flex-direction: column;
 }
 /* Scrolls when the zoomed drawing is bigger than the preview; centred when it is smaller. */
-.mermaid-canvas {
+.mermaid-canvas,
+.large-body {
   flex: 1;
   min-height: 0;
   display: flex;
   padding: 16px;
   overflow: auto;
 }
-.mermaid-canvas > * {
+.mermaid-canvas > *,
+.large-body > * {
   margin: auto;
 }
-.mermaid-canvas[data-pannable] {
+.mermaid-canvas[data-pannable],
+.large-body[data-pannable] {
   cursor: grab;
 }
-.mermaid-canvas[data-dragging] {
+.mermaid-canvas[data-dragging],
+.large-body[data-dragging] {
   cursor: grabbing;
   user-select: none;
 }
@@ -2462,4 +2467,161 @@ kbd {
 }
 .mermaid-editor-foot .muted {
   flex: 1;
+}
+
+/* Diagrams, images and tables open large from the reading view. A click on a diagram or image opens it when the
+   reading settings say so; otherwise, and for tables always, the button at its top right corner does. */
+.doc[data-click-large] .mermaid svg,
+.doc[data-click-large] img {
+  cursor: zoom-in;
+}
+.doc[data-click-large] a img {
+  cursor: pointer;
+}
+.doc .mermaid {
+  position: relative;
+}
+/* An image with its open button */
+.doc .large-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: bottom;
+}
+/* The button that opens a table, diagram or image large; shown while the pointer is over it or the button has focus. */
+.doc .large-open {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--doc);
+  color: var(--muted);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+}
+/* A table's button is placed from the left, since the table can scroll sideways in its box. */
+.doc .table-scroll > .large-open {
+  right: auto;
+  left: 0;
+}
+.doc .table-scroll:hover > .large-open,
+.doc .mermaid:hover > .large-open,
+.doc .large-frame:hover > .large-open,
+.doc .large-open:focus-visible {
+  opacity: 1;
+}
+.doc .large-open:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+/* An image that couldn't be loaded has nothing to open. */
+.doc .large-frame:not(:has(img)) > .large-open {
+  display: none;
+}
+.large-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  padding: 24px;
+  background: rgb(10 12 16 / 0.62);
+}
+.large-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--doc);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
+  overflow: hidden;
+}
+/* A table's panel is only as tall as the table, centered, and scrolls once it reaches the window's height. */
+.large-panel[data-kind="table"] {
+  align-self: center;
+  max-height: 100%;
+}
+.large-panel[data-kind="table"] > .large-body {
+  flex: 0 1 auto;
+}
+.large-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.large-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.large-body[data-kind="image"] {
+  background: var(--chrome);
+}
+.large-image {
+  display: block;
+  flex: none;
+  max-width: none;
+}
+/* A table fills the view's width, and scrolls inside it when it is wider. */
+.large-body[data-kind="table"] {
+  display: block;
+  padding: 28px 32px;
+}
+.large-body[data-kind="table"] > * {
+  margin: 0;
+}
+.large-table {
+  display: flow-root;
+  width: max-content;
+  min-width: 100%;
+}
+.large-table table {
+  min-width: 100%;
+  margin: 0;
+}
+.large-foot {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.large-controls,
+.large-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.large-zoom input {
+  width: 200px;
+  accent-color: var(--accent);
+}
+.large-zoom output {
+  min-width: 4ch;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
