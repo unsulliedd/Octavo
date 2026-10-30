@@ -5,6 +5,8 @@
 # and a document the editor can open; otherwise the cell is empty.
 # Limitation: UI Automation makes the webview build its accessibility tree, so large documents read slower
 # than they feel; compare runs with each other, not with a stopwatch.
+# Limitation: UI Automation sometimes loses a press before it reaches the page. Done appears as soon as a press
+# lands, so without it Edit is pressed again and the time starts over.
 # "Rendered" = the window title changes to "<file> — Octavo", which App.tsx sets right after the
 # render pipeline finishes. Mermaid diagrams render after that. Polling resolution is ~15 ms.
 param(
@@ -23,12 +25,18 @@ function Find-Named($root, $name) {
 # Milliseconds from pressing Edit to the editor being ready, or $null if it never is.
 function Measure-Editor($process) {
   $root = [Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
-  $edit = $null
-  $wait = [Diagnostics.Stopwatch]::StartNew()
-  while (-not $edit -and $wait.ElapsedMilliseconds -lt 5000) { $edit = Find-Named $root "Edit" }
-  if (-not $edit) { return $null }
-  $sw = [Diagnostics.Stopwatch]::StartNew()
-  $edit.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+  $done = $null
+  foreach ($press in 1..3) {
+    $edit = $null
+    $wait = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $edit -and $wait.ElapsedMilliseconds -lt 5000) { $edit = Find-Named $root "Edit" }
+    if (-not $edit) { return $null }
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $edit.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+    while (-not $done -and $sw.ElapsedMilliseconds -lt 5000) { $done = Find-Named $root "Done" }
+    if ($done) { break }
+  }
+  if (-not $done) { return $null }
   while (-not (Find-Named $root "Bold (Ctrl+B)")) {
     if ($sw.ElapsedMilliseconds -gt 20000) { return $null }
   }
