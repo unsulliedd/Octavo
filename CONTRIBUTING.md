@@ -20,7 +20,7 @@ Pass a file to open it on start: `npm run tauri dev -- -- -- path/to/file.md`.
 | `npm test` | Unit tests (render pipeline, editor and saving, find, tabs) |
 | `npm run fidelity` | Editor round-trip report, see [docs/editor-fidelity.md](docs/editor-fidelity.md) |
 | `npx tauri build --no-bundle` | Release executable without installers |
-| `npm run perf` | Launch-to-rendered timing of the release build (Windows) |
+| `npm run perf` | Launch-to-rendered and Edit-to-editor timing of the release build (Windows) |
 | `npm run updater-test` | Builds an old copy and an update, and serves them locally to try the updater (Windows, needs the updater key) |
 | `npm run perf:render` | Render pipeline timing on ~1 MB documents, compared with `main` (`BASE=<git ref>` for another version) |
 
