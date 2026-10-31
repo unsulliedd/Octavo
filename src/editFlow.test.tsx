@@ -7,7 +7,24 @@ import { clearMocks, mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { EditorView } from "@codemirror/view";
 import App from "./App";
+
+// Limitation: no edit made in the editor was found whose Markdown reopens differently, so the "not exact"
+// test makes the real editor session report its snapshot as inexact instead.
+const inexact = vi.hoisted(() => ({ on: false }));
+vi.mock("./editor/session", async (original) => {
+  const real = await original<typeof import("./editor/session")>();
+  return {
+    ...real,
+    createEditor: async (...args: Parameters<typeof real.createEditor>) => {
+      const session = await real.createEditor(...args);
+      const snapshot = session.snapshot;
+      session.snapshot = (base) => ({ ...snapshot(base), exact: !inexact.on });
+      return session;
+    },
+  };
+});
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -22,6 +39,17 @@ let writes: string[];
 let attempts: string[];
 let answer: boolean;
 let askings: string[];
+/** The save_doc paths the disk accepted, in order. */
+let savedPaths: string[];
+/** When set, save_doc refuses with this message. */
+let refuse: string | undefined;
+/** The button picked in the Save / Don't save / Cancel dialog, and the dialogs shown. */
+let choice: "Save" | "Don't save" | "Cancel";
+let questions: string[];
+/** The path the Save As dialog returns. */
+let savePath: string | null;
+/** How many times the window was destroyed (closed). */
+let destroyed: number;
 
 const settle = (ms = 0) => act(() => new Promise<void>((done) => setTimeout(done, ms)));
 /** Waits (in real time) until `check` holds. */
@@ -40,6 +68,13 @@ beforeEach(async () => {
   attempts = [];
   askings = [];
   answer = true;
+  savedPaths = [];
+  refuse = undefined;
+  choice = "Save";
+  questions = [];
+  savePath = null;
+  destroyed = 0;
+  inexact.on = false;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
   window.requestAnimationFrame = (cb) => window.setTimeout(() => cb(performance.now()), 0);
@@ -68,19 +103,30 @@ beforeEach(async () => {
         }
         case "save_doc": {
           attempts.push(a.text);
+          if (refuse) throw refuse;
           // The file must still hold the text the edits were made to.
           if (a.expected != null && disk.get(a.path) !== a.expected) throw "The file changed on disk.";
           if (disk.get(a.path) === a.text) return false;
           disk.set(a.path, a.text);
           writes.push(a.text);
+          savedPaths.push(a.path);
           return true;
         }
         case "plugin:dialog|message": {
           // ask() resolves to whether the answer is the button it named as the confirming one.
+          if (a.buttons.YesNoCancelCustom) {
+            questions.push(a.message);
+            return choice;
+          }
           askings.push(a.message);
           const [ok, cancel] = a.buttons.OkCancelCustom;
           return answer ? ok : cancel;
         }
+        case "plugin:dialog|save":
+          return savePath;
+        case "plugin:window|destroy":
+          destroyed++;
+          return null;
         default:
           return null;
       }
@@ -122,6 +168,8 @@ async function type(text: string) {
   await act(async () => {
     p.firstChild!.nodeValue = text;
   });
+  // ProseMirror reads the mutation after a short delay, then the app marks the file unsaved.
+  await until(() => saveStateButton()?.dataset.state === "unsaved", "the edit to register");
 }
 
 const EDITED = "# Title\n\nChanged text.\n";
@@ -254,4 +302,276 @@ test("Reload from disk drops the edits and shows the changed file", async () => 
   await until(() => editorText().includes("Elsewhere."), "the editor to load the disk text");
   expect(writes).toEqual([]);
   expect(banner()).toBeUndefined();
+});
+
+// Paths where unsaved work could be lost: closing, failed saves, Save As, Source mode and the "not exact" refusal.
+
+const closeTabButton = () => host.querySelector<HTMLButtonElement>('button[aria-label^="Close note.md"]');
+const tabCount = () => host.querySelectorAll("[data-tab-id]").length;
+const saveStateButton = () => host.querySelector<HTMLButtonElement>("button.save-state");
+const errorBanner = () => host.querySelector(".error")?.textContent;
+/** The window is asked to close, as when its close button is pressed. */
+const closeWindow = () => act(async () => void (await emit("tauri://close-requested")));
+
+test("closing a tab with autosave on saves the edits first without asking", async () => {
+  await launch();
+  await startEditing();
+  await type("Changed text.");
+  await click(closeTabButton());
+  await until(() => tabCount() === 0, "the tab to close");
+  expect(questions).toEqual([]);
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("closing a tab with autosave off: Save writes the edits and closes", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  await click(closeTabButton());
+  await until(() => tabCount() === 0, "the tab to close");
+  expect(questions).toHaveLength(1);
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("closing a tab with autosave off: Don't save closes and leaves the file alone", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  choice = "Don't save";
+  await click(closeTabButton());
+  await until(() => tabCount() === 0, "the tab to close");
+  expect(attempts).toEqual([]);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test("closing a tab with autosave off: Cancel keeps the tab and the edits", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  choice = "Cancel";
+  await click(closeTabButton());
+  await until(() => questions.length === 1, "the question");
+  await settle(100);
+  expect(tabCount()).toBe(1);
+  expect(attempts).toEqual([]);
+  expect(editorText()).toContain("Changed text.");
+});
+
+test("a save that fails while closing a tab keeps the tab and the edits", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  refuse = "No space left on device";
+  answer = false;
+  await click(closeTabButton());
+  await until(() => askings.length === 1, "the question");
+  await settle(100);
+  expect(askings[0]).toContain("No space left on device");
+  expect(tabCount()).toBe(1);
+  expect(editorText()).toContain("Changed text.");
+  // The retry works once the disk accepts the write.
+  refuse = undefined;
+  await click(saveStateButton());
+  await until(() => disk.get(FILE) === EDITED, "the retry to write");
+});
+
+test("a save that fails while closing a tab can still close it when the user agrees", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  refuse = "No space left on device";
+  answer = true;
+  await click(closeTabButton());
+  await until(() => tabCount() === 0, "the tab to close");
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test("closing the window with autosave on saves the edits and closes", async () => {
+  await launch();
+  await startEditing();
+  await type("Changed text.");
+  await closeWindow();
+  await until(() => destroyed === 1, "the window to close");
+  expect(questions).toEqual([]);
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("closing the window with autosave off: Save writes and closes", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  await closeWindow();
+  await until(() => destroyed === 1, "the window to close");
+  expect(questions).toHaveLength(1);
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("closing the window with autosave off: Don't save closes without writing", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  choice = "Don't save";
+  await closeWindow();
+  await until(() => destroyed === 1, "the window to close");
+  expect(attempts).toEqual([]);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test("closing the window with autosave off: Cancel keeps it open with the edits", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  choice = "Cancel";
+  await closeWindow();
+  await until(() => questions.length === 1, "the question");
+  await settle(100);
+  expect(destroyed).toBe(0);
+  expect(attempts).toEqual([]);
+  expect(editorText()).toContain("Changed text.");
+});
+
+test("closing the window without edits closes at once", async () => {
+  await launch();
+  await closeWindow();
+  await until(() => destroyed === 1, "the window to close");
+  expect(questions).toEqual([]);
+});
+
+test("a save that fails while closing the window keeps it open unless the user agrees", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  refuse = "Access is denied";
+  answer = false;
+  await closeWindow();
+  await until(() => askings.length === 1, "the question");
+  await settle(100);
+  expect(askings[0]).toContain("Access is denied");
+  expect(destroyed).toBe(0);
+  expect(editorText()).toContain("Changed text.");
+  answer = true;
+  await closeWindow();
+  await until(() => destroyed === 1, "the window to close");
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test.each(["No space left on device", "Access is denied", "No such file"])("a failed autosave (%s) keeps the edits, shows the error and a retry works", async (reason) => {
+  await launch();
+  await startEditing();
+  refuse = reason;
+  await type("Changed text.");
+  await until(() => attempts.length === 1, "the autosave attempt");
+  await until(() => errorBanner(), "the error");
+  expect(errorBanner()).toContain(reason);
+  expect(saveStateButton()?.dataset.state).toBe("error");
+  expect(editorText()).toContain("Changed text.");
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+  refuse = undefined;
+  await click(saveStateButton());
+  await until(() => disk.get(FILE) === EDITED, "the retry to write");
+  await until(() => !errorBanner(), "the error to clear");
+});
+
+test("a file that cannot be read when opening shows an error and the app keeps running", async () => {
+  disk.clear();
+  localStorage.setItem("prefs", JSON.stringify({}));
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () => root.render(<App />));
+  await until(() => errorBanner(), "the error");
+  expect(errorBanner()).toContain("No such file");
+  expect(host.querySelector(".doc-column")).toBeNull();
+  // Another file still opens.
+  disk.set("C:\\docs\\other.md", "# Other\n");
+  await act(async () => void (await emit("open-file", "C:\\docs\\other.md")));
+  await until(() => host.querySelector(".doc-column")?.textContent?.includes("Other"), "the other file");
+});
+
+const COPY = "C:\\docs\\copy.md";
+const saveAsButton = () => host.querySelector<HTMLButtonElement>('button[aria-label^="Save as"]');
+
+test("Save As writes the edits to the new path, leaves the original and the tab follows", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  savePath = COPY;
+  await click(saveAsButton());
+  await until(() => disk.has(COPY), "the copy to be written");
+  expect(disk.get(COPY)).toBe(EDITED);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+  await until(() => host.querySelector('button[aria-label^="Close copy.md"]'), "the tab to show the copy");
+  expect(closeTabButton()).toBeNull();
+  // Nothing is written to the original afterwards.
+  await settle(1300);
+  expect(savedPaths).toEqual([COPY]);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test("cancelling the Save As dialog writes nothing", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  savePath = null;
+  await click(saveAsButton());
+  await settle(100);
+  expect(attempts).toEqual([]);
+  expect(editorText()).toContain("Changed text.");
+});
+
+const sourceView = () => host.querySelector<HTMLElement>(".cm-content");
+async function openSource() {
+  await click([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Source")!);
+  await until(sourceView, "Source mode");
+}
+/** Replaces the whole text of Source mode, as typing would. */
+async function typeSource(text: string) {
+  const view = EditorView.findFromDOM(host.querySelector<HTMLElement>(".cm-editor")!)!;
+  await act(async () => void view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }));
+}
+
+test("Source mode edits are autosaved", async () => {
+  await launch();
+  await startEditing();
+  await openSource();
+  await typeSource(EDITED);
+  await until(() => writes.length === 1, "the autosave");
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("Source mode edits are written on Done when autosave is off", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await openSource();
+  await typeSource(EDITED);
+  await settle(1300);
+  expect(writes).toEqual([]);
+  await click(host.querySelector(".done-btn"));
+  await until(() => writes.length === 1, "the save on Done");
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("an edit the editor can't write back as the same Markdown is refused: nothing is written and the user is told", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  inexact.on = true;
+  await click(host.querySelector(".done-btn"));
+  await until(() => saveStateButton()?.dataset.state === "error", "the refusal");
+  expect(attempts).toEqual([]);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+  expect(saveStateButton()?.title).toContain("Nothing was written");
+  // The edits are kept as a draft, so the tab still counts as unsaved.
+  expect(host.querySelector(".unsaved-dot")).not.toBeNull();
+});
+
+test("autosave also refuses an inexact edit", async () => {
+  await launch();
+  await startEditing();
+  inexact.on = true;
+  await type("Changed text.");
+  await settle(1300);
+  expect(attempts).toEqual([]);
+  expect(errorBanner()).toContain("Nothing was written");
+  expect(editorText()).toContain("Changed text.");
 });
