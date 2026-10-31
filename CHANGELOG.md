@@ -19,6 +19,7 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 ### Fixed
 - Documents on a network share show their images: relative ones, images added to the document, and absolute network paths on the document's own server. A network image on another server shows as missing, because loading it would send your network credentials to that server
 - When the editor refuses to save an edit, the save status says what to do next instead of offering a retry that can't work
+- Octavo reads an image from disk only if it's in an open document's folder or is an image file a document refers to. Any other path sent to Octavo's image address shows as a missing image
 
 ## [0.5.2] - 2026-10-22
 
