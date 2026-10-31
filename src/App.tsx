@@ -102,7 +102,8 @@ type Mode = "edit" | "source" | "preview";
 /** Edits are saved this long after the last change. */
 const AUTOSAVE_DELAY = 1000;
 
-type SaveState = { state: "unsaved" | "saving" | "saved" | "error"; message?: string };
+/** `refused`: the save failed because of the edits themselves, so trying again can't help until they change. */
+type SaveState = { state: "unsaved" | "saving" | "saved" | "error"; message?: string; refused?: boolean };
 const SAVE_LABELS: Record<SaveState["state"], string> = {
   unsaved: "Unsaved changes",
   saving: "Saving…",
@@ -112,8 +113,10 @@ const SAVE_LABELS: Record<SaveState["state"], string> = {
 
 const CHANGED_ON_DISK = "the file changed on disk while it had unsaved edits.";
 
-const NOT_EXACT =
-  "the editor can't write part of this document as Markdown that opens the same way again (for example inline code containing | in a table cell). Nothing was written; undo or change the last edit and save again.";
+const NOT_EXACT_PROBLEM = "the editor can't write part of this document as Markdown that opens the same way again. Nothing was written;";
+const NOT_EXACT = `${NOT_EXACT_PROBLEM} undo or change the last edit and save again.`;
+/** After Done the undo history is gone: the edits are kept and go back to the editor with Edit. */
+const NOT_EXACT_AFTER_DONE = `${NOT_EXACT_PROBLEM} press Edit, then change the last edit or revert to the original.`;
 
 const EDIT_BLOCKED =
   "The editor would change how parts of this document look when it saves, so it opens in Source mode: edit its Markdown as text.";
@@ -529,11 +532,11 @@ export default function App() {
       setSaveStates((all) => (all[file] ? { ...all, [file]: { state: "saved" } } : all));
       return undefined;
     }
-    const fail = (message: string) => {
-      setSaveState(target ?? file, { state: "error", message: `Couldn't save ${basename(target ?? file)}: ${message}` });
+    const fail = (message: string, refused?: boolean) => {
+      setSaveState(target ?? file, { state: "error", message: `Couldn't save ${basename(target ?? file)}: ${message}`, refused });
       return message;
     };
-    if (edited !== undefined && !(snapshot ? snapshot.exact : draft?.exact)) return fail(NOT_EXACT);
+    if (edited !== undefined && !(snapshot ? snapshot.exact : draft?.exact)) return fail(originalsRef.current[file] === undefined ? NOT_EXACT_AFTER_DONE : NOT_EXACT, true);
     const text = other ? (edited === undefined ? base : toFileText(edited, fileFormat(base))) : textToSave(base, edited);
     setSaveState(file, { state: "saving" });
     try {
@@ -1226,7 +1229,7 @@ export default function App() {
       <button
         className="save-state"
         data-state={saveState.state}
-        title={saveState.state === "error" ? `${saveState.message} Click to try again.` : tip("Save now", "save")}
+        title={saveState.state !== "error" ? tip("Save now", "save") : saveState.refused ? saveState.message : `${saveState.message} Click to try again.`}
         onClick={() => void saveDoc(path!)}
       >
         {SAVE_LABELS[saveState.state]}

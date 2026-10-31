@@ -16,6 +16,10 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 ### Changed
 - The update settings (Check for updates when Octavo starts, Check now and Restart now) are at the bottom of About; the Updates section is gone
 
+### Fixed
+- Documents on a network share show their images: relative ones, images added to the document, and absolute network paths on the document's own server. A network image on another server shows as missing, because loading it would send your network credentials to that server
+- When the editor refuses to save an edit, the save status says what to do next instead of offering a retry that can't work
+
 ## [0.5.2] - 2026-10-22
 
 ### Fixed

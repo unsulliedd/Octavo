@@ -252,5 +252,38 @@ mod tests {
     fn windows_paths() {
         assert_eq!(kept(&[r"C:\Docs\img\a.PNG"]), [r"C:\Docs\img\a.PNG"]);
         assert!(kept(&[r"C:\Docs\..\a.png", r"img\a.png"]).is_empty());
+        assert_eq!(
+            kept(&[r"\\server\share\img\a.png"]),
+            [r"\\server\share\img\a.png"]
+        );
+        assert!(kept(&[r"\\server\share\..\a.png", r"\\server\share\a.md"]).is_empty());
+    }
+
+    // Runs through the C$ share where Windows offers it; there is nothing to test without one.
+    #[cfg(windows)]
+    #[test]
+    fn places_and_saves_images_on_a_network_share() {
+        let local = std::env::temp_dir().join(format!("octavo-share-{}", std::process::id()));
+        let Some(rest) = local.to_str().and_then(|p| p.strip_prefix(r"C:\")) else {
+            return;
+        };
+        let root = PathBuf::from(format!(r"\\localhost\C$\{rest}"));
+        if !Path::new(r"\\localhost\C$\Windows").exists() {
+            return;
+        }
+        let docs = root.join("docs");
+        std::fs::create_dir_all(docs.join("img")).unwrap();
+        std::fs::create_dir_all(local.join("elsewhere")).unwrap();
+        std::fs::write(local.join("elsewhere").join("b.png"), b"b").unwrap();
+        std::fs::write(docs.join("a.png"), b"a").unwrap();
+
+        assert_eq!(image_dir(&docs), docs.join("img"));
+        let saved = save_new(&image_dir(&docs), "shot.png", b"s").unwrap();
+        assert_eq!(saved, docs.join("img").join("shot.png"));
+        assert_eq!(place(&docs, &docs.join("a.png")).unwrap(), docs.join("a.png"));
+        let copied = place(&docs, &local.join("elsewhere").join("b.png")).unwrap();
+        assert_eq!(copied, docs.join("img").join("b.png"));
+        assert_eq!(std::fs::read(&copied).unwrap(), b"b");
+        std::fs::remove_dir_all(&local).unwrap();
     }
 }
