@@ -1,3 +1,4 @@
+mod asset;
 mod backup;
 mod images;
 mod notes;
@@ -18,13 +19,11 @@ struct Doc {
 
 /// Reads a document and lets the webview load images from its folder.
 #[tauri::command]
-fn open_doc(app: tauri::AppHandle, path: String) -> Result<Doc, String> {
+fn open_doc(allowed: tauri::State<asset::Allowed>, path: String) -> Result<Doc, String> {
     let path = std::path::absolute(&path).map_err(|e| e.to_string())?;
     let text = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     if let Some(dir) = path.parent() {
-        app.asset_protocol_scope()
-            .allow_directory(dir, true)
-            .map_err(|e| e.to_string())?;
+        allowed.add(dir);
     }
     Ok(Doc {
         path: path.to_string_lossy().into_owned(),
@@ -35,12 +34,10 @@ fn open_doc(app: tauri::AppHandle, path: String) -> Result<Doc, String> {
 /// Lets the webview load these image files, for images a document references outside its own folder.
 /// Only absolute image paths are allowed; other paths are ignored.
 #[tauri::command]
-fn allow_images(app: tauri::AppHandle, paths: Vec<String>) -> Result<(), String> {
-    let scope = app.asset_protocol_scope();
+fn allow_images(allowed: tauri::State<asset::Allowed>, paths: Vec<String>) {
     for path in images::image_files(&paths) {
-        scope.allow_file(&path).map_err(|e| e.to_string())?;
+        allowed.add(&path);
     }
-    Ok(())
 }
 
 /// Saves a pasted image as a new file in the image folder of the document in `dir`; returns its full path.
@@ -57,18 +54,17 @@ fn save_image(dir: String, name: String, bytes: Vec<u8>) -> Result<String, Strin
 /// copied into its image folder. The webview may load each of them.
 #[tauri::command]
 fn place_images(
-    app: tauri::AppHandle,
+    allowed: tauri::State<asset::Allowed>,
     dir: String,
     paths: Vec<String>,
 ) -> Result<Vec<String>, String> {
     let dir = std::path::absolute(&dir).map_err(|e| e.to_string())?;
-    let scope = app.asset_protocol_scope();
     paths
         .iter()
         .map(|path| {
             let file = std::path::absolute(path).map_err(|e| e.to_string())?;
             let placed = images::place(&dir, &file).map_err(|e| format!("{path}: {e}"))?;
-            scope.allow_file(&placed).map_err(|e| e.to_string())?;
+            allowed.add(&placed);
             Ok(placed.to_string_lossy().into_owned())
         })
         .collect()
@@ -177,6 +173,14 @@ pub fn run() {
                 .build(),
         )
         .manage(watch::DocWatcher::default())
+        .manage(asset::Allowed::default())
+        .register_asynchronous_uri_scheme_protocol("asset", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                let allowed = app.state::<asset::Allowed>();
+                responder.respond(asset::respond(&allowed, request.uri().path()));
+            });
+        })
         // The window starts hidden and the webview shows it after its first render. If that never
         // happens, it is shown anyway.
         .setup(|app| {

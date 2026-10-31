@@ -5,8 +5,18 @@ use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
-const IMAGE_EXTENSIONS: &[&str] = &[
-    "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif", "apng",
+const IMAGE_TYPES: &[(&str, &str)] = &[
+    ("png", "image/png"),
+    ("jpg", "image/jpeg"),
+    ("jpeg", "image/jpeg"),
+    ("jfif", "image/jpeg"),
+    ("gif", "image/gif"),
+    ("webp", "image/webp"),
+    ("svg", "image/svg+xml"),
+    ("bmp", "image/bmp"),
+    ("ico", "image/x-icon"),
+    ("avif", "image/avif"),
+    ("apng", "image/apng"),
 ];
 
 /// The paths, out of `paths`, that are absolute image files without `..` components.
@@ -19,13 +29,20 @@ pub fn image_files(paths: &[String]) -> Vec<PathBuf> {
         .collect()
 }
 
-fn has_image_extension(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| IMAGE_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+/// The content type of the image file `path`, from its extension.
+pub fn content_type(path: &Path) -> Option<&'static str> {
+    let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+    IMAGE_TYPES
+        .iter()
+        .find(|(e, _)| *e == extension)
+        .map(|(_, kind)| *kind)
 }
 
-fn is_image_file(path: &Path) -> bool {
+fn has_image_extension(path: &Path) -> bool {
+    content_type(path).is_some()
+}
+
+pub fn is_image_file(path: &Path) -> bool {
     let normalized = path.components().all(|c| c != Component::ParentDir);
     path.is_absolute() && normalized && has_image_extension(path)
 }
@@ -280,7 +297,10 @@ mod tests {
         assert_eq!(image_dir(&docs), docs.join("img"));
         let saved = save_new(&image_dir(&docs), "shot.png", b"s").unwrap();
         assert_eq!(saved, docs.join("img").join("shot.png"));
-        assert_eq!(place(&docs, &docs.join("a.png")).unwrap(), docs.join("a.png"));
+        assert_eq!(
+            place(&docs, &docs.join("a.png")).unwrap(),
+            docs.join("a.png")
+        );
         let copied = place(&docs, &local.join("elsewhere").join("b.png")).unwrap();
         assert_eq!(copied, docs.join("img").join("b.png"));
         assert_eq!(std::fs::read(&copied).unwrap(), b"b");
