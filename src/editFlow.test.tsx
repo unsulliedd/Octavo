@@ -26,6 +26,17 @@ vi.mock("./editor/session", async (original) => {
   };
 });
 
+// A downloaded update: `installed` holds what the file said each time the update installed.
+const update = vi.hoisted(() => ({ installed: [] as (string | undefined)[], disk: (): string | undefined => undefined }));
+vi.mock("@tauri-apps/plugin-updater", () => ({
+  check: async () => ({
+    version: "9.9.9",
+    download: async () => {},
+    install: async () => void update.installed.push(update.disk()),
+    close: async () => {},
+  }),
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const FILE = "C:\\docs\\note.md";
@@ -44,7 +55,10 @@ let savedPaths: string[];
 /** When set, save_doc refuses with this message. */
 let refuse: string | undefined;
 /** The button picked in the Save / Don't save / Cancel dialog, and the dialogs shown. */
-let choice: "Save" | "Don't save" | "Cancel";
+type Choice = "Save" | "Don't save" | "Cancel";
+let choice: Choice;
+/** Picked before `choice`, one per dialog, when several dialogs come in a row. */
+let choices: Choice[];
 let questions: string[];
 /** The path the Save As dialog returns. */
 let savePath: string | null;
@@ -71,10 +85,13 @@ beforeEach(async () => {
   savedPaths = [];
   refuse = undefined;
   choice = "Save";
+  choices = [];
   questions = [];
   savePath = null;
   destroyed = 0;
   inexact.on = false;
+  update.installed = [];
+  update.disk = () => disk.get(FILE);
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
   window.requestAnimationFrame = (cb) => window.setTimeout(() => cb(performance.now()), 0);
@@ -116,7 +133,7 @@ beforeEach(async () => {
           // ask() resolves to whether the answer is the button it named as the confirming one.
           if (a.buttons.YesNoCancelCustom) {
             questions.push(a.message);
-            return choice;
+            return choices.shift() ?? choice;
           }
           askings.push(a.message);
           const [ok, cancel] = a.buttons.OkCancelCustom;
@@ -163,8 +180,8 @@ async function startEditing() {
 }
 
 /** Types into the editor: the paragraph's text node changes and ProseMirror reads the mutation. */
-async function type(text: string) {
-  const p = [...host.querySelectorAll(".ProseMirror p")].find((el) => el.textContent?.includes("Original"))!;
+async function type(text: string, over = "Original") {
+  const p = [...host.querySelectorAll(".ProseMirror p")].find((el) => el.textContent?.includes(over))!;
   await act(async () => {
     p.firstChild!.nodeValue = text;
   });
@@ -574,4 +591,264 @@ test("autosave also refuses an inexact edit", async () => {
   expect(attempts).toEqual([]);
   expect(errorBanner()).toContain("Nothing was written");
   expect(editorText()).toContain("Changed text.");
+});
+
+test("a refused edit offers no retry while editing", async () => {
+  await launch();
+  await startEditing();
+  inexact.on = true;
+  await type("Changed text.");
+  await until(() => saveStateButton()?.dataset.state === "error", "the refusal");
+  expect(saveStateButton()?.title).toContain("undo or change the last edit");
+  expect(saveStateButton()?.title).not.toContain("try again");
+});
+
+test("after Done a refused edit points to Edit, and changing the edit there saves it", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  inexact.on = true;
+  await click(host.querySelector(".done-btn"));
+  await until(() => saveStateButton()?.dataset.state === "error", "the refusal");
+  expect(saveStateButton()?.title).toContain("press Edit");
+  expect(saveStateButton()?.title).not.toContain("try again");
+  expect(errorBanner()).toContain("press Edit");
+  // Saving again without changing anything is still refused.
+  await click(saveStateButton());
+  await settle(50);
+  expect(attempts).toEqual([]);
+  inexact.on = false;
+  await startEditing();
+  await type("Changed again.", "Changed text.");
+  await click(host.querySelector(".done-btn"));
+  await until(() => writes.length === 1, "the save on Done");
+  expect(disk.get(FILE)).toBe("# Title\n\nChanged again.\n");
+});
+
+// Closing several tabs, and closing for an update.
+
+const OTHER = "C:\\docs\\other.md";
+const THIRD = "C:\\docs\\third.md";
+const EDITED_OTHER = "# Other\n\nChanged text.\n";
+const openTabs = () => [...host.querySelectorAll<HTMLElement>("[data-tab-id]")].map((t) => t.title);
+const tabOf = (file: string) => [...host.querySelectorAll<HTMLElement>("[data-tab-id]")].find((t) => t.title === file)!;
+const showTab = (file: string) => click(tabOf(file).querySelector("button"));
+/** Opens `file` in its own tab and shows it. */
+async function openFile(file: string, text = "# Other\n\nOriginal text.\n") {
+  disk.set(file, text);
+  await act(async () => void (await emit("open-file", file)));
+  await until(() => tabOf(file) && host.querySelector(".doc-column")?.textContent?.includes("Other"), `${file} to open`);
+}
+/** Opens `file` and edits it; leaving its tab later keeps the edits as a draft. */
+async function editOther(file: string) {
+  await openFile(file);
+  await startEditing();
+  await type("Changed text.");
+}
+/** Picks `label` in the menu of the tab showing `file`. */
+async function fromTabMenu(file: string, label: string) {
+  await act(async () => void tabOf(file).dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })));
+  await until(() => host.querySelector(".menu"), "the tab menu");
+  await click([...host.querySelectorAll(".menu-item")].find((b) => b.firstChild?.textContent === label)!);
+}
+
+test("Close others with autosave off: Save writes the edits of the open editor and keeps the chosen tab", async () => {
+  await launch(NO_AUTOSAVE);
+  await openFile(OTHER);
+  await showTab(FILE);
+  await startEditing();
+  await type("Changed text.");
+  await fromTabMenu(OTHER, "Close others");
+  await until(() => openTabs().length === 1, "the other tabs to close");
+  expect(openTabs()).toEqual([OTHER]);
+  expect(questions).toHaveLength(1);
+  expect(disk.get(FILE)).toBe(EDITED);
+  expect(disk.get(OTHER)).not.toContain("Changed");
+});
+
+test("Close others with autosave on saves without asking", async () => {
+  await launch();
+  await openFile(OTHER);
+  await showTab(FILE);
+  await startEditing();
+  await type("Changed text.");
+  await fromTabMenu(OTHER, "Close others");
+  await until(() => openTabs().length === 1, "the other tabs to close");
+  expect(questions).toEqual([]);
+  expect(disk.get(FILE)).toBe(EDITED);
+});
+
+test("Close others: Don't save closes the edited tab and leaves its file alone", async () => {
+  await launch(NO_AUTOSAVE);
+  await openFile(OTHER);
+  await showTab(FILE);
+  await startEditing();
+  await type("Changed text.");
+  choice = "Don't save";
+  await fromTabMenu(OTHER, "Close others");
+  await until(() => openTabs().length === 1, "the other tabs to close");
+  expect(attempts).toEqual([]);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test("Close tabs to the right closes only those, saving each edited tab after asking about it", async () => {
+  await launch(NO_AUTOSAVE);
+  await editOther(OTHER);
+  await editOther(THIRD);
+  await fromTabMenu(FILE, "Close tabs to the right");
+  await until(() => openTabs().length === 1, "the tabs to the right to close");
+  expect(openTabs()).toEqual([FILE]);
+  expect(questions).toHaveLength(2);
+  expect(savedPaths).toEqual([OTHER, THIRD]);
+  expect(disk.get(OTHER)).toBe(EDITED_OTHER);
+  expect(disk.get(THIRD)).toBe(EDITED_OTHER);
+  expect(disk.get(FILE)).toBe(ORIGINAL);
+});
+
+test("closing several edited tabs: Cancel on one keeps it and the tabs after it", async () => {
+  const fourth = "C:\\docs\\fourth.md";
+  await launch(NO_AUTOSAVE);
+  await editOther(OTHER);
+  await editOther(THIRD);
+  await editOther(fourth);
+  choices = ["Save", "Cancel"];
+  await fromTabMenu(FILE, "Close tabs to the right");
+  await until(() => questions.length === 2, "the second question");
+  await until(() => openTabs().length === 3, "the first tab to close");
+  await settle(100);
+  expect(questions).toHaveLength(2);
+  expect(openTabs()).toEqual([FILE, THIRD, fourth]);
+  expect(savedPaths).toEqual([OTHER]);
+  expect(disk.get(THIRD)).not.toContain("Changed");
+  expect(disk.get(fourth)).not.toContain("Changed");
+  expect(tabOf(THIRD).querySelector(".unsaved-dot")).not.toBeNull();
+});
+
+test("closing several edited tabs: Don't save and Save are each kept to their own tab", async () => {
+  await launch(NO_AUTOSAVE);
+  await editOther(OTHER);
+  await editOther(THIRD);
+  choices = ["Don't save", "Save"];
+  await fromTabMenu(FILE, "Close tabs to the right");
+  await until(() => openTabs().length === 1, "the tabs to close");
+  expect(savedPaths).toEqual([THIRD]);
+  expect(disk.get(OTHER)).not.toContain("Changed");
+});
+
+test("closing several edited tabs: a save that fails and is kept open stops the rest", async () => {
+  await launch(NO_AUTOSAVE);
+  await editOther(OTHER);
+  await editOther(THIRD);
+  refuse = "Access is denied";
+  answer = false;
+  await fromTabMenu(FILE, "Close tabs to the right");
+  await until(() => askings.length === 1, "the question");
+  await settle(100);
+  expect(askings[0]).toContain("Access is denied");
+  expect(questions).toHaveLength(1);
+  expect(openTabs()).toEqual([FILE, OTHER, THIRD]);
+});
+
+test("Close others writes a draft left behind by a failed autosave, without asking", async () => {
+  await launch();
+  await openFile(OTHER);
+  await startEditing();
+  refuse = "Access is denied";
+  await type("Changed text.");
+  await showTab(FILE);
+  await until(() => attempts.length >= 1, "the failed save");
+  refuse = undefined;
+  await fromTabMenu(FILE, "Close others");
+  await until(() => openTabs().length === 1, "the other tab to close");
+  expect(questions).toEqual([]);
+  expect(disk.get(OTHER)).toBe(EDITED_OTHER);
+});
+
+/** A checked and downloaded update, offered in the toolbar. */
+async function readyUpdate() {
+  await click(button("Settings"));
+  await click([...host.querySelectorAll(".settings-nav button")].find((b) => b.textContent === "About")!);
+  await click([...host.querySelectorAll(".settings button")].find((b) => b.textContent === "Check now")!);
+  await until(() => host.querySelector(".update-btn"), "the update to be ready");
+  await click(button("Close settings"));
+}
+const restartNow = async () => {
+  await click(host.querySelector(".update-btn"));
+  await click([...host.querySelectorAll("button")].find((b) => b.textContent === "Restart now")!);
+};
+
+test("Restart now with autosave on saves the edits before the update installs", async () => {
+  await launch();
+  await startEditing();
+  await type("Changed text.");
+  await readyUpdate();
+  await restartNow();
+  await until(() => update.installed.length === 1, "the update to install");
+  expect(questions).toEqual([]);
+  expect(update.installed).toEqual([EDITED]);
+});
+
+test("Restart now with autosave off: Save writes the edits before the update installs", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  await readyUpdate();
+  await restartNow();
+  await until(() => update.installed.length === 1, "the update to install");
+  expect(questions).toHaveLength(1);
+  expect(update.installed).toEqual([EDITED]);
+});
+
+test("Restart now with autosave off: Don't save installs and leaves the file alone", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  await readyUpdate();
+  choice = "Don't save";
+  await restartNow();
+  await until(() => update.installed.length === 1, "the update to install");
+  expect(attempts).toEqual([]);
+  expect(update.installed).toEqual([ORIGINAL]);
+});
+
+test("Restart now with autosave off: Cancel doesn't install and keeps the edits", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  await readyUpdate();
+  choice = "Cancel";
+  await restartNow();
+  await until(() => questions.length === 1, "the question");
+  await settle(100);
+  expect(update.installed).toEqual([]);
+  expect(attempts).toEqual([]);
+  expect(editorText()).toContain("Changed text.");
+});
+
+test("Restart now with a failed save doesn't install unless the user agrees", async () => {
+  await launch(NO_AUTOSAVE);
+  await startEditing();
+  await type("Changed text.");
+  await readyUpdate();
+  refuse = "Access is denied";
+  answer = false;
+  await restartNow();
+  await until(() => askings.length === 1, "the question");
+  await settle(100);
+  expect(askings[0]).toContain("Access is denied");
+  expect(update.installed).toEqual([]);
+  expect(editorText()).toContain("Changed text.");
+  answer = true;
+  await click([...host.querySelectorAll("button")].find((b) => b.textContent === "Restart now")!);
+  await until(() => update.installed.length === 1, "the update to install");
+  expect(update.installed).toEqual([ORIGINAL]);
+});
+
+test("Restart now without edits installs at once", async () => {
+  await launch();
+  await readyUpdate();
+  await restartNow();
+  await until(() => update.installed.length === 1, "the update to install");
+  expect(questions).toEqual([]);
+  expect(attempts).toEqual([]);
 });

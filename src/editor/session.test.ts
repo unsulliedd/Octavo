@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { contentKey, createEditor } from "./session";
 
 const open = (markdown: string) => createEditor(document.createElement("div"), markdown, { imageUrl: String, onChange: () => {} });
@@ -17,6 +17,30 @@ test("Markdown that would open differently is not exact", async () => {
   const s = await open("| a | b |\n|---|---|\n| `x|y` | z |\n");
   expect(s.snapshot().exact).toBe(false);
   await s.destroy();
+});
+
+test("inline code containing an escaped | in a table cell stays exact and keeps its text", async () => {
+  const root = document.createElement("div");
+  const markdown = "| a | b |\n|---|---|\n| `x\\|y` | z |\n";
+  const s = await createEditor(root, markdown, { imageUrl: String, onChange: () => {} });
+  expect(root.querySelector("td code")?.textContent).toBe("x|y");
+  const snap = s.snapshot();
+  expect(snap.exact).toBe(true);
+  expect(snap.markdown).toContain("x\\|y");
+  await s.destroy();
+});
+
+test("typing | into inline code in a table cell saves as an exact escaped pipe", async () => {
+  const root = document.createElement("div");
+  document.body.append(root);
+  const s = await createEditor(root, "| a | b |\n|---|---|\n| `xy` | z |\n", { imageUrl: String, onChange: () => {} });
+  root.querySelector("td code")!.firstChild!.nodeValue = "x|y";
+  await vi.waitFor(() => expect(s.edited()).toBe(true));
+  const snap = s.snapshot("| a | b |\n|---|---|\n| `xy` | z |\n");
+  expect(snap.exact).toBe(true);
+  expect(snap.markdown).toContain("`x\\|y`");
+  await s.destroy();
+  root.remove();
 });
 
 test("markSaved makes the snapshot's content the saved state", async () => {
