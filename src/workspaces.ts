@@ -16,6 +16,13 @@ export type TreeNode =
 
 export const PINNED: Workspace = { id: "pinned", name: "Pinned", items: [], removed: [] };
 
+/** What `scan_folder` returns. */
+export type FolderScan = { files: string[]; truncated: boolean };
+/** What `load_workspaces` and `save_workspaces` report about a saved file they couldn't use. */
+export type Problem = { reason: "corrupt" | "newer"; copy: string };
+/** The latest scan of the workspace `id`. `scans` holds the Markdown files of each folder that could be read. */
+export type ScanResult = { id: string; scans: Record<string, string[]>; truncated: boolean; errors: string[] };
+
 /**
  * `path` as paths compare here. It follows `samePath` for case and also evens out separators, so that a file picked
  * in a dialog matches a saved path; it is a plain string, so that large lists can use a Set. Every key ends in a
@@ -49,6 +56,53 @@ export function workspaceForFolder(workspaces: Workspace[], folder: string) {
   if (found) return { workspaces, workspace: found };
   const workspace: Workspace = { id: newId(), name: lastName(folder), items: [{ kind: "folder", path: folder }], removed: [] };
   return { workspaces: [...workspaces, workspace], workspace };
+}
+
+/** `workspaces` with the workspace `id` first, the saved order being most recent first. */
+export function toFront(workspaces: Workspace[], id: string) {
+  const found = workspaces.find((w) => w.id === id);
+  return !found || workspaces[0] === found ? workspaces : [found, ...workspaces.filter((w) => w !== found)];
+}
+
+/** The name a workspace of `folder` gets. */
+export const workspaceFolderName = lastName;
+
+/** Where a workspace is, for a list: "Documents › Notes" for one folder, or else how many items it holds. */
+export function workspacePlace({ items }: Workspace) {
+  if (items.length === 1 && items[0].kind === "folder") return items[0].path.split(/[\\/]+/).filter(Boolean).slice(-4).join(" › ");
+  const count = (kind: ItemKind) => items.filter((i) => i.kind === kind).length;
+  const counted = (n: number, name: string) => (n ? [`${n} ${name}${n === 1 ? "" : "s"}`] : []);
+  return [...counted(count("folder"), "folder"), ...counted(count("document"), "document")].join(", ");
+}
+
+/** The sentence that tells the user where the copy of a saved file they can't use is. */
+export function problemText({ reason, copy }: Problem) {
+  const what = reason === "newer" ? "The saved workspaces come from a newer version of Octavo." : "The saved workspaces couldn't be read.";
+  return `${what} A copy of the file is kept at:\n\n${copy}`;
+}
+
+/** The result of scanning `folders` in order, each giving its scan or an error message. `previous` when nothing changed, so that the tree stays as it is. */
+export function scanResult(id: string, folders: string[], results: (FolderScan | string)[], previous?: ScanResult) {
+  const next: ScanResult = { id, scans: {}, truncated: false, errors: [] };
+  folders.forEach((folder, i) => {
+    const result = results[i];
+    if (typeof result === "string") {
+      next.errors.push(`Couldn't read ${folder}: ${result}`);
+    } else {
+      next.scans[folder] = result.files;
+      next.truncated ||= result.truncated;
+    }
+  });
+  return previous && JSON.stringify(previous) === JSON.stringify(next) ? previous : next;
+}
+
+/** Runs that replace each other: each call starts a new run and returns a check that holds until the next one starts. */
+export function latestRun() {
+  let latest = 0;
+  return () => {
+    const run = ++latest;
+    return () => run === latest;
+  };
 }
 
 /** Adds a folder or document, showing it again if it was removed. */

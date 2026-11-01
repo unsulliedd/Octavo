@@ -100,7 +100,7 @@ pub fn image_dir(doc_dir: &Path) -> PathBuf {
 
 /// The folder whose files a document in `doc_dir` can link and still show them after a commit and clone: the
 /// nearest folder holding `.git`, or `doc_dir` when the document isn't in a repository.
-fn link_root(doc_dir: &Path) -> &Path {
+pub fn link_root(doc_dir: &Path) -> &Path {
     doc_dir
         .ancestors()
         .find(|dir| dir.join(".git").exists())
@@ -184,6 +184,21 @@ mod tests {
             assert!(save_new(&dir, bad, b"x").is_err(), "{bad}");
         }
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_link_root_is_the_nearest_folder_holding_git_or_the_folder_itself() {
+        let root = std::env::temp_dir().join(format!("octavo-root-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let inner = root.join("repo").join("sub");
+        let outside = root.join("plain");
+        std::fs::create_dir_all(&inner).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::create_dir(root.join("repo").join(".git")).unwrap();
+        assert_eq!(link_root(&inner), root.join("repo"));
+        assert_eq!(link_root(&root.join("repo")), root.join("repo"));
+        assert_eq!(link_root(&outside), outside);
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

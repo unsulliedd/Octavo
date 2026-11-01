@@ -165,6 +165,17 @@ async fn scan_folder(path: String, show_hidden: bool) -> Result<scan::Scan, Stri
         .map_err(|e| e.to_string())
 }
 
+/// The folder to offer as a workspace for a document in `dir`: the nearest folder holding `.git`, or `dir` itself.
+#[tauri::command]
+async fn workspace_folder(dir: String) -> Result<String, String> {
+    let dir = std::path::absolute(&dir).map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        images::link_root(&dir).to_string_lossy().into_owned()
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
 fn workspaces_file(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
     Ok(dir.join("workspaces.json"))
@@ -276,6 +287,7 @@ pub fn run() {
             write_notes,
             write_licenses,
             scan_folder,
+            workspace_folder,
             load_workspaces,
             save_workspaces,
             initial_file,

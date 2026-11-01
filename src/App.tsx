@@ -15,6 +15,7 @@ import { editedText, editorText, eolLabel, fileFormat, textToSave } from "./file
 import { CompareView } from "./CompareView";
 import { diskChange } from "./conflict";
 import { canRevert, revertText } from "./editSession";
+import { FilesPanel, WorkspaceMenu, WorkspaceStatus } from "./FilesPanel";
 import { FindBar } from "./FindBar";
 import { basename, folderTrail, Home } from "./Home";
 import { Icon } from "./icons";
@@ -27,11 +28,13 @@ import { afterPaint } from "./paint";
 import { shareInFlight } from "./shared";
 import { ReadingSettings } from "./ReadingSettings";
 import { Settings } from "./Settings";
+import { Sidebar } from "./Sidebar";
 import { SourcePane } from "./SourcePane";
 import { UpdatePopover } from "./UpdatePopover";
 import { TabMenu, type TabMenuItem } from "./TabMenu";
 import { releaseUrl } from "./links";
 import { useUpdates } from "./useUpdates";
+import { useWorkspaces } from "./useWorkspaces";
 import { changelogSection, notesPage, showAfterUpdate } from "./whatsNew";
 import type { SourceEditor } from "./sourceEditor";
 import type { SourceSession, SourceSnapshot } from "./sourceSession";
@@ -172,6 +175,9 @@ export default function App() {
   const [showAppSettings, setShowAppSettings] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const updates = useUpdates(prefs.checkUpdates);
+  const workspaces = useWorkspaces(prefs.showHidden);
+  // The sidebar tab picked by hand; opening or closing a workspace clears it.
+  const [sidebarTab, setSidebarTab] = useState<"files" | "outline">();
   const [focusMode, setFocusMode] = useState(false);
   // The diagram, image or table open large over the window.
   const [large, setLarge] = useState<LargeContent>();
@@ -250,6 +256,7 @@ export default function App() {
   const editorReady = editing && editorShown?.key === editorKey;
   const shownPath = useRef(path);
   shownPath.current = path;
+  const filesShown = !tab || (sidebarTab ?? (workspaces.open ? "files" : "outline")) === "files";
 
   const changePrefs = (next: Prefs) => {
     setPrefs(next);
@@ -965,6 +972,7 @@ export default function App() {
   const focusKey = keyLabel(bindings, "toggleFocus");
   const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large });
   latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large };
+  const openFromTree = useCallback((file: string) => void latest.current.openPath(file), []);
 
   useEffect(() => {
     // The first launch after an update opens What's new; a file passed on the command line opens after it.
@@ -1052,6 +1060,8 @@ export default function App() {
       window.show().catch(() => {});
     }
   }, [dark, started]);
+
+  useEffect(() => setSidebarTab(undefined), [workspaces.open?.id]);
 
   // The home screen always shows the toolbar.
   useEffect(() => {
@@ -1262,6 +1272,12 @@ export default function App() {
 
   const updateReady = updates.status.state === "ready" || updates.status.state === "installing" ? updates.status : undefined;
 
+  const sidebarButton = (
+    <button className="icon-btn" aria-label="Show sidebar" aria-pressed={prefs.outline} onClick={() => changePrefs({ ...prefs, outline: !prefs.outline })}>
+      <Icon name="sidebar" />
+    </button>
+  );
+
   const view = (
     <div
       ref={appRoot}
@@ -1278,16 +1294,7 @@ export default function App() {
             <button className="icon-btn" aria-label="Home" aria-pressed={!tab} onClick={() => changeTabs(goHome)}>
               <Icon name="home" />
             </button>
-            {tab && (
-              <button
-                className="icon-btn"
-                aria-label="Show outline"
-                aria-pressed={prefs.outline}
-                onClick={() => changePrefs({ ...prefs, outline: !prefs.outline })}
-              >
-                <Icon name="sidebar" />
-              </button>
-            )}
+            {(tab || workspaces.open) && sidebarButton}
             <button className="icon-btn" aria-label={tip("Back", "back")} disabled={!tab || !historyTarget(tabs, -1)} onClick={() => go(-1)}>
               <Icon name="back" />
             </button>
@@ -1332,7 +1339,10 @@ export default function App() {
             </nav>
           </>
         ) : (
-          <span className="brand">Octavo</span>
+          <>
+            {workspaces.open && sidebarButton}
+            <span className="brand">Octavo</span>
+          </>
         )}
         <span className="spacer" />
         {editing && layout.status === "toolbar" && <span className="toolbar-status">{saveStatus}</span>}
@@ -1403,38 +1413,56 @@ export default function App() {
       {editing && <div className="format-slot" ref={setFormatSlot} />}
 
       <div className="body">
+        {prefs.outline && (doc || workspaces.open) && (
+          <Sidebar width={prefs.sidebarWidth} onWidth={(sidebarWidth) => changePrefs({ ...prefs, sidebarWidth })}>
+            <div className="sidebar-tabs">
+              <div className="seg" role="group" aria-label="Sidebar">
+                <button aria-pressed={filesShown} onClick={() => setSidebarTab("files")}>
+                  Files
+                </button>
+                <button aria-pressed={!filesShown} disabled={!tab} onClick={() => setSidebarTab("outline")}>
+                  Outline
+                </button>
+              </div>
+            </div>
+            {filesShown ? (
+              <FilesPanel ws={workspaces} document={path} onOpen={openFromTree} />
+            ) : (
+              doc && (
+                <>
+                  <div className="sidebar-head">
+                    <span className="section-label">Outline</span>
+                    <span className="count">{headings.length}</span>
+                  </div>
+                  <nav className="outline">
+                    {headings.length === 0 && <p className="muted">No headings</p>}
+                    {headings.map((h, i) => (
+                      <a
+                        key={h.id}
+                        href={`#${h.id}`}
+                        data-level={h.level}
+                        aria-current={h.id === activeId ? "location" : undefined}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (source) return sourceEditor.current?.reveal(sourceHeadingStarts.current[i]);
+                          // The editor's headings have no ids; they are in the same order.
+                          const target = editing
+                            ? article.current?.querySelectorAll("h1, h2, h3, h4")[i]
+                            : document.getElementById(h.id);
+                          target?.scrollIntoView();
+                        }}
+                      >
+                        {h.text}
+                      </a>
+                    ))}
+                  </nav>
+                </>
+              )
+            )}
+          </Sidebar>
+        )}
         {tab ? (
           <>
-            {prefs.outline && doc && (
-              <aside className="sidebar" aria-label="Outline">
-                <div className="sidebar-head">
-                  <span className="section-label">Outline</span>
-                  <span className="count">{headings.length}</span>
-                </div>
-                <nav className="outline">
-                  {headings.length === 0 && <p className="muted">No headings</p>}
-                  {headings.map((h, i) => (
-                    <a
-                      key={h.id}
-                      href={`#${h.id}`}
-                      data-level={h.level}
-                      aria-current={h.id === activeId ? "location" : undefined}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (source) return sourceEditor.current?.reveal(sourceHeadingStarts.current[i]);
-                        // The editor's headings have no ids; they are in the same order.
-                        const target = editing
-                          ? article.current?.querySelectorAll("h1, h2, h3, h4")[i]
-                          : document.getElementById(h.id);
-                        target?.scrollIntoView();
-                      }}
-                    >
-                      {h.text}
-                    </a>
-                  ))}
-                </nav>
-              </aside>
-            )}
             <main className="reader" ref={scroller} onScroll={onScroll}>
               {(error ?? (path && loadErrors[path])) && <p className="error banner">{error ?? (path && loadErrors[path])}</p>}
               {path && editBlocked[path] && <p className="notice banner">{editBlocked[path]}</p>}
@@ -1593,13 +1621,17 @@ export default function App() {
             pinned={pinned}
             dragging={dragging}
             error={error}
+            workspaces={workspaces.workspaces}
+            openWorkspace={workspaces.open}
             onPick={pick}
+            onPickFolder={() => void workspaces.pickFolder()}
             onOpen={(p) => openPath(p)}
+            onOpenWorkspace={(id) => void workspaces.openWorkspace(id)}
             onTogglePin={togglePin}
           />
         )}
         {(opening.length > 0 || (path && !doc && !loadErrors[path])) && (
-          <div className="loading" data-solid={!tab || undefined} role="status">
+          <div className="loading" data-solid={(!tab && !workspaces.open) || undefined} role="status">
             <span className="spinner" aria-hidden="true" />
             <span>Opening {basename(opening[opening.length - 1] ?? path ?? "")}…</span>
           </div>
@@ -1637,6 +1669,7 @@ export default function App() {
             onClose={closeTabMenu}
           />
         )}
+        <WorkspaceMenu ws={workspaces} />
         {showUpdate && updates.offered && updateReady && (
           <UpdatePopover
             version={updateReady.version}
@@ -1669,8 +1702,11 @@ export default function App() {
       <footer className="statusbar">
         {doc ? (
           <>
-            <span>
-              {words.toLocaleString()} words · {Math.max(1, Math.round(words / 230))} min read
+            <span className="status-left">
+              <WorkspaceStatus ws={workspaces} />
+              <span>
+                {words.toLocaleString()} words · {Math.max(1, Math.round(words / 230))} min read
+              </span>
             </span>
             <span className="status-right">
               {(!editing || layout.status === "status") && saveStatus}
@@ -1681,7 +1717,10 @@ export default function App() {
           </>
         ) : (
           <>
-            <span>Octavo {version}</span>
+            <span className="status-left">
+              <WorkspaceStatus ws={workspaces} />
+              <span>Octavo {version}</span>
+            </span>
             <span>No document open</span>
           </>
         )}

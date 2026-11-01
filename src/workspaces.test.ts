@@ -9,9 +9,14 @@ import {
   filterDocuments,
   removeItem,
   restorePath,
+  latestRun,
+  problemText,
+  scanResult,
+  toFront,
   visibleDocuments,
   withPinned,
   workspaceForFolder,
+  workspacePlace,
 } from "./workspaces";
 
 const workspace = (items: Workspace["items"], removed: string[] = []): Workspace => ({ id: "w", name: "w", items, removed });
@@ -237,4 +242,46 @@ test("the filter doesn't match the part of the path above the root", () => {
 test("an empty query keeps every document", () => {
   expect(found("")).toHaveLength(4);
   expect(found("   ")).toHaveLength(4);
+});
+
+test("toFront moves a workspace first and leaves the list as it is when it already is", () => {
+  const [a, b, c] = ["a", "b", "c"].map((id) => ({ ...workspace([]), id }));
+  expect(toFront([a, b, c], "c")).toEqual([c, a, b]);
+  const list = [a, b];
+  expect(toFront(list, "a")).toBe(list);
+  expect(toFront(list, "missing")).toBe(list);
+});
+
+test("a workspace's place is its folder's last names, or how many items it holds", () => {
+  expect(workspacePlace(workspace([folder("C:\\Users\\me\\Documents\\Github\\Handbook\\")]))).toBe("me › Documents › Github › Handbook");
+  expect(workspacePlace(workspace([document("C:\\a.md")]))).toBe("1 document");
+  expect(workspacePlace(workspace([folder("C:\\a"), folder("C:\\b"), document("C:\\c.md")]))).toBe("2 folders, 1 document");
+  expect(workspacePlace(workspace([]))).toBe("");
+});
+
+test("the problem text names the copy and the reason", () => {
+  expect(problemText({ reason: "corrupt", copy: "C:\\w.corrupt.json" })).toBe("The saved workspaces couldn't be read. A copy of the file is kept at:\n\nC:\\w.corrupt.json");
+  expect(problemText({ reason: "newer", copy: "C:\\w.newer.json" })).toContain("newer version");
+});
+
+test("a scan result gathers files, errors and whether a scan was cut off", () => {
+  const result = scanResult("w", ["C:\\a", "C:\\b", "C:\\c"], [{ files: ["C:\\a\\x.md"], truncated: false }, "denied", { files: [], truncated: true }]);
+  expect(result).toEqual({ id: "w", scans: { "C:\\a": ["C:\\a\\x.md"], "C:\\c": [] }, truncated: true, errors: ["Couldn't read C:\\b: denied"] });
+});
+
+test("a scan with the same outcome keeps the earlier result, and one that differs replaces it", () => {
+  const first = scanResult("w", ["C:\\a"], [{ files: ["x"], truncated: false }]);
+  expect(scanResult("w", ["C:\\a"], [{ files: ["x"], truncated: false }], first)).toBe(first);
+  expect(scanResult("w", ["C:\\a"], [{ files: ["y"], truncated: false }], first)).not.toBe(first);
+  expect(scanResult("w", ["C:\\a"], [{ files: ["x"], truncated: true }], first)).not.toBe(first);
+  expect(scanResult("v", ["C:\\a"], [{ files: ["x"], truncated: false }], first)).not.toBe(first);
+});
+
+test("only the latest run holds", () => {
+  const start = latestRun();
+  const first = start();
+  expect(first()).toBe(true);
+  const second = start();
+  expect(first()).toBe(false);
+  expect(second()).toBe(true);
 });
