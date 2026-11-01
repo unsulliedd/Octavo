@@ -44,10 +44,18 @@ export function relativePath(dir: string, file: string) {
   return "../".repeat(from.length - i) + to.slice(i).join("/");
 }
 
+const DRIVE = /^[a-z]:[\\/]/i;
+
+/**
+ * Hides the colon of a drive path ("C:/pics/a.png" or "C:\pics\a.png") from the sanitizer, which reads "C:" as a
+ * protocol and drops the source. `resolveLocal` decodes it again; a source that isn't a drive path is returned as is.
+ */
+export const protectDrivePath = (src: string) => (DRIVE.test(safeDecode(src)) ? src.replace(":", "%3A") : src);
+
 /** Maps an <img src> from the document to something the webview can load. */
 export function resolveLocal(dir: string, src: string, toUrl: (path: string) => string) {
-  if (/^[a-z]:[\\/]/i.test(src)) return toUrl(src); // absolute Windows path
   const path = safeDecode(src.split(/[?#]/)[0]);
+  if (DRIVE.test(path)) return toUrl(joinPath(path, ".")); // absolute Windows path
   // Markdown reads the "\\" of a network path as an escaped "\", so one may be left.
   const network = path.replace(/^\\(?=[^\\/])/, "\\\\").replace(/\//g, "\\");
   // Limitation: a network path loads only from the document's own server. Reading one makes Windows send the
@@ -55,4 +63,27 @@ export function resolveLocal(dir: string, src: string, toUrl: (path: string) => 
   if (serverOf(network) && serverOf(network) === serverOf(dir)) return toUrl(joinPath(network, "."));
   if (/^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(src)) return src; // URL or fragment
   return toUrl(joinPath(dir, path));
+}
+
+/**
+ * Maps every candidate of a <source srcset> through `resolveLocal`, keeping its width or density descriptor
+ * ("a.png 1x, b.png 2x"). A candidate may not contain whitespace; one that ends in a comma has no descriptor.
+ */
+export function resolveSrcset(dir: string, srcset: string, toUrl: (path: string) => string) {
+  const out: string[] = [];
+  for (let rest = srcset; ; ) {
+    const m = /^[\s,]*(\S+)/.exec(rest);
+    if (!m) break;
+    rest = rest.slice(m[0].length);
+    let url = m[1];
+    let descriptor = "";
+    if (url.endsWith(",")) url = url.replace(/,+$/, "");
+    else {
+      const d = /^[^,]*/.exec(rest)![0];
+      rest = rest.slice(d.length);
+      descriptor = d.trim();
+    }
+    if (url) out.push(`${resolveLocal(dir, url, toUrl)}${descriptor && ` ${descriptor}`}`);
+  }
+  return out.join(", ");
 }

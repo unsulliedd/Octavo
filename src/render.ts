@@ -9,7 +9,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import type { Element, Root } from "hast";
-import { resolveLocal, safeDecode } from "./paths";
+import { protectDrivePath, resolveLocal, resolveSrcset, safeDecode } from "./paths";
 import { languageName } from "./languages";
 import { displayValue, parseProperties } from "./properties";
 
@@ -235,15 +235,28 @@ function properties(yaml: string | undefined) {
   };
 }
 
+/** Keeps the sanitizer from dropping the `src` of an image with a drive path ("C:/pics/a.png"), see protectDrivePath. */
+function driveImages() {
+  const walk = (node: Root | Element) => {
+    for (const child of node.children) {
+      if (child.type !== "element") continue;
+      if (child.tagName === "img" && typeof child.properties.src === "string") child.properties.src = protectDrivePath(child.properties.src);
+      walk(child);
+    }
+  };
+  return () => walk;
+}
+
 function localImages(dir: string, toUrl: (path: string) => string) {
   const walk = (node: Root | Element) => {
     for (const child of node.children) {
       if (child.type !== "element") continue;
-      const src = child.properties.src;
+      const { src, srcSet } = child.properties;
       if (child.tagName === "img" && typeof src === "string") {
-        child.properties.dataSrc = src; // as written in the document, for the missing-image placeholder
+        child.properties.dataSrc = src.replace(/^([a-z])%3A/i, "$1:"); // as written in the document, for the missing-image placeholder
         child.properties.src = resolveLocal(dir, src, toUrl);
       }
+      if (child.tagName === "source" && typeof srcSet === "string") child.properties.srcSet = resolveSrcset(dir, srcSet, toUrl);
       walk(child);
     }
   };
@@ -257,7 +270,7 @@ function localImages(dir: string, toUrl: (path: string) => string) {
 export async function render(md: string, dir: string, toUrl: (path: string) => string) {
   const { md: source, tree } = parseMarkdown(md);
   // Slug after sanitize so heading ids stay "my-heading" and match GitHub-style #my-heading links.
-  const rehype: PluggableList = [[rehypeSanitize, schema], rehypeSlug, fragmentLinks, tableCells, breakPoints];
+  const rehype: PluggableList = [driveImages(), [rehypeSanitize, schema], rehypeSlug, fragmentLinks, tableCells, breakPoints];
   // Raw HTML needs a "<", so documents without one skip rehype-raw.
   if (source.includes("<")) rehype.unshift(rehypeRaw);
   // Limitation: "$" sniff decides whether to load KaTeX; a false positive only costs one lazy chunk

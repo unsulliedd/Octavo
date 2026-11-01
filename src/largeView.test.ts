@@ -186,3 +186,26 @@ test("Tab cycles through the panel's controls", () => {
   expect(cycleFocus(3, -1, true)).toBe(2);
   expect(cycleFocus(0, -1, false)).toBe(-1);
 });
+
+test("a picture is framed whole, so its sources keep applying to its image, and it still opens large", () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  const html = '<p>Hi <picture><source media="(prefers-color-scheme: dark)" srcset="dark.png"><img src="light.png" alt="Logo"></picture></p>';
+  const root = article(html);
+  const before = root.innerHTML;
+  const remove = addOpenButtons(root, true);
+  const picture = root.querySelector("picture")!;
+  expect(picture.parentElement?.className).toBe("large-frame");
+  expect(picture.querySelector(":scope > source")).not.toBeNull();
+  expect(picture.querySelector(":scope > img")).not.toBeNull(); // still the <source>'s sibling
+  const button = root.querySelector<HTMLButtonElement>(".large-open")!;
+  expect(largeContent(button, root, { ...state, click: false })).toMatchObject({ kind: "image", title: "Logo" });
+  expect(largeContent(picture.querySelector("img")!, root, state)).toMatchObject({ kind: "image" });
+  remove();
+  expect(root.innerHTML).toBe(before);
+});
+
+test("a picture inside a link gets no button", () => {
+  const root = article('<a href="x.md"><picture><source srcset="d.png"><img src="l.png"></picture></a>');
+  addOpenButtons(root, true);
+  expect(root.querySelectorAll(".large-open, .large-frame")).toHaveLength(0);
+});

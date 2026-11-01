@@ -17,6 +17,10 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - The update settings (Check for updates when Octavo starts, Check now and Restart now) are at the bottom of About; the Updates section is gone
 
 ### Fixed
+- Images with an absolute drive path (`C:/pics/a.png` or `C:\pics.png`) show in Markdown and in `<img>`
+- A `<picture>` shows its `<source>` variants, such as a dark-mode image, when images open large; the large view still opens
+- `<source srcset>` images next to the document load, with their width or density descriptors; one on another network server stays blocked
+- A link in a Mermaid diagram opens in the browser, and the window refuses to navigate away from Octavo, so a link can no longer replace the document and lose unsaved edits
 - Documents on a network share show their images: relative ones, images added to the document, and absolute network paths on the document's own server. A network image on another server shows as missing, because loading it would send your network credentials to that server
 - When the editor refuses to save an edit, the save status says what to do next instead of offering a retry that can't work
 - Octavo reads an image from disk only if it's in an open document's folder or is an image file a document refers to. Any other path sent to Octavo's image address shows as a missing image

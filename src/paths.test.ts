@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { joinPath, relativePath, resolveLocal } from "./paths";
+import { joinPath, protectDrivePath, relativePath, resolveLocal, resolveSrcset } from "./paths";
 
 const SHARE = "\\\\Server\\share\\docs";
 const url = (path: string) => `asset:${path}`;
@@ -62,4 +62,47 @@ test("a document can't load a network image from another server", () => {
   resolveLocal(SHARE, "%5C%5Cother%5Cshare%5Ca.png", track);
   resolveLocal("C:\\Docs", "%5C%5Cother%5Cshare%5Ca.png", track);
   expect(asked).toEqual(["\\\\Server\\share\\docs\\other\\share\\a.png", "C:\\Docs\\other\\share\\a.png"]);
+});
+
+test.each([
+  ["forward slashes", "C:/pics/a.png"],
+  ["backslashes, as raw HTML keeps them", "C:\\pics\\a.png"],
+  ["escaped backslashes, as Markdown leaves them", "C:%5Cpics%5Ca.png"],
+  ["a query", "C:/pics/a.png?v=1"],
+  ["a protected colon", protectDrivePath("c:/pics/a.png")],
+  ["a climb", "C:/pics/x/../a.png"],
+])("an absolute drive path reaches toUrl: %s", (_, src) => {
+  const asked: string[] = [];
+  resolveLocal(SHARE, src, (path) => (asked.push(path), url(path)));
+  expect(asked).toHaveLength(1);
+  expect(asked[0].replace(/\\/g, "/")).toMatch(/^[cC]:\/pics\/a\.png$/);
+});
+
+test("only a drive path gets its colon hidden", () => {
+  expect(protectDrivePath("C:/pics/a.png")).toBe("C%3A/pics/a.png");
+  expect(protectDrivePath("C:%5Cpics%5Ca.png")).toBe("C%3A%5Cpics%5Ca.png");
+  for (const src of ["a.png", "img/a:b.png", "https://x.org/a.png", "javascript:alert(1)", "data:image/png;base64,AA", "mailto:a@b.c", "C:file.png", "ab:/x.png"]) {
+    expect(protectDrivePath(src)).toBe(src);
+  }
+});
+
+test("a srcset maps every candidate and keeps its descriptor", () => {
+  const set = (srcset: string) => resolveSrcset("C:\\Docs", srcset, url);
+  expect(set("a.png")).toBe("asset:C:\\Docs\\a.png");
+  expect(set("img/a.png 1x, ../b%20c.png 2x")).toBe("asset:C:\\Docs\\img\\a.png 1x, asset:C:\\b c.png 2x");
+  expect(set("  a.png 480w ,b.png 800w,  ")).toBe("asset:C:\\Docs\\a.png 480w, asset:C:\\Docs\\b.png 800w");
+  expect(set("a.png, b.png 2x")).toBe("asset:C:\\Docs\\a.png, asset:C:\\Docs\\b.png 2x");
+  expect(set("https://x.org/a.png 2x, data:image/png;base64,AA")).toBe("https://x.org/a.png 2x, data:image/png;base64,AA");
+  expect(set("C:/pics/a.png 2x")).toBe("asset:C:/pics/a.png 2x");
+  expect(set(" , ,")).toBe("");
+});
+
+test("an image on another server stays blocked through srcset", () => {
+  const asked: string[] = [];
+  const track = (path: string) => (asked.push(path), url(path));
+  expect(resolveSrcset(SHARE, "//other/share/a.png 1x, %5C%5Cother%5Cshare%5Cb.png 2x", track)).toBe(
+    "//other/share/a.png 1x, asset:\\\\Server\\share\\docs\\other\\share\\b.png 2x",
+  );
+  expect(resolveSrcset(SHARE, "//server/share/c.png 2x", track)).toBe("asset:\\\\server\\share\\c.png 2x");
+  expect(asked).toEqual(["\\\\Server\\share\\docs\\other\\share\\b.png", "\\\\server\\share\\c.png"]);
 });

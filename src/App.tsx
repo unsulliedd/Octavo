@@ -19,6 +19,7 @@ import { FindBar } from "./FindBar";
 import { basename, folderTrail, Home } from "./Home";
 import { Icon } from "./icons";
 import { pastedName, watchBrokenImages } from "./images";
+import { linkTarget } from "./svgLinks";
 import { addOpenButtons, largeContent, type LargeContent } from "./largeView";
 import { LargeViewer } from "./LargeViewer";
 import { widenBlocks } from "./breakout";
@@ -594,10 +595,6 @@ export default function App() {
     if (typeof target === "string") await saveDoc(path, target);
   }
 
-  /**
-   * Saves every document with unsaved edits. Resolves to the messages of the saves that failed, each
-   * naming its file.
-   */
   /** Every document with unsaved edits. */
   function filesWithEdits() {
     const files = new Set(Object.keys(draftsRef.current));
@@ -606,6 +603,10 @@ export default function App() {
     return [...files];
   }
 
+  /**
+   * Saves every document with unsaved edits. Resolves to the messages of the saves that failed, each
+   * naming its file.
+   */
   async function saveAll() {
     const failed: string[] = [];
     for (const file of filesWithEdits()) {
@@ -1188,7 +1189,7 @@ export default function App() {
       setLarge(opened);
       return;
     }
-    const href = (e.target as HTMLElement).closest("a")?.getAttribute("href");
+    const href = linkTarget(e.target as Element);
     if (!href || !doc) return;
     e.preventDefault();
     followLink(href);

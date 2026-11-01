@@ -143,3 +143,60 @@ test("local images are reported to toUrl with their full path and keep their sou
   expect(html).toContain('data-src="../img/a.png"');
   expect(html).toContain('src="https://example.com/b.png" alt="b" data-src="https://example.com/b.png"');
 });
+
+test("images with an absolute drive path survive the sanitizer, in Markdown and in raw HTML", async () => {
+  const asked: string[] = [];
+  const track = (p: string) => (asked.push(p), toUrl(p));
+  const html = await render(
+    ["![a](C:/pics/a.png)", "", "![b](C:\\pics\\b.png)", "", '<img src="C:\\pics\\c.png" alt="c"> <img src="d:/pics/my pic.png">', "", "![e](<C:/pics/my pic.png>)"].join("\n"),
+    "/d",
+    track,
+  );
+  expect(html).toContain('src="asset:C:/pics/a.png"');
+  expect(html).toContain('src="asset:C:\\pics\\b.png"');
+  expect(html).toContain('src="asset:C:\\pics\\c.png"');
+  expect(html).toContain('src="asset:d:/pics/my pic.png"');
+  expect(html).toContain('data-src="C:/pics/a.png"');
+  expect(asked.map((p) => p.replace(/\\/g, "/"))).toEqual(["C:/pics/a.png", "C:/pics/b.png", "C:/pics/c.png", "d:/pics/my pic.png", "C:/pics/my pic.png"]);
+});
+
+test("the sanitizer still drops every other scheme from an image source", async () => {
+  const asked: string[] = [];
+  const html = await render(
+    ['<img src="javascript:alert(1)"><img src="file:///C:/x.png"><img src="ab:/x.png"><img src="data:image/png;base64,AA"><img src="C:x.png">'].join("\n"),
+    "/d",
+    (p) => (asked.push(p), toUrl(p)),
+  );
+  expect(html).not.toMatch(/src=/);
+  expect(asked).toEqual([]);
+});
+
+test("a <source srcset> is mapped like an image, descriptors kept, and the local files reach toUrl", async () => {
+  const asked: string[] = [];
+  const html = await render(
+    [
+      "<picture>",
+      '<source media="(prefers-color-scheme: dark)" srcset="img/dark.png 1x, img/dark@2x.png 2x">',
+      '<source srcset="C:/pics/w.png 480w, https://x.org/r.png 800w">',
+      '<img src="img/light.png" alt="p">',
+      "</picture>",
+    ].join("\n"),
+    "/d",
+    (p) => (asked.push(p), toUrl(p)),
+  );
+  expect(html).toContain('srcset="asset:/d/img/dark.png 1x, asset:/d/img/dark@2x.png 2x"');
+  expect(html).toContain('media="(prefers-color-scheme: dark)"');
+  expect(html).toContain('srcset="asset:C:/pics/w.png 480w, https://x.org/r.png 800w"');
+  expect(asked).toEqual(["/d/img/dark.png", "/d/img/dark@2x.png", "C:/pics/w.png", "/d/img/light.png"]);
+});
+
+test("an image on another server stays blocked through a <source srcset>", async () => {
+  const asked: string[] = [];
+  const html = await render(
+    '<picture><source srcset="//other/share/a.png 1x, //server/share/b.png 2x"><img src="x.png"></picture>',
+    "\\\\server\\share\\docs",
+    (p) => (asked.push(p), toUrl(p)),
+  );
+  expect(html).toContain('srcset="//other/share/a.png 1x, asset:\\\\server\\share\\b.png 2x"');
+  expect(asked).toEqual(["\\\\server\\share\\b.png", "\\\\server\\share\\docs\\x.png"]);
+});

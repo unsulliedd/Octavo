@@ -1,5 +1,6 @@
 mod asset;
 mod backup;
+mod gate;
 mod images;
 mod notes;
 mod save;
@@ -164,6 +165,7 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(gate::plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
