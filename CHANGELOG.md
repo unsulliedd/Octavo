@@ -8,6 +8,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Workspaces: Open folder… on Home and in the sidebar's new Files tab lists a folder's Markdown documents as a tree and opens them with a click. Home shows recent workspaces, the status bar and the Files tab switch between them, the open workspace comes back after a restart, and the tree refreshes when the window gets focus or with Refresh. Settings › Reading › Show hidden folders includes folders whose names start with a dot
 - The sidebar can be resized by dragging its edge or with the arrow keys on it; a double-click goes back to the usual width. The width is kept between launches
 
+### Fixed
+- With many documents open, tabs shrink to fit instead of running off the end of the toolbar, the mouse wheel scrolls the tab strip sideways, and a button at the end of the strip lists every open tab when they still don't fit
+
 ## [0.6.1] - 2026-11-01
 
 ### Fixed
