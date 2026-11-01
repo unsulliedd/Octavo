@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { lineWidth, openLarge, recentFiles } from "./storage";
+import { DEFAULT_PREFS, lineWidth, openLarge, recentFiles } from "./storage";
 
 test("a stored line width is kept; anything else is the default width", () => {
   expect(lineWidth("wider")).toBe("wider");
@@ -22,4 +22,8 @@ test("recent files keep only entries with a path and a time", () => {
   expect(recentFiles([file, "C:/notes/b.md", { path: "C:/notes/c.md" }, null, 4])).toEqual([file]);
   expect(recentFiles("junk")).toEqual([]);
   expect(recentFiles(undefined)).toEqual([]);
+});
+
+test("hidden folders are left out of workspaces by default", () => {
+  expect(DEFAULT_PREFS.showHidden).toBe(false);
 });

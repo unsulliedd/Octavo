@@ -88,6 +88,13 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                   ]}
                   hint="With a button at their top right, a click on them, or both. Tables open from their button."
                 />
+                <label className="setting-row">
+                  <span>
+                    Show hidden folders
+                    <span className="setting-hint">Workspaces also list folders whose names start with a dot, such as .github.</span>
+                  </span>
+                  <input type="checkbox" checked={prefs.showHidden} onChange={(e) => set({ showHidden: e.target.checked })} />
+                </label>
               </div>
             )}
             {section === "editing" && (

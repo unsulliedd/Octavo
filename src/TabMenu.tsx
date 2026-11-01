@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { Icon } from "./icons";
 
-export type TabMenuItem = { label: string; keys?: string; disabled?: boolean; run: () => void } | "separator";
+/** With `checked`, the item is one choice of a set, and `checked` says whether it is the current one. */
+export type TabMenuItem = { label: string; keys?: string; disabled?: boolean; checked?: boolean; run: () => void } | "separator";
 
 type Props = {
   /** The document the menu is for, read out as its name. */
@@ -8,27 +10,30 @@ type Props = {
   /** Where the pointer was right-clicked. */
   x: number;
   y: number;
+  /** The menu ends at `y` instead of starting there. */
+  above?: boolean;
   items: TabMenuItem[];
   onClose: () => void;
 };
 
 /**
  * The menu a right-click on a tab opens, at the pointer and kept inside the window. The arrow keys move between
- * the items, Home and End go to the first and last, Enter picks one; Escape or a click outside closes it.
+ * the items, Home and End go to the first and last, Enter picks one; Escape or a click outside closes it. A click on
+ * an element marked `data-menu-toggle` is left to that element, which closes the menu itself.
  */
-export function TabMenu({ name, x, y, items, onClose }: Props) {
+export function TabMenu({ name, x, y, above, items, onClose }: Props) {
   const menu = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState({ left: x, top: y });
 
   useLayoutEffect(() => {
     const box = menu.current?.getBoundingClientRect();
     if (!box) return;
-    setPlace({ left: Math.max(4, Math.min(x, window.innerWidth - box.width - 4)), top: Math.max(4, Math.min(y, window.innerHeight - box.height - 4)) });
+    setPlace({ left: Math.max(4, Math.min(x, window.innerWidth - box.width - 4)), top: Math.max(4, Math.min(above ? y - box.height : y, window.innerHeight - box.height - 4)) });
     menu.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
-  }, [x, y]);
+  }, [x, y, above]);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => !menu.current?.contains(e.target as Node) && onClose();
+    const onDown = (e: MouseEvent) => !menu.current?.contains(e.target as Node) && !(e.target as Element).closest("[data-menu-toggle]") && onClose();
     const onBlur = () => onClose();
     window.addEventListener("mousedown", onDown);
     window.addEventListener("blur", onBlur);
@@ -59,9 +64,10 @@ export function TabMenu({ name, x, y, items, onClose }: Props) {
           <div key={i} className="menu-separator" role="separator" />
         ) : (
           <button
-            key={item.label}
+            key={i}
             className="menu-item"
-            role="menuitem"
+            role={item.checked === undefined ? "menuitem" : "menuitemradio"}
+            aria-checked={item.checked}
             disabled={item.disabled}
             onClick={() => {
               onClose();
@@ -70,6 +76,7 @@ export function TabMenu({ name, x, y, items, onClose }: Props) {
           >
             {item.label}
             {item.keys && <span className="menu-keys">{item.keys}</span>}
+            {item.checked && <Icon name="check" size={14} />}
           </button>
         ),
       )}

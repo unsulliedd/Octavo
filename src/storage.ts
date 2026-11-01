@@ -1,4 +1,5 @@
 import { sanitizeBindings, type Bindings } from "./shortcuts";
+import { DEFAULT_SIDEBAR, storedSidebarWidth } from "./sidebarWidth";
 import { fromStored } from "./tabs";
 import type { TableWidths } from "./tableWidths";
 
@@ -43,10 +44,14 @@ export type Prefs = {
   shortcuts: Bindings;
   /** Shortly after launch, Octavo looks for a newer release and downloads it in the background. */
   checkUpdates: boolean;
+  /** Workspace scans include folders whose names start with a dot. */
+  showHidden: boolean;
+  /** The width of the sidebar, in pixels. */
+  sidebarWidth: number;
 };
 export type RecentFile = { path: string; at: number };
 
-export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true };
+export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR };
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -57,7 +62,7 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
-export function save(key: "prefs" | "recent" | "pinned" | "tabs" | "tableWidths" | "lastVersion", value: unknown) {
+export function save(key: "prefs" | "recent" | "pinned" | "tabs" | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy", value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
@@ -71,7 +76,7 @@ export const openLarge = (v: unknown): OpenLarge => (OPEN_LARGE.includes(v as Op
 
 export const loadPrefs = (): Prefs => {
   const stored = load<Partial<Prefs>>("prefs", {});
-  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), shortcuts: sanitizeBindings(stored.shortcuts) };
+  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), sidebarWidth: storedSidebarWidth(stored.sidebarWidth), shortcuts: sanitizeBindings(stored.shortcuts) };
 };
 export const loadTabs = () => fromStored(load<unknown>("tabs", null));
 export const loadTableWidths = () => {
@@ -83,6 +88,14 @@ export const loadLastVersion = () => {
   const v = load<unknown>("lastVersion", undefined);
   return typeof v === "string" ? v : undefined;
 };
+const loadString = (key: string) => {
+  const v = load<unknown>(key, undefined);
+  return typeof v === "string" ? v : undefined;
+};
+/** The id of the workspace that was open. */
+export const loadOpenWorkspace = () => loadString("workspace");
+/** The kept copy of a saved workspaces file the user was last told about. */
+export const loadToldCopy = () => loadString("workspaceCopy");
 export const loadPinned = () => load<string[]>("pinned", []).filter((p) => typeof p === "string");
 
 /** The recent files in `raw`, skipping anything that isn't a path with the time it was opened. */
