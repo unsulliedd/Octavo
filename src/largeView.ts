@@ -173,8 +173,10 @@ export function addOpenButtons(root: HTMLElement, media: boolean) {
     const frame = doc.createElement("span");
     frame.className = "large-frame";
     const button = openButton(doc, "image");
-    img.replaceWith(frame);
-    frame.append(img, button);
+    // A <picture> is framed whole: its <source> elements only apply to an <img> that is their sibling.
+    const shown = img.parentElement?.tagName === "PICTURE" ? img.parentElement : img;
+    shown.replaceWith(frame);
+    frame.append(shown, button);
     undo.push(() => frame.isConnected && frame.replaceWith(...[...frame.childNodes].filter((n) => n !== button)));
   }
   return () => undo.forEach((f) => f());
