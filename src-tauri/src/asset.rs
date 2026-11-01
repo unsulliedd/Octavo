@@ -72,7 +72,7 @@ pub fn respond(allowed: &Allowed, uri_path: &str) -> Response<Vec<u8>> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 
@@ -226,7 +226,7 @@ mod tests {
 
     /// Links `at` to `target`. On Windows a folder link is a junction, which needs no special rights; a file link
     /// needs Developer Mode or elevation, so it can fail there.
-    fn link(target: &Path, at: &Path) -> bool {
+    pub(crate) fn link(target: &Path, at: &Path) -> bool {
         #[cfg(unix)]
         return std::os::unix::fs::symlink(target, at).is_ok();
         #[cfg(windows)]
