@@ -1,6 +1,6 @@
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { render } from "./render";
-import { createRenderer } from "./renderClient";
+import { createRenderer, RENDER_LIMIT, TOO_SLOW } from "./renderClient";
 import { runRenderJob, type RenderRequest } from "./renderJob";
 
 /** A stand-in worker that runs jobs with the real pipeline, answering in order or on demand. */
@@ -19,6 +19,8 @@ function fakeWorker() {
   return w;
 }
 
+afterEach(() => void vi.useRealTimers());
+
 test("runRenderJob builds image URLs from the asset prefix and reports images and math", async () => {
   const res = await runRenderJob({ id: 7, md: "![a](../img/a%20b.png) $x$", dir: "C:\\docs\\notes", assetBase: "http://asset.localhost/" }, render);
   expect(res).toMatchObject({ id: 7, ok: true, images: ["C:\\docs\\img\\a b.png"], math: true });
@@ -32,6 +34,11 @@ test("runRenderJob turns a failure into an error answer", async () => {
     throw new Error("boom");
   });
   expect(res).toEqual({ id: 1, ok: false, error: "Error: boom" });
+});
+
+test("a document too deep for the pipeline's stack gets a clear message", async () => {
+  const res = await runRenderJob({ id: 1, md: ">".repeat(20000) + " deep", dir: "/d", assetBase: "" }, render);
+  expect(res).toEqual({ id: 1, ok: false, error: "This document is nested too deeply to show." });
 });
 
 test("answers are matched to requests by id, in any order", async () => {
@@ -69,4 +76,52 @@ test("when the worker fails, waiting and later requests move to the main thread"
   expect((await renderDoc("# Later", "/d", "")).html).toContain("Later");
   expect(w.terminate).toHaveBeenCalled();
   expect(w.posted).toHaveLength(1);
+});
+
+test("a render that never ends fails with a message, and the next documents render in a new worker", async () => {
+  vi.useFakeTimers();
+  const workers = [fakeWorker(), fakeWorker()];
+  let started = 0;
+  const renderDoc = createRenderer(() => workers[started++], async () => render);
+  const stuck = renderDoc("# Stuck", "/d", "");
+  const waiting = renderDoc("# Waiting", "/d", "");
+  const failed = expect(stuck).rejects.toThrow(TOO_SLOW);
+  vi.advanceTimersByTime(RENDER_LIMIT);
+  await failed;
+  expect(workers[0].terminate).toHaveBeenCalledOnce();
+  expect(workers[1].posted.map((r) => r.md)).toEqual(["# Waiting"]);
+  vi.useRealTimers();
+  await workers[1].answer(0);
+  expect((await waiting).html).toContain("Waiting");
+});
+
+test("the time limit is for the render being worked on, not the ones waiting behind it", async () => {
+  vi.useFakeTimers();
+  const w = fakeWorker();
+  const renderDoc = createRenderer(() => w, async () => render);
+  const first = renderDoc("# One", "/d", "");
+  const second = renderDoc("# Two", "/d", "");
+  vi.advanceTimersByTime(RENDER_LIMIT - 1);
+  vi.useRealTimers();
+  await w.answer(0);
+  await first;
+  vi.useFakeTimers();
+  vi.advanceTimersByTime(RENDER_LIMIT - 1);
+  expect(w.terminate).not.toHaveBeenCalled();
+  vi.useRealTimers();
+  await w.answer(1);
+  expect((await second).html).toContain("Two");
+});
+
+test("no time limit is left running once every render has answered", async () => {
+  vi.useFakeTimers();
+  const w = fakeWorker();
+  const renderDoc = createRenderer(() => w, async () => render);
+  const done = renderDoc("# One", "/d", "");
+  vi.useRealTimers();
+  await w.answer(0);
+  await done;
+  vi.useFakeTimers();
+  vi.advanceTimersByTime(RENDER_LIMIT * 2);
+  expect(w.terminate).not.toHaveBeenCalled();
 });

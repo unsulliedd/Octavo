@@ -18,11 +18,31 @@ struct Doc {
     text: String,
 }
 
+/// A document's text, or None for a file that isn't UTF-8 text: another encoding, or binary. A NUL byte
+/// never appears in text, and marks UTF-16 and binary files that happen to be valid UTF-8.
+fn document_text(bytes: Vec<u8>) -> Option<String> {
+    if bytes.contains(&0) {
+        return None;
+    }
+    String::from_utf8(bytes).ok()
+}
+
+/// The text of the document at `path`, with a message that says why when it can't be read.
+fn read_document(path: &Path) -> Result<String, String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    document_text(bytes).ok_or_else(|| {
+        format!(
+            "{} can't be opened: Octavo opens UTF-8 text files, and this file isn't one.",
+            path.display()
+        )
+    })
+}
+
 /// Reads a document and lets the webview load images from its folder.
 #[tauri::command]
 fn open_doc(allowed: tauri::State<asset::Allowed>, path: String) -> Result<Doc, String> {
     let path = std::path::absolute(&path).map_err(|e| e.to_string())?;
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let text = read_document(&path)?;
     if let Some(dir) = path.parent() {
         allowed.add(dir);
     }
@@ -218,6 +238,54 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn text_opens_as_it_is_with_its_bom_and_line_endings() {
+        for text in ["", "---\nt: x\n---\n", "\u{FEFF}# T\r\n", "a\r\nb\nc\rd", "ğü 日本語"] {
+            assert_eq!(document_text(text.into()).as_deref(), Some(text));
+        }
+    }
+
+    #[test]
+    fn other_encodings_and_binary_files_are_refused() {
+        let utf16 = |bom: &[u8], text: &str| -> Vec<u8> {
+            let units = text.encode_utf16().flat_map(u16::to_le_bytes);
+            bom.iter().copied().chain(units).collect()
+        };
+        let png = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+        for bytes in [
+            utf16(&[0xFF, 0xFE], "# Title"),
+            utf16(&[], "# Title"),
+            b"caf\xE9".to_vec(),
+            png,
+            vec![0; 16],
+        ] {
+            assert_eq!(document_text(bytes), None);
+        }
+    }
+
+    #[test]
+    fn a_file_with_a_non_ascii_name_and_spaces_opens_and_saves() {
+        let dir = std::env::temp_dir().join(format!("octavo open {} ğ", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("notlar ğü 日本語.md");
+        std::fs::write(&file, "a\r\n").unwrap();
+        assert_eq!(read_document(&file).unwrap(), "a\r\n");
+        save::save(&file, "b\r\n", Some("a\r\n"), |_| Ok(())).unwrap();
+        assert_eq!(std::fs::read(&file).unwrap(), b"b\r\n");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_message_for_a_refused_file_names_it() {
+        let dir = std::env::temp_dir().join(format!("octavo-refused-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("wide.md");
+        std::fs::write(&file, [0xFF, 0xFE, b'a', 0]).unwrap();
+        let message = read_document(&file).unwrap_err();
+        assert!(message.contains("wide.md") && message.contains("UTF-8"), "{message}");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn the_window_keeps_its_size_position_and_maximized_state_only() {

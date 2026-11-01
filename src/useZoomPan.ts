@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { fitZoom, stepZoom } from "./mermaid";
+import { linkTarget } from "./svgLinks";
 
 /**
  * Zoom and drag-to-move for a drawing of `size` in a scrolling box. The drawing starts zoomed to fit the box once
@@ -47,7 +48,8 @@ export function useZoomPan(size: { width: number; height: number } | undefined, 
     onDoubleClick: fit,
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
       const el = e.currentTarget;
-      if (e.button !== 0 || !pannable) return;
+      // Capturing the pointer would take the click away from a link.
+      if (e.button !== 0 || !pannable || linkTarget(e.target as Element) !== undefined) return;
       drag.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
       el.setPointerCapture(e.pointerId);
       el.dataset.dragging = "";

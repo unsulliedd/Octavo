@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { editorText, fileFormat, textToSave, toFileText } from "./fileText";
+import { editedText, editorText, fileFormat, textToSave, toFileText } from "./fileText";
 
 describe("fileFormat", () => {
+  it("handles any run of blank lines in the middle of a file at once", () => {
+    const text = `a${"\r\n".repeat(50_000)}b\r\n`;
+    expect(fileFormat(text).finalBreaks).toBe(1);
+    expect(textToSave(text, `a${"\n".repeat(50_000)}c\n`)).toBe(`a${"\r\n".repeat(50_000)}c\r\n`);
+  });
+
   it("finds line endings, final line breaks and a byte order mark", () => {
-    expect(fileFormat("a\r\nb\r\n")).toEqual({ eol: "\r\n", finalBreaks: 1, bom: false });
-    expect(fileFormat("a\nb")).toEqual({ eol: "\n", finalBreaks: 0, bom: false });
-    expect(fileFormat("﻿a\n\n\n")).toEqual({ eol: "\n", finalBreaks: 3, bom: true });
-    expect(fileFormat("a\r\n\r\n")).toEqual({ eol: "\r\n", finalBreaks: 2, bom: false });
-    expect(fileFormat("single line")).toEqual({ eol: "\n", finalBreaks: 0, bom: false });
+    expect(fileFormat("a\r\nb\r\n")).toEqual({ eol: "\r\n", mixed: false, finalBreaks: 1, bom: false });
+    expect(fileFormat("a\nb")).toEqual({ eol: "\n", mixed: false, finalBreaks: 0, bom: false });
+    expect(fileFormat("﻿a\n\n\n")).toEqual({ eol: "\n", mixed: false, finalBreaks: 3, bom: true });
+    expect(fileFormat("a\r\n\r\n")).toEqual({ eol: "\r\n", mixed: false, finalBreaks: 2, bom: false });
+    expect(fileFormat("single line")).toEqual({ eol: "\n", mixed: false, finalBreaks: 0, bom: false });
   });
 
   it("uses the more common line ending in a mixed file", () => {
@@ -50,5 +56,30 @@ describe("textToSave", () => {
   it("writes edits in the file's format", () => {
     expect(textToSave("# T\r\n\r\ntext\r\n", "# T\n\nmore text\n")).toBe("# T\r\n\r\nmore text\r\n");
     expect(textToSave("# T", "# T2\n")).toBe("# T2");
+  });
+
+  it("keeps the line ending of each line the edits left alone in a mixed file", () => {
+    const original = "# T\r\n\r\nfirst\nsecond\r\n\nlast\n";
+    expect(textToSave(original, "# T\n\nfirst\nsecond\n\nlast\n")).toBeUndefined();
+    expect(textToSave(original, "# T\n\nfirst\nsecond\n\nchanged\n")).toBe("# T\r\n\r\nfirst\nsecond\r\n\nchanged\n");
+    expect(textToSave(original, "# Title\n\nfirst\nadded\nsecond\n\nlast\n")).toBe("# Title\r\n\r\nfirst\nadded\nsecond\r\n\nlast\n");
+  });
+
+  it("keeps lone carriage returns as line endings", () => {
+    expect(fileFormat("a\rb\r")).toEqual({ eol: "\r", mixed: false, finalBreaks: 1, bom: false });
+    expect(textToSave("a\r\rb\r", "a\n\nb\n")).toBeUndefined();
+    expect(textToSave("a\r\rb\r", "a\n\nc\n")).toBe("a\r\rc\r");
+    expect(textToSave("a\r\nb\rc\n", "a\nb\nd\n")).toBe("a\r\nb\rd\n");
+  });
+
+  it("keeps a final line without a line ending and the byte order mark in a mixed file", () => {
+    expect(textToSave("﻿a\r\nb\nc", "a\nb\nd\n")).toBe("﻿a\r\nb\nd");
+  });
+});
+
+describe("editedText", () => {
+  it("is the file's format even when the edits change nothing", () => {
+    expect(editedText("a\r\nb\n", "a\nb\n")).toBe("a\r\nb\n");
+    expect(editedText("a\r\n", "a\nb\n")).toBe("a\r\nb\r\n");
   });
 });

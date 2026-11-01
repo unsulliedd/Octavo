@@ -21,6 +21,8 @@ export type RenderResult = {
 
 export type RenderResponse = ({ ok: true } & RenderResult) | { ok: false; error: string };
 
+const TOO_DEEP = "This document is nested too deeply to show.";
+
 /** Renders one request. Never throws: a failure becomes an error response. */
 export async function runRenderJob(req: RenderRequest, renderFn: typeof render): Promise<RenderResponse & { id: number }> {
   const images: string[] = [];
@@ -31,6 +33,6 @@ export async function runRenderJob(req: RenderRequest, renderFn: typeof render):
     });
     return { id: req.id, ok: true, html, images, math: html.includes('class="katex') };
   } catch (e) {
-    return { id: req.id, ok: false, error: String(e) };
+    return { id: req.id, ok: false, error: e instanceof RangeError ? TOO_DEEP : String(e) };
   }
 }

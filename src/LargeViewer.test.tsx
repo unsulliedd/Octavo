@@ -24,8 +24,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(content: LargeContent, onClose = vi.fn()) {
-  act(() => root.render(<LargeViewer content={content} onClose={onClose} />));
+function show(content: LargeContent, onClose = vi.fn(), onOpenLink = vi.fn()) {
+  act(() => root.render(<LargeViewer content={content} onClose={onClose} onOpenLink={onOpenLink} />));
   return onClose;
 }
 
@@ -94,6 +94,66 @@ test("focus goes back to where it was when the view closes", () => {
   expect(document.activeElement).not.toBe(opener);
   act(() => root.render(<div />));
   expect(document.activeElement).toBe(opener);
+});
+
+/** Clicks `el` and returns whether the page's own navigation was stopped. */
+function clickLink(el: Element) {
+  const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+  act(() => void el.dispatchEvent(event));
+  return event.defaultPrevented;
+}
+
+test("a link in a table goes to onOpenLink instead of navigating the window", () => {
+  const onOpenLink = vi.fn();
+  show({ kind: "table", title: "Data", markup: '<table><tr><td><a href="https://example.com/"><b>site</b></a></td></tr></table>' }, vi.fn(), onOpenLink);
+  expect(clickLink(document.querySelector("b")!)).toBe(true);
+  expect(onOpenLink).toHaveBeenCalledWith("https://example.com/");
+});
+
+test("a link in a diagram goes to onOpenLink, by its xlink:href", () => {
+  const onOpenLink = vi.fn();
+  const svg = '<svg viewBox="0 0 10 10" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="other.md"><text>node</text></a></svg>';
+  show({ kind: "diagram", title: "Flow", markup: svg }, vi.fn(), onOpenLink);
+  expect(clickLink(document.querySelector("text")!)).toBe(true);
+  expect(onOpenLink).toHaveBeenCalledWith("other.md");
+});
+
+test("a click outside a link opens nothing, and a link with no target goes nowhere", () => {
+  const onOpenLink = vi.fn();
+  show({ kind: "table", title: "Data", markup: '<table><tr><td>cell</td><td><a href="">empty</a></td></tr></table>' }, vi.fn(), onOpenLink);
+  expect(clickLink(document.querySelector("td")!)).toBe(false);
+  expect(clickLink(document.querySelector("a")!)).toBe(true);
+  expect(onOpenLink).not.toHaveBeenCalled();
+});
+
+test("a press on a link in a zoomed diagram leaves the click to the link; elsewhere it starts a drag", () => {
+  const capture = vi.fn();
+  Element.prototype.setPointerCapture = capture;
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(1000);
+  show({ kind: "diagram", title: "Flow", markup: '<svg viewBox="0 0 10 10"><a href="other.md"><text>node</text></a><rect/></svg>' });
+  const press = (el: Element) => act(() => void el.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
+  press(document.querySelector("text")!);
+  expect(capture).not.toHaveBeenCalled();
+  press(document.querySelector("rect")!);
+  expect(capture).toHaveBeenCalledTimes(1);
+  vi.restoreAllMocks();
+});
+
+test("Tab reaches the links in the panel", () => {
+  show({ kind: "table", title: "Data", markup: '<table><tr><td><a href="other.md">other</a></td></tr></table>' });
+  press("Tab");
+  expect(document.activeElement).toBe(document.querySelector("a"));
+});
+
+test("Tab reaches a diagram's links, which have an xlink:href", () => {
+  show({ kind: "diagram", title: "Flow", markup: '<svg viewBox="0 0 10 10" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="other.md"><text>node</text></a></svg>' });
+  const link = document.querySelector("svg a") as unknown as HTMLElement;
+  const items = document.querySelectorAll(".large-panel button, .large-panel input, .large-panel a");
+  expect(items).toHaveLength(4);
+  link.focus = vi.fn();
+  press("Tab");
+  press("Tab");
+  expect(link.focus).toHaveBeenCalled();
 });
 
 test("Tab stays inside the panel", () => {

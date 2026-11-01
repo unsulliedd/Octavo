@@ -2,20 +2,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { cycleFocus, type LargeContent, type Size } from "./largeView";
 import { svgSize } from "./mermaid";
+import { linkTarget } from "./svgLinks";
 import { useZoomPan } from "./useZoomPan";
 
 type Props = {
   content: LargeContent;
   onClose: () => void;
+  onOpenLink: (href: string) => void;
 };
 
 /**
  * A diagram, image or table from the reading view, large over the whole window. Diagrams and images zoom with the
  * slider or Ctrl+wheel, fit again on a double-click and are dragged around when larger than the view; a table
- * fills the view's width and scrolls inside it. Escape, the close button or a click outside the panel closes it, and
- * focus goes back to where it was.
+ * fills the view's width and scrolls inside it. Links open through `onOpenLink`. Escape, the close button or a click
+ * outside the panel closes it, and focus goes back to where it was.
  */
-export function LargeViewer({ content, onClose }: Props) {
+export function LargeViewer({ content, onClose, onOpenLink }: Props) {
   const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const [opener] = useState(() => document.activeElement);
@@ -39,7 +41,7 @@ export function LargeViewer({ content, onClose }: Props) {
         e.stopPropagation();
         close.current();
       } else if (e.key === "Tab" && panel.current) {
-        const items = [...panel.current.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)")];
+        const items = [...panel.current.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), a[href], a[*|href]")];
         e.preventDefault();
         items[cycleFocus(items.length, items.indexOf(document.activeElement as HTMLElement), e.shiftKey)]?.focus();
       }
@@ -54,7 +56,20 @@ export function LargeViewer({ content, onClose }: Props) {
       onMouseDown={(e) => (pressedOutside.current = e.target === e.currentTarget)}
       onClick={(e) => e.target === e.currentTarget && pressedOutside.current && onClose()}
     >
-      <section ref={panel} className="large-panel" data-kind={content.kind} role="dialog" aria-modal="true" aria-label={content.title}>
+      <section
+        ref={panel}
+        className="large-panel"
+        data-kind={content.kind}
+        role="dialog"
+        aria-modal="true"
+        aria-label={content.title}
+        onClick={(e) => {
+          const href = linkTarget(e.target as Element);
+          if (href === undefined) return;
+          e.preventDefault();
+          if (href) onOpenLink(href);
+        }}
+      >
         <header className="large-head">
           <strong title={content.title}>{content.title}</strong>
           <button ref={closeButton} className="icon-btn" aria-label="Close (Escape)" title="Close (Escape)" onClick={onClose}>
