@@ -275,8 +275,7 @@ test("thousands of headings fill the outline, with unique ids", async () => {
 
 const INLINE_IMAGE = `data:image/png;base64,${"iVBORw0KGgo".repeat(50000)}`;
 
-// The sanitizer drops data: sources, so the reading view shows nothing for an inline image while the editor shows it.
-test.fails("a large inline image shows in the reading view", async () => {
+test("a large inline image shows in the reading view", async () => {
   await launch(`![pic](${INLINE_IMAGE})
 `);
   expect(host.querySelector("img")!.getAttribute("src")).toBe(INLINE_IMAGE);
@@ -354,4 +353,15 @@ test("a fragment link in a large table closes the view and scrolls the document 
   await click(largeLink("below"));
   await until(() => !document.querySelector('[role="dialog"]'), "the view to close");
   expect(scrolled.map((el) => el.id)).toContain("later");
+});
+
+test.each([
+  ["a\nb\n\nOriginal text.\n", "LF"],
+  ["a\r\nb\r\n\r\nOriginal text.\r\n", "CRLF"],
+  ["a\rb\r\rOriginal text.\r", "CR"],
+  ["a\r\nb\r\n\r\nOriginal text.\n", "CRLF (mixed)"],
+  ["a\nb\n\nOriginal text.\r\n", "LF (mixed)"],
+])("the status bar shows the line endings of %j as %s", async (text, label) => {
+  await launch(text);
+  expect(host.querySelector(".statusbar .status-right")!.textContent).toContain(`UTF-8${label}Markdown`);
 });

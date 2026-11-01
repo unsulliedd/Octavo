@@ -163,13 +163,58 @@ test("images with an absolute drive path survive the sanitizer, in Markdown and 
 test("the sanitizer still drops every other scheme from an image source", async () => {
   const asked: string[] = [];
   const html = await render(
-    ['<img src="javascript:alert(1)"><img src="file:///C:/x.png"><img src="ab:/x.png"><img src="data:image/png;base64,AA"><img src="C:x.png">'].join("\n"),
+    ['<img src="javascript:alert(1)"><img src="file:///C:/x.png"><img src="ab:/x.png"><img src="C:x.png">'].join("\n"),
     "/d",
     (p) => (asked.push(p), toUrl(p)),
   );
   expect(html).not.toMatch(/src=/);
   expect(asked).toEqual([]);
 });
+
+test("an inline png, jpeg, gif or webp image keeps its source, in Markdown and in <img>", async () => {
+  const srcs = ["data:image/png;base64,AA", "data:image/jpeg;base64,AA", "data:image/gif;base64,AA", "data:image/webp;base64,AA", "data:Image/PNG;base64,AA", "data:image/png;charset=utf-8;base64,AA", "data:image/png,AA"];
+  for (const src of srcs) {
+    expect(await render(`<img src="${src}">`, "/d", toUrl)).toContain(`src="${src}"`);
+    expect(await render(`![p](${src})`, "/d", toUrl)).toContain(`src="${src}"`);
+  }
+});
+
+test("every other data: source stays dropped, in any letter case and with any parameters", async () => {
+  const srcs = [
+    "data:image/svg+xml;base64,AA",
+    "data:image/svg+xml,%3Csvg%3E",
+    "DATA:IMAGE/SVG+XML;base64,AA",
+    "data:image/svg+xml;charset=utf-8,x",
+    "data:text/html;base64,AA",
+    "data:text/html,<script>1</script>",
+    "data:application/javascript,1",
+    "data:image/pngx;base64,AA",
+    "data:image/png+xml;base64,AA",
+    "data:image/bmp;base64,AA",
+    "data:,AA",
+    "data:image/png",
+    " data:image/png;base64,AA",
+  ];
+  for (const src of srcs) {
+    expect(await render(`<img src="${src}">`, "/d", toUrl), src).not.toMatch(/src=/);
+    expect(await render(`![p](<${src}>)`, "/d", toUrl), src).not.toMatch(/src=/);
+  }
+});
+
+test("only an image's src keeps a data: value", async () => {
+  const html = await render('<a href="data:image/png;base64,AA">x</a><img srcset="data:image/png;base64,AA 1x" longdesc="data:image/png;base64,AA">', "/d", toUrl);
+  expect(html).not.toContain("data:");
+});
+
+test("a 5 MB inline image renders quickly, and so does a 5 MB refused one", async () => {
+  const big = "A".repeat(5_000_000);
+  for (const [src, kept] of [[`data:image/png;base64,${big}`, true], [`data:image/svg+xml;base64,${big}`, false], [`data:image/png;${"image/".repeat(800_000)}`, true]] as const) {
+    const started = performance.now();
+    const html = await render(`![p](${src})`, "/d", toUrl);
+    expect(html.includes("src=")).toBe(kept);
+    expect(performance.now() - started).toBeLessThan(8000); // parsing the source alone takes about 2 s; a backtracking pattern would take minutes
+  }
+}, 20_000);
 
 test("a <source srcset> is mapped like an image, descriptors kept, and the local files reach toUrl", async () => {
   const asked: string[] = [];

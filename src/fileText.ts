@@ -25,6 +25,9 @@ export function fileFormat(text: string): FileFormat {
   return { eol, mixed: counts.size > 1, finalBreaks, bom: text.startsWith(BOM) };
 }
 
+/** The status bar's name for a file's line endings: "CRLF", "LF" or "CR", with "(mixed)" when the file uses more than one. */
+export const eolLabel = ({ eol, mixed }: FileFormat) => `${{ "\n": "LF", "\r\n": "CRLF", "\r": "CR" }[eol]}${mixed ? " (mixed)" : ""}`;
+
 /** The Markdown the editor loads for a file's text: without the byte order mark. */
 export const editorText = (text: string) => (text.startsWith(BOM) ? text.slice(BOM.length) : text);
 

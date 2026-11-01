@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editedText, editorText, fileFormat, textToSave, toFileText } from "./fileText";
+import { editedText, editorText, eolLabel, fileFormat, textToSave, toFileText } from "./fileText";
 
 describe("fileFormat", () => {
   it("handles any run of blank lines in the middle of a file at once", () => {
@@ -82,4 +82,15 @@ describe("editedText", () => {
     expect(editedText("a\r\nb\n", "a\nb\n")).toBe("a\r\nb\n");
     expect(editedText("a\r\n", "a\nb\n")).toBe("a\r\nb\r\n");
   });
+});
+
+it("names a file's line endings for the status bar, mixed or not", () => {
+  const label = (text: string) => eolLabel(fileFormat(text));
+  expect(label("a\nb\n")).toBe("LF");
+  expect(label("no break")).toBe("LF");
+  expect(label("a\r\nb\r\n")).toBe("CRLF");
+  expect(label("a\rb\rc")).toBe("CR");
+  expect(label("a\r\nb\r\nc\n")).toBe("CRLF (mixed)");
+  expect(label("a\nb\nc\r\n")).toBe("LF (mixed)");
+  expect(label("a\rb\rc\n")).toBe("CR (mixed)");
 });

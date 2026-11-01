@@ -20,11 +20,28 @@ const ID_PREFIX = "user-content-";
 const schema = {
   ...defaultSchema,
   clobberPrefix: ID_PREFIX,
+  protocols: { ...defaultSchema.protocols, src: [...(defaultSchema.protocols?.src ?? []), "data"] },
   attributes: {
     ...defaultSchema.attributes,
     code: [["className", /^language-./, "math-inline", "math-display"]],
   },
 };
+
+/** The only `data:` sources that stay: raster images. Anchored and without nested repeats, so it is linear on a huge source. */
+const RASTER_DATA = /^data:image\/(?:png|jpeg|gif|webp)[;,]/i;
+
+/** After sanitizing: drops every `data:` source except an inline raster image (SVG and HTML can carry script). */
+function rasterDataOnly() {
+  const walk = (node: Root | Element) => {
+    for (const child of node.children) {
+      if (child.type !== "element") continue;
+      const { src } = child.properties;
+      if (typeof src === "string" && /^data:/i.test(src) && !(child.tagName === "img" && RASTER_DATA.test(src))) delete child.properties.src;
+      walk(child);
+    }
+  };
+  return () => walk;
+}
 
 export { dirname, joinPath, resolveLocal, safeDecode } from "./paths";
 
@@ -270,7 +287,7 @@ function localImages(dir: string, toUrl: (path: string) => string) {
 export async function render(md: string, dir: string, toUrl: (path: string) => string) {
   const { md: source, tree } = parseMarkdown(md);
   // Slug after sanitize so heading ids stay "my-heading" and match GitHub-style #my-heading links.
-  const rehype: PluggableList = [driveImages(), [rehypeSanitize, schema], rehypeSlug, fragmentLinks, tableCells, breakPoints];
+  const rehype: PluggableList = [driveImages(), [rehypeSanitize, schema], rasterDataOnly(), rehypeSlug, fragmentLinks, tableCells, breakPoints];
   // Raw HTML needs a "<", so documents without one skip rehype-raw.
   if (source.includes("<")) rehype.unshift(rehypeRaw);
   // Limitation: "$" sniff decides whether to load KaTeX; a false positive only costs one lazy chunk
