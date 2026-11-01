@@ -11,7 +11,7 @@ import { DocButtons, type DocActions } from "./editor/FormatBar";
 import { editorLayout } from "./editor/layout";
 import { sameRendering } from "./editor/sameRendering";
 import type { EditorSession, Snapshot } from "./editor/session";
-import { editorText, fileFormat, textToSave, toFileText } from "./fileText";
+import { editedText, editorText, textToSave } from "./fileText";
 import { CompareView } from "./CompareView";
 import { diskChange } from "./conflict";
 import { canRevert, revertText } from "./editSession";
@@ -538,7 +538,7 @@ export default function App() {
       return message;
     };
     if (edited !== undefined && !(snapshot ? snapshot.exact : draft?.exact)) return fail(originalsRef.current[file] === undefined ? NOT_EXACT_AFTER_DONE : NOT_EXACT, true);
-    const text = other ? (edited === undefined ? base : toFileText(edited, fileFormat(base))) : textToSave(base, edited);
+    const text = other ? (edited === undefined ? base : editedText(base, edited)) : textToSave(base, edited);
     setSaveState(file, { state: "saving" });
     try {
       if (text !== undefined) await invoke<boolean>("save_doc", { path: target ?? file, text, expected: other ? null : base, backup: prefs.backups });
@@ -1190,9 +1190,9 @@ export default function App() {
       return;
     }
     const href = linkTarget(e.target as Element);
-    if (!href || !doc) return;
+    if (href === undefined || !doc) return;
     e.preventDefault();
-    followLink(href);
+    if (href) followLink(href);
   }
 
   /** Fragments scroll, URLs go to the browser, .md links open here. */
@@ -1665,7 +1665,17 @@ export default function App() {
           </>
         )}
       </footer>
-      {large && <LargeViewer content={large} onClose={() => setLarge(undefined)} />}
+      {large && (
+        <LargeViewer
+          content={large}
+          onClose={() => setLarge(undefined)}
+          onOpenLink={(href) => {
+            // A fragment scrolls the document behind the view.
+            if (href.startsWith("#")) setLarge(undefined);
+            followLink(href);
+          }}
+        />
+      )}
     </div>
   );
 

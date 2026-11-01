@@ -24,6 +24,10 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Documents on a network share show their images: relative ones, images added to the document, and absolute network paths on the document's own server. A network image on another server shows as missing, because loading it would send your network credentials to that server
 - When the editor refuses to save an edit, the save status says what to do next instead of offering a retry that can't work
 - Octavo reads an image from disk only if it's in an open document's folder or is an image file a document refers to. Any other path sent to Octavo's image address shows as a missing image
+- Links in a table or diagram open large work as they do in the document: web links go to the browser, documents open here, and a link to a heading closes the large view and scrolls there. Tab reaches them
+- A file with mixed line endings or carriage-return line endings keeps them when saved: only the edited lines change
+- A file that isn't UTF-8 text, such as UTF-16 or a binary file named `.md`, shows a message saying so instead of a technical error or unreadable text
+- A document nested too deeply to show says so, and a document that takes too long to render stops with a message instead of showing Opening forever
 
 ## [0.5.2] - 2026-10-22
 

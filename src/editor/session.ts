@@ -24,13 +24,13 @@ import { NodeSelection, Plugin } from "@milkdown/kit/prose/state";
 import { diagramSvg, isDark } from "../mermaid";
 import { $prose, $view, getMarkdown } from "@milkdown/kit/utils";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
-import { escapeStrayDollars } from "../render";
+import { escapeStrayDollars, parseMarkdown } from "../render";
 import { editorText } from "../fileText";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { configureMarkdown, octavoCommonmark, octavoMarkdown, frontmatterSchema, mathBlockSchema, mathInlineSchema } from "./markdown";
 import { cleanKey, parseProperties, serializeProperties, type Property } from "../properties";
-import { markdownStyle, preserveUnchanged } from "./preserve";
+import { markdownStyle, preserveUnchanged, type Mdast } from "./preserve";
 import {
   codeBlockAt,
   formatState,
@@ -373,11 +373,12 @@ function withoutFormatKeys(ctx: Ctx) {
 
 /** Creates an editor in `root` for `markdown`. Stray `$` are escaped first, as the reader does, so prices stay text. */
 export async function createEditor(root: HTMLElement, markdown: string, { imageUrl, onChange, onSelection, onKey, onPasteImages }: Options): Promise<EditorSession> {
+  const { md: escaped, tree } = parseMarkdown(markdown);
   const editor = await Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root);
-      ctx.set(defaultValueCtx, escapeStrayDollars(markdown));
-      configureMarkdown(ctx, markdownStyle(markdown));
+      ctx.set(defaultValueCtx, escaped);
+      configureMarkdown(ctx, markdownStyle(escaped, tree as Mdast));
       withoutFormatKeys(ctx);
       ctx.get(listenerCtx).updated(() => onChange());
       ctx.get(listenerCtx).selectionUpdated(() => onSelection?.());

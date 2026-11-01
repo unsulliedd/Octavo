@@ -10,7 +10,7 @@ import { parseMarkdown } from "../render";
 import { diffLines } from "../lineDiff";
 import { DEFAULT_STYLE, type MarkdownStyle } from "./markdown";
 
-type Mdast = {
+export type Mdast = {
   type: string;
   position?: { start: { offset?: number }; end: { offset?: number } };
   children?: Mdast[];
@@ -196,8 +196,8 @@ export function preserveUnchanged(original: string, edited: string): string {
   return out + "\n";
 }
 
-/** The bullet, emphasis, strong emphasis and rule characters `md` uses most; the defaults where it uses none. */
-export function markdownStyle(md: string): MarkdownStyle {
+/** The bullet, emphasis, strong emphasis and rule characters `md` uses most; the defaults where it uses none. `tree` is `md` parsed. */
+export function markdownStyle(md: string, tree = parser.parse(md) as Mdast): MarkdownStyle {
   const counts = { bullet: new Map<string, number>(), emphasis: new Map<string, number>(), strong: new Map<string, number>(), rule: new Map<string, number>() };
   const count = (kind: keyof typeof counts, offset: number | undefined) => {
     const char = offset === undefined ? undefined : md[offset];
@@ -211,7 +211,7 @@ export function markdownStyle(md: string): MarkdownStyle {
     else if (node.type === "thematicBreak") count("rule", start);
     node.children?.forEach((child) => walk(child, node));
   };
-  walk(parser.parse(md) as Mdast);
+  walk(tree);
   const pick = <K extends keyof MarkdownStyle>(kind: K, allowed: string): MarkdownStyle[K] => {
     const best = [...counts[kind]].filter(([c]) => allowed.includes(c)).sort((x, y) => y[1] - x[1])[0];
     return (best?.[0] ?? DEFAULT_STYLE[kind]) as MarkdownStyle[K];

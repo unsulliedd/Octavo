@@ -9,6 +9,10 @@ type WorkerLike = Pick<Worker, "postMessage" | "terminate"> & {
   onerror: ((e: ErrorEvent) => void) | null;
 };
 
+/** A render that takes longer than this is stopped, so a document that can't finish doesn't hold up the others. */
+export const RENDER_LIMIT = 60_000;
+export const TOO_SLOW = "This document is too complex to show: rendering it took too long.";
+
 type Pending = { req: RenderRequest; resolve: (r: RenderResult) => void; reject: (e: Error) => void };
 
 export function createRenderer(
@@ -22,6 +26,13 @@ export function createRenderer(
   let failed = false;
   let nextId = 1;
   const pending = new Map<number, Pending>();
+  let limit: ReturnType<typeof setTimeout> | undefined;
+
+  /** Times the render the worker is on, the oldest one waiting. */
+  const watch = () => {
+    clearTimeout(limit);
+    if (pending.size) limit = setTimeout(stopRender, RENDER_LIMIT);
+  };
 
   const onMainThread = async ({ req, resolve, reject }: Pending) => {
     try {
@@ -39,9 +50,20 @@ export function createRenderer(
     failed = true;
     worker?.terminate();
     worker = undefined;
+    clearTimeout(limit);
     const waiting = [...pending.values()];
     pending.clear();
     waiting.forEach(onMainThread);
+  };
+
+  /** The render the worker is on takes too long: it fails, and the others go to a new worker. */
+  const stopRender = () => {
+    worker?.terminate();
+    worker = undefined;
+    const [stuck, ...waiting] = pending.values();
+    pending.clear();
+    stuck?.reject(new Error(TOO_SLOW));
+    waiting.forEach(send);
   };
 
   const getWorker = () => {
@@ -58,6 +80,7 @@ export function createRenderer(
       const job = pending.get(e.data.id);
       if (!job) return;
       pending.delete(e.data.id);
+      watch();
       if (e.data.ok) job.resolve(e.data);
       else job.reject(new Error(e.data.error));
     };
@@ -65,13 +88,17 @@ export function createRenderer(
     return worker;
   };
 
+  function send(job: Pending) {
+    const w = getWorker();
+    if (!w) return void onMainThread(job);
+    pending.set(job.req.id, job);
+    w.postMessage(job.req);
+    if (pending.size === 1) watch();
+  }
+
   /** Markdown → HTML, the local image paths it shows, and whether it needs the KaTeX stylesheet. */
   return (md: string, dir: string, assetBase: string) =>
     new Promise<RenderResult>((resolve, reject) => {
-      const job: Pending = { req: { id: nextId++, md, dir, assetBase }, resolve, reject };
-      const w = getWorker();
-      if (!w) return void onMainThread(job);
-      pending.set(job.req.id, job);
-      w.postMessage(job.req);
+      send({ req: { id: nextId++, md, dir, assetBase }, resolve, reject });
     });
 }
