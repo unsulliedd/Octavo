@@ -29,9 +29,28 @@ pub fn write(dir: &Path, version: &str, text: &str) -> io::Result<PathBuf> {
     Ok(path)
 }
 
+/// Writes the open-source licenses document to `dir`, replacing an earlier copy; returns the file's path.
+pub fn write_licenses(dir: &Path, text: &str) -> io::Result<PathBuf> {
+    let path = dir.join("Open-source licenses.md");
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(&path, text)?;
+    Ok(path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn licenses_replace_an_earlier_copy() {
+        let dir = std::env::temp_dir().join(format!("octavo-licenses-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = write_licenses(&dir, "first").unwrap();
+        assert_eq!(path, dir.join("Open-source licenses.md"));
+        write_licenses(&dir, "second").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn only_a_plain_version_names_a_file() {

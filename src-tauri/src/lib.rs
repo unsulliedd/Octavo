@@ -139,6 +139,19 @@ fn write_notes(app: tauri::AppHandle, version: String, text: String) -> Result<S
         .map_err(|e| e.to_string())
 }
 
+/// Writes the open-source licenses document to the licenses folder in the app's data folder; returns the file's path.
+#[tauri::command]
+fn write_licenses(app: tauri::AppHandle, text: String) -> Result<String, String> {
+    let dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("licenses");
+    notes::write_licenses(&dir, &text)
+        .map(|p| p.to_string_lossy().into_owned())
+        .map_err(|e| e.to_string())
+}
+
 /// File passed on the command line, e.g. by a double-click in Explorer.
 // Limitation: macOS delivers opened files as RunEvent::Opened, not argv; handle when testing on macOS
 fn file_arg(args: &[String], cwd: &Path) -> Option<String> {
@@ -228,6 +241,7 @@ pub fn run() {
             save_doc,
             open_backups,
             write_notes,
+            write_licenses,
             initial_file,
             watch_docs
         ])

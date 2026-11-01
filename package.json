@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest run src",
+    "test": "vitest run src scripts",
     "fidelity": "vitest run fidelity --silent=false",
     "perf": "powershell -NoProfile -ExecutionPolicy Bypass -File perf/startup.ps1",
     "perf:render": "vitest run perf --silent=false",

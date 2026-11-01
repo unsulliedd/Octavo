@@ -88,4 +88,4 @@ npm run build
 ```bash
 npm run fidelity
 ```
-`npm run build` type-checks and builds the production bundle. `npm run fidelity` is the Milkdown round-trip report, needed when touching `src/editor/` or `src/render.ts`. When `src-tauri/` changes, also run `cargo test` in `src-tauri/`. Before a release, also build with `npx tauri build --no-bundle` and run `npm run perf`.
+`npm run build` type-checks and builds the production bundle, and writes `third-party-licenses.md` (the open-source licenses shown in Settings › About) into `dist/`. It lists the npm packages in the bundle and the Rust crates of the Windows build, so it needs `cargo`, and it fails when a shipped package has no license or one that is not in `ALLOWED` in `scripts/licenses.ts`. Adding a license to that list is a decision for the maintainers. `npm run fidelity` is the Milkdown round-trip report, needed when touching `src/editor/` or `src/render.ts`. When `src-tauri/` changes, also run `cargo test` in `src-tauri/`. Before a release, also build with `npx tauri build --no-bundle` and run `npm run perf`.

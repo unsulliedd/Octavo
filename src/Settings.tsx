@@ -19,6 +19,8 @@ type Props = {
   onRestart: () => void;
   /** Opens What's new for the running version. */
   onWhatsNew: () => void;
+  /** Opens the open-source licenses document. */
+  onLicenses: () => void;
 };
 
 const SECTIONS = { reading: "Reading", editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
@@ -35,7 +37,7 @@ const ABOUT_LINKS = [
  * shortcuts, and About with updates. A list of sections on the left picks the one shown. Closes on Escape or a click
  * beside it.
  */
-export function Settings({ prefs, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew }: Props) {
+export function Settings({ prefs, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew, onLicenses }: Props) {
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
   const [section, setSection] = useState<keyof typeof SECTIONS>("reading");
 
@@ -194,6 +196,9 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                 <div className="about-links" role="group" aria-label="Links">
                   <button className="text-btn" onClick={onWhatsNew}>
                     What's new
+                  </button>
+                  <button className="text-btn" onClick={onLicenses}>
+                    Open-source licenses
                   </button>
                   {ABOUT_LINKS.map(([label, url]) => (
                     <button key={label} className="text-btn with-icon" onClick={() => void openUrl(url)}>
