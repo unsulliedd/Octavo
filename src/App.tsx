@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -11,7 +11,7 @@ import { DocButtons, type DocActions } from "./editor/FormatBar";
 import { editorLayout } from "./editor/layout";
 import { sameRendering } from "./editor/sameRendering";
 import type { EditorSession, Snapshot } from "./editor/session";
-import { editedText, editorText, textToSave } from "./fileText";
+import { editedText, editorText, eolLabel, fileFormat, textToSave } from "./fileText";
 import { CompareView } from "./CompareView";
 import { diskChange } from "./conflict";
 import { canRevert, revertText } from "./editSession";
@@ -239,6 +239,7 @@ export default function App() {
   const tab = shownTab(tabs);
   const path = tab && currentEntry(tab).path;
   const doc = path ? docs[path] : undefined;
+  const lineEndings = useMemo(() => (doc ? eolLabel(fileFormat(doc.text)) : ""), [doc?.text]);
   const draft = path ? drafts[path] : undefined;
   const saveState = path ? saveStates[path] : undefined;
   const editing = !!(tab && doc && path && editingTabs.includes(tab.id) && !editBlocked[path]);
@@ -1654,7 +1655,7 @@ export default function App() {
             <span className="status-right">
               {(!editing || layout.status === "status") && saveStatus}
               <span>UTF-8</span>
-              <span>{doc.text.includes("\r\n") ? "CRLF" : "LF"}</span>
+              <span>{lineEndings}</span>
               <span>Markdown</span>
             </span>
           </>

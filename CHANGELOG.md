@@ -17,6 +17,10 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - The update settings (Check for updates when Octavo starts, Check now and Restart now) are at the bottom of About; the Updates section is gone
 
 ### Fixed
+- Images embedded in the document (`data:image/png`, jpeg, gif and webp) show in the reading view; other embedded types, such as SVG, stay blocked
+- A click on a link in a diagram follows the link instead of opening the diagram large
+- Images in a table no longer show an open button in the large copy of the table, where it did nothing
+- The status bar shows a file's real line endings: CR for old Mac files, and the most common kind with "(mixed)" for files that mix them
 - Images with an absolute drive path (`C:/pics/a.png` or `C:\pics.png`) show in Markdown and in `<img>`
 - A `<picture>` shows its `<source>` variants, such as a dark-mode image, when images open large; the large view still opens
 - `<source srcset>` images next to the document load, with their width or density descriptors; one on another network server stays blocked

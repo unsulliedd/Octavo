@@ -209,3 +209,22 @@ test("a picture inside a link gets no button", () => {
   addOpenButtons(root, true);
   expect(root.querySelectorAll(".large-open, .large-frame")).toHaveLength(0);
 });
+
+test("a click on a link inside a diagram follows the link; elsewhere on the diagram opens it", () => {
+  const root = article(`<div class="mermaid"><svg id="mermaid-2" viewBox="0 0 10 10"><a xlink:href="https://x.org"><text>go</text></a><rect/></svg></div>`);
+  expect(largeContent(root.querySelector("text")!, root, state)).toBeUndefined();
+  expect(largeContent(root.querySelector("a")!, root, state)).toBeUndefined();
+  expect(largeContent(root.querySelector("rect")!, root, state)).toMatchObject({ kind: "diagram" });
+});
+
+test("a table with images is copied without their open buttons, and the document's table keeps them", () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  const root = article('<div class="table-scroll"><table><tr><td><img src="a.png" alt="A"></td></tr></table></div>');
+  addOpenButtons(root, true);
+  expect(root.querySelectorAll("td .large-open")).toHaveLength(1);
+  const content = largeContent(root.querySelector(".table-scroll > .large-open")!, root, state);
+  const markup = content && "markup" in content ? content.markup : "";
+  expect(markup).toContain("<img");
+  expect(markup).not.toContain("large-open");
+  expect(root.querySelectorAll("td .large-open")).toHaveLength(1);
+});

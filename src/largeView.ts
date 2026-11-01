@@ -47,10 +47,10 @@ export function uniqueIds(markup: string, suffix: string) {
   return markup.replace(new RegExp(`${escaped}(?!\\d)`, "g"), `${id}-${suffix}`);
 }
 
-/** A copy of a table's markup as it is shown large: without resize handles or hand-set column widths. */
+/** A copy of a table's markup as it is shown large: without resize handles, open buttons or hand-set column widths. */
 export function tableMarkup(table: HTMLTableElement) {
   const copy = table.cloneNode(true) as HTMLTableElement;
-  for (const handle of copy.querySelectorAll(".col-resize")) handle.remove();
+  for (const handle of copy.querySelectorAll(".col-resize, .large-open")) handle.remove();
   copy.classList.remove("sized", "resizing");
   copy.style.width = "";
   for (const cell of copy.querySelectorAll<HTMLElement>("th, td")) cell.style.width = "";
@@ -92,7 +92,7 @@ export function largeContent(
   }
   if (!state.click || state.selecting) return undefined;
   const diagram = target.closest(".mermaid");
-  if (diagram) return diagramContent(root, diagram);
+  if (diagram) return target.closest("a") ? undefined : diagramContent(root, diagram); // a link in a diagram is followed
   const img = target.closest("img");
   return img && !img.closest("a") ? imageContent(img) : undefined;
 }
