@@ -324,11 +324,12 @@ export default function App() {
   async function openLicenses() {
     try {
       const res = await fetch("/third-party-licenses.md");
-      // The development server answers an unknown path with the app's own page.
-      if (!res.ok || res.headers.get("content-type")?.includes("html")) {
+      const text = await res.text();
+      // An unknown path answers with the app's own page, and the app's files of this type are labelled as HTML, so the text decides.
+      if (!res.ok || !text.startsWith("# Open-source licenses")) {
         throw "The open-source licenses are written when Octavo is built; this build doesn't have them.";
       }
-      const file = await invoke<string>("write_licenses", { text: await res.text() });
+      const file = await invoke<string>("write_licenses", { text });
       await openPath(file, undefined, false);
     } catch (e) {
       await message(String(e), { kind: "error" });

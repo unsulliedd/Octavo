@@ -18,6 +18,7 @@ let root: Root;
 let disk: Map<string, string>;
 let writes: string[];
 let opened: string[];
+let dialogs: string[];
 let scrolled: Element[];
 /** The file passed on the command line. */
 let initial: string;
@@ -40,6 +41,7 @@ beforeEach(() => {
   writes = [];
   initial = FILE;
   opened = [];
+  dialogs = [];
   scrolled = [];
   unreadable = undefined;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
@@ -77,6 +79,12 @@ beforeEach(() => {
         case "plugin:opener|open_url":
           opened.push(a.url);
           return null;
+        case "write_licenses":
+          disk.set(LICENSES, a.text);
+          return LICENSES;
+        case "plugin:dialog|message":
+          dialogs.push(a.message);
+          return "Ok";
         default:
           return null;
       }
@@ -323,6 +331,30 @@ async function openTableLarge() {
   await until(() => document.querySelector('[role="dialog"]'), "the large view");
 }
 const largeLink = (name: string) => [...document.querySelectorAll('[role="dialog"] a')].find((a) => a.textContent === name)!;
+
+const LICENSES = "C:\\data\\licenses\\Open-source licenses.md";
+
+/** Presses Settings › About › Open-source licenses while the app's file answers with `body`, labelled as HTML as the app labels it. */
+async function pressLicenses(body: string) {
+  vi.stubGlobal("fetch", async () => ({ ok: true, headers: new Headers({ "content-type": "text/html" }), text: async () => body }));
+  await launch("# Doc\n");
+  await click(host.querySelector('button[aria-label="Settings"]'));
+  await click(namedButton("About"));
+  await click(namedButton("Open-source licenses"));
+}
+
+test("Open-source licenses opens the build's document in a tab", async () => {
+  await pressLicenses("# Open-source licenses\n\nOctavo includes the software below.\n");
+  await until(() => host.querySelector("article h1")?.textContent === "Open-source licenses", "the licenses");
+  expect(dialogs).toEqual([]);
+});
+
+test("Open-source licenses says so when the build has no document", async () => {
+  await pressLicenses("<!doctype html><title>Octavo</title>");
+  await until(() => dialogs.length === 1, "the message");
+  expect(dialogs[0]).toContain("written when Octavo is built");
+  expect(disk.has(LICENSES)).toBe(false);
+});
 
 test("an empty link in the document stays on the page", async () => {
   await launch("[nowhere]()\n");

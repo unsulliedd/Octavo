@@ -233,3 +233,7 @@ test("repository fields become web addresses, and the document links them", () =
   expect(sourceLink("file:///x")).toBe("");
   expect(notices([entry({ source: "https://github.com/a/b" })])).toContain("- `a` 1.0.0, MIT, [source](https://github.com/a/b)");
 });
+
+test("starts with the heading Settings › About recognizes the document by", () => {
+  expect(notices([entry({})]).startsWith("# Open-source licenses\n")).toBe(true);
+});
