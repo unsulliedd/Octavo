@@ -1,6 +1,6 @@
 [package]
 name = "octavo"
-version = "0.5.2"
+version = "0.6.0"
 description = "Markdown reader and editor"
 authors = ["unsulliedd"]
 license = "MIT"

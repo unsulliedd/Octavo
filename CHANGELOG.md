@@ -4,6 +4,8 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-01
+
 ### Added
 - Settings › About has Open-source licenses: the licenses of the libraries and fonts Octavo is built from, opened in a tab. Every build writes the document from what it actually contains and stops if a package has no license or one that is not on the allowed list
 - Diagrams, images and tables open large over the window from the reading view. Diagrams and images zoom and can be dragged to move; a table gets the window's width. Tables open from a button at their top right; diagrams and images from the same button, a click on them, or both, as Settings › Reading › Open diagrams and images large says (both at first). An image inside a link still follows the link when clicked. Escape or a click outside closes the large view
