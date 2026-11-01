@@ -2,11 +2,13 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { licensesPlugins } from "./scripts/licenses.ts";
 const host = process.env.TAURI_DEV_HOST;
+const licenses = licensesPlugins();
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [react()],
+  plugins: [react(), licenses.main],
 
   resolve: {
     // These packages' browser builds use `document` or `DOMParser`, which the render worker doesn't have;
@@ -44,7 +46,7 @@ export default defineConfig(() => ({
   },
 
   // The render worker loads KaTeX and highlighting on demand, which needs an ES module worker.
-  worker: { format: "es" as const },
+  worker: { format: "es" as const, plugins: () => [licenses.worker] },
 
   test: {
     // The first test run after an install loads KaTeX and highlight.js cold and can pass 5 s.

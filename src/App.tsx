@@ -320,6 +320,21 @@ export default function App() {
     }
   }
 
+  /** Opens the open-source licenses document the build wrote next to the app's frontend. */
+  async function openLicenses() {
+    try {
+      const res = await fetch("/third-party-licenses.md");
+      // The development server answers an unknown path with the app's own page.
+      if (!res.ok || res.headers.get("content-type")?.includes("html")) {
+        throw "The open-source licenses are written when Octavo is built; this build doesn't have them.";
+      }
+      const file = await invoke<string>("write_licenses", { text: await res.text() });
+      await openPath(file, undefined, false);
+    } catch (e) {
+      await message(String(e), { kind: "error" });
+    }
+  }
+
   async function pick() {
     const path = await openDialog({ filters: [{ name: "Markdown", extensions: ["md", "markdown"] }] });
     if (typeof path === "string") openPath(path);
@@ -1605,6 +1620,10 @@ export default function App() {
             onWhatsNew={() => {
               setShowAppSettings(false);
               void openWhatsNew(version);
+            }}
+            onLicenses={() => {
+              setShowAppSettings(false);
+              void openLicenses();
             }}
           />
         )}
