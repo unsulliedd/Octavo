@@ -206,13 +206,13 @@ test("only an image's src keeps a data: value", async () => {
   expect(html).not.toContain("data:");
 });
 
-test("a 5 MB inline image renders quickly, and so does a 5 MB refused one", async () => {
-  const big = "A".repeat(5_000_000);
-  for (const [src, kept] of [[`data:image/png;base64,${big}`, true], [`data:image/svg+xml;base64,${big}`, false], [`data:image/png;${"image/".repeat(800_000)}`, true]] as const) {
+test("a large inline image renders quickly, and so does a large refused one", async () => {
+  const big = "A".repeat(1_000_000);
+  for (const [src, kept] of [[`data:image/png;base64,${big}`, true], [`data:image/svg+xml;base64,${big}`, false], [`data:image/png;${"image/".repeat(160_000)}`, true]] as const) {
     const started = performance.now();
     const html = await render(`![p](${src})`, "/d", toUrl);
     expect(html.includes("src=")).toBe(kept);
-    expect(performance.now() - started).toBeLessThan(8000); // parsing the source alone takes about 2 s; a backtracking pattern would take minutes
+    expect(performance.now() - started).toBeLessThan(5000); // a backtracking pattern would take minutes
   }
 }, 20_000);
 

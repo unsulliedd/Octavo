@@ -42,7 +42,7 @@ impl Backups {
         let day = self.dir.join(today.format("%Y-%m-%d").to_string());
         fs::create_dir_all(&day)?;
         let name = Path::new(key.file_name().unwrap_or("document.md".as_ref()));
-        let mut file = new_file(&day, name)?;
+        let (_, mut file) = new_file(&day, name)?;
         file.write_all(original)?;
         file.sync_all()?;
         done.insert(key);
@@ -69,7 +69,7 @@ impl Backups {
 }
 
 /// A new file in `dir` named `name`, or `name (2)`, `name (3)`… when that is taken.
-fn new_file(dir: &Path, name: &Path) -> io::Result<fs::File> {
+pub fn new_file(dir: &Path, name: &Path) -> io::Result<(PathBuf, fs::File)> {
     let stem = name.file_stem().unwrap_or_default().to_string_lossy();
     let ext = name
         .extension()
@@ -81,13 +81,10 @@ fn new_file(dir: &Path, name: &Path) -> io::Result<fs::File> {
         } else {
             format!("{stem} ({n}){ext}")
         };
-        match OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(dir.join(file))
-        {
+        let path = dir.join(file);
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
-            other => return other,
+            other => return other.map(|file| (path, file)),
         }
     }
     unreachable!()

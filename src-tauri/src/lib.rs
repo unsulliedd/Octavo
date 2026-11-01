@@ -4,7 +4,9 @@ mod gate;
 mod images;
 mod notes;
 mod save;
+mod scan;
 mod watch;
+mod workspaces;
 
 use std::path::Path;
 use std::time::Duration;
@@ -152,6 +154,37 @@ fn write_licenses(app: tauri::AppHandle, text: String) -> Result<String, String>
         .map_err(|e| e.to_string())
 }
 
+/// The Markdown files under the folder at `path`, read off the main thread so that a large folder can't freeze the
+/// window.
+#[tauri::command]
+async fn scan_folder(path: String, show_hidden: bool) -> Result<scan::Scan, String> {
+    let path = std::path::absolute(&path).map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || scan::scan(&path, show_hidden))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+fn workspaces_file(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    Ok(dir.join("workspaces.json"))
+}
+
+/// The saved workspaces.
+#[tauri::command]
+fn load_workspaces(app: tauri::AppHandle) -> Result<workspaces::Loaded, String> {
+    workspaces::load(&workspaces_file(&app)?).map_err(|e| e.to_string())
+}
+
+/// Saves `workspaces`, in place of those saved before.
+#[tauri::command]
+fn save_workspaces(
+    app: tauri::AppHandle,
+    workspaces: Vec<workspaces::Workspace>,
+) -> Result<Option<workspaces::Problem>, String> {
+    workspaces::save(&workspaces_file(&app)?, &workspaces).map_err(|e| e.to_string())
+}
+
 /// File passed on the command line, e.g. by a double-click in Explorer.
 // Limitation: macOS delivers opened files as RunEvent::Opened, not argv; handle when testing on macOS
 fn file_arg(args: &[String], cwd: &Path) -> Option<String> {
@@ -242,6 +275,9 @@ pub fn run() {
             open_backups,
             write_notes,
             write_licenses,
+            scan_folder,
+            load_workspaces,
+            save_workspaces,
             initial_file,
             watch_docs
         ])
@@ -255,7 +291,13 @@ mod tests {
 
     #[test]
     fn text_opens_as_it_is_with_its_bom_and_line_endings() {
-        for text in ["", "---\nt: x\n---\n", "\u{FEFF}# T\r\n", "a\r\nb\nc\rd", "ğü 日本語"] {
+        for text in [
+            "",
+            "---\nt: x\n---\n",
+            "\u{FEFF}# T\r\n",
+            "a\r\nb\nc\rd",
+            "ğü 日本語",
+        ] {
             assert_eq!(document_text(text.into()).as_deref(), Some(text));
         }
     }
@@ -297,7 +339,10 @@ mod tests {
         let file = dir.join("wide.md");
         std::fs::write(&file, [0xFF, 0xFE, b'a', 0]).unwrap();
         let message = read_document(&file).unwrap_err();
-        assert!(message.contains("wide.md") && message.contains("UTF-8"), "{message}");
+        assert!(
+            message.contains("wide.md") && message.contains("UTF-8"),
+            "{message}"
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
