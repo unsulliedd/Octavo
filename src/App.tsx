@@ -32,6 +32,7 @@ import { Sidebar } from "./Sidebar";
 import { SourcePane } from "./SourcePane";
 import { UpdatePopover } from "./UpdatePopover";
 import { TabMenu, type TabMenuItem } from "./TabMenu";
+import { tabListItems, useTabOverflow } from "./tabStrip";
 import { releaseUrl } from "./links";
 import { useUpdates } from "./useUpdates";
 import { useWorkspaces } from "./useWorkspaces";
@@ -236,6 +237,9 @@ export default function App() {
   const [draggedTab, setDraggedTab] = useState<number>();
   // The tab a right-click menu is open for, and where the pointer was.
   const [tabMenu, setTabMenu] = useState<{ id: number; x: number; y: number }>();
+  /** The menu listing every tab, open from the button at the end of an overflowing strip. */
+  const [tabList, setTabList] = useState<{ x: number; y: number }>();
+  const tabsOverflow = useTabOverflow(tabStrip, tabs.tabs.length);
   const appRoot = useRef<HTMLDivElement>(null);
   const windowShown = useRef(false);
   const systemDark = useSystemDark();
@@ -874,6 +878,7 @@ export default function App() {
   }
 
   const closeTabMenu = useCallback(() => setTabMenu(undefined), []);
+  const closeTabList = useCallback(() => setTabList(undefined), []);
 
   /** The tab menu's items for tab `id`. */
   function tabMenuItems(id: number): TabMenuItem[] {
@@ -1337,6 +1342,22 @@ export default function App() {
                 <Icon name="plus" />
               </button>
             </nav>
+            {tabsOverflow && (
+              <button
+                className="icon-btn"
+                data-menu-toggle
+                aria-label="All open documents"
+                aria-haspopup="menu"
+                aria-expanded={!!tabList}
+                title="All open documents"
+                onClick={(e) => {
+                  const box = e.currentTarget.getBoundingClientRect();
+                  setTabList((l) => (l ? undefined : { x: box.right - 250, y: box.bottom + 4 }));
+                }}
+              >
+                <Icon name="down" />
+              </button>
+            )}
           </>
         ) : (
           <>
@@ -1667,6 +1688,15 @@ export default function App() {
             y={tabMenu.y}
             items={tabMenuItems(tabMenu.id)}
             onClose={closeTabMenu}
+          />
+        )}
+        {tabList && (
+          <TabMenu
+            name="Open documents"
+            x={tabList.x}
+            y={tabList.y}
+            items={tabListItems(tabs, tab?.id, unsavedAt, (id) => changeTabs((s) => activate(s, id)))}
+            onClose={closeTabList}
           />
         )}
         <WorkspaceMenu ws={workspaces} />

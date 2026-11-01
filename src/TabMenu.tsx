@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Icon } from "./icons";
 
 /** With `checked`, the item is one choice of a set, and `checked` says whether it is the current one. */
-export type TabMenuItem = { label: string; keys?: string; disabled?: boolean; checked?: boolean; run: () => void } | "separator";
+export type TabMenuItem = { label: ReactNode; keys?: string; disabled?: boolean; checked?: boolean; run: () => void } | "separator";
 
 type Props = {
   /** The document the menu is for, read out as its name. */
