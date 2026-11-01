@@ -4,6 +4,8 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-01
+
 ### Fixed
 - Open-source licenses in Settings › About opens the list instead of saying this build doesn't have it
 
