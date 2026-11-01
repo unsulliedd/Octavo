@@ -9,6 +9,7 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - The sidebar can be resized by dragging its edge or with the arrow keys on it; a double-click goes back to the usual width. The width is kept between launches
 
 ### Fixed
+- A document with struck-through bold text (`~~**text**~~`) opens in the editor instead of Source mode: the editor writes it as `**~~text~~**`, which looks the same
 - With many documents open, tabs shrink to fit instead of running off the end of the toolbar, the mouse wheel scrolls the tab strip sideways, and a button at the end of the strip lists every open tab when they still don't fit
 
 ## [0.6.1] - 2026-11-01
