@@ -183,7 +183,7 @@ export default function App() {
   const workspaces = useWorkspaces(
     prefs.showHidden,
     () => latest.current.confirmSwitch(),
-    (id) => latest.current.showTabSet(id),
+    (id, carry) => latest.current.showTabSet(id, carry),
   );
   // The sidebar tab picked by hand; opening or closing a workspace clears it.
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">();
@@ -554,18 +554,19 @@ export default function App() {
   /**
    * Writes the edits to `file`, or the document to `target` (Save As). Nothing is written when there are no
    * edits or they leave the file as it is, when the editor's Markdown would not open as what was edited,
-   * or when the file no longer holds the text the edits were made to.
+   * or when the file no longer holds the text the edits were made to. A draft is written even when no tab
+   * shows its document now; it carries the text it was made to, which the file is checked against.
    */
   async function writeDoc(file: string, target?: string): Promise<string | undefined> {
     const doc = docs[file];
-    if (!doc) return undefined;
+    if (!doc && !draftsRef.current[file]) return undefined;
     const other = target !== undefined && !samePath(target, file);
     if (!other && conflictsRef.current[file] !== undefined) return CHANGED_ON_DISK;
     const s = sessionFor(file);
     const snapshot = s?.edited() ? s.snapshot(baseFor(file)) : undefined;
     const draft = draftsRef.current[file];
     const edited = snapshot?.markdown ?? draft?.text;
-    const base = edited === undefined ? doc.text : baseFor(file);
+    const base = edited === undefined ? doc!.text : baseFor(file);
     if (edited === undefined && !other) {
       setSaveStates((all) => (all[file] ? { ...all, [file]: { state: "saved" } } : all));
       return undefined;
@@ -596,7 +597,8 @@ export default function App() {
       if (text !== undefined) {
         const { html } = await renderDoc(written, dirname(file), convertFileSrc(""));
         verified.current.delete(file);
-        setDocs((all) => ({ ...all, [file]: { path: file, text: written, html } }));
+        // A document no tab shows isn't kept.
+        setDocs((all) => (file in all ? { ...all, [file]: { path: file, text: written, html } } : all));
       }
       return undefined;
     }
@@ -832,9 +834,10 @@ export default function App() {
 
   /**
    * Shows the tabs of workspace `id`, or those of no workspace, after `confirmSwitch`. Edit sessions end, and
-   * the documents are read again when shown, so a change made to one while its tab was away is seen then.
+   * the documents are read again when shown, so a change made to one while its tab was away is seen then. A
+   * document to `carry` is opened as a tab of those shown, or shown if one has it.
    */
-  function showTabSet(id?: string) {
+  function showTabSet(id?: string, carry?: string) {
     if (id === tabs.workspace) return;
     updateOriginals(() => ({}));
     setEditingTabs([]);
@@ -845,7 +848,8 @@ export default function App() {
     changeTabs((s) => {
       tabSets.current.set(s.workspace, s);
       save(tabsKey(s.workspace), toStored(s));
-      return tabSets.current.get(id) ?? loadTabs(id);
+      const next = tabSets.current.get(id) ?? loadTabs(id);
+      return carry ? openTab(next, carry) : next;
     });
   }
 

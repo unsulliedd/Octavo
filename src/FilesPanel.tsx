@@ -92,7 +92,7 @@ export function WorkspaceMenu({ ws }: { ws: Workspaces }) {
   );
 }
 
-/** The Files tab with no workspace open: offers the folder around the shown document. Nothing opens until a button is pressed. */
+/** The Files tab with no workspace open: offers the folder around the shown document. Nothing opens until a button is pressed; the document comes along as a tab. */
 function Offer({ ws, document }: { ws: Workspaces; document: string }) {
   const [folder, setFolder] = useState<string>();
   useEffect(() => {
@@ -112,14 +112,14 @@ function Offer({ ws, document }: { ws: Workspaces; document: string }) {
       </div>
       {folder && (
         <div className="files-offer-folder">
-          <button className="primary" onClick={() => void ws.openFolderAt(folder)}>
+          <button className="primary" onClick={() => void ws.openFolderAt(folder, document)}>
             <Icon name="folder" size={14} />
             <span>Open {workspaceFolderName(folder)} folder</span>
           </button>
           <span title={folder}>{folderTrail(`${folder}/`)}</span>
         </div>
       )}
-      <button className="secondary" onClick={() => void ws.pickFolder(folder)}>
+      <button className="secondary" onClick={() => void ws.pickFolder(folder, document)}>
         Choose folder…
       </button>
     </div>

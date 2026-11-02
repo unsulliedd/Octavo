@@ -22,9 +22,10 @@ export type MenuPlace = { x: number; y: number; above?: boolean };
 /**
  * The open workspace and the saved ones. One workspace is open at a time; with none, nothing here reads or writes a folder.
  * Before another workspace opens or the open one closes, `confirmLeave` decides whether it may; `onShown` runs in the same
- * step as the change, and once the saved list has loaded.
+ * step as the change, and once the saved list has loaded. A document to `carry` is passed on to `onShown` when the
+ * workspace it opens is another one.
  */
-export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<boolean>, onShown: (id?: string) => void) {
+export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<boolean>, onShown: (id?: string, carry?: string) => void) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const list = useRef(workspaces);
   const [openId, setOpenId] = useState<string>();
@@ -87,7 +88,7 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
     setScanned((previous) => scanResult(open.id, folders, results, previous));
   }
 
-  async function show(next: Workspace[], id: string) {
+  async function show(next: Workspace[], id: string, carry?: string) {
     const other = id !== openId;
     if (other && !(await confirmLeave())) return;
     const ordered = toFront(next, id);
@@ -95,7 +96,7 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
     save("workspace", id);
     if (!other) return void rescan();
     setOpenId(id);
-    onShown(id);
+    onShown(id, carry);
   }
 
   /** Opens a saved workspace. */
@@ -104,17 +105,17 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
     await show(list.current, id);
   }
 
-  /** Opens the workspace of `folder`, saving a new one the first time. */
-  async function openFolderAt(folder: string) {
+  /** Opens the workspace of `folder`, saving a new one the first time; `carry` is a document to bring along as a tab. */
+  async function openFolderAt(folder: string, carry?: string) {
     await loaded.current;
     const { workspaces: next, workspace } = workspaceForFolder(list.current, folder);
-    await show(next, workspace.id);
+    await show(next, workspace.id, carry);
   }
 
-  /** Lets the user pick a folder, starting at `defaultPath`, and opens it. */
-  async function pickFolder(defaultPath?: string) {
+  /** Lets the user pick a folder, starting at `defaultPath`, and opens it, with `carry` as for `openFolderAt`. */
+  async function pickFolder(defaultPath?: string, carry?: string) {
     const folder = await openDialog({ directory: true, defaultPath });
-    if (typeof folder === "string") await openFolderAt(folder);
+    if (typeof folder === "string") await openFolderAt(folder, carry);
   }
 
   /** Closes the open workspace. */

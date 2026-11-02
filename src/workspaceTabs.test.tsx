@@ -33,6 +33,8 @@ let writes: string[];
 let watched: string[];
 /** When set, save_doc refuses with this message. */
 let refuse: string | undefined;
+/** What the folder picker answers. */
+let picked: string | null;
 let choice: Choice;
 /** The Save / Don't save / Cancel questions shown, and what answers the next one when set. */
 let questions: string[];
@@ -67,6 +69,7 @@ beforeEach(() => {
   writes = [];
   watched = [];
   refuse = undefined;
+  picked = null;
   choice = "Save";
   questions = [];
   holdDialog = undefined;
@@ -111,6 +114,8 @@ beforeEach(() => {
           disk.set(a.path, a.text);
           writes.push(a.text);
           return true;
+        case "plugin:dialog|open":
+          return picked;
         case "watch_docs":
           watched = a.paths;
           return null;
@@ -393,12 +398,18 @@ test("a draft left by a tab that isn't shown is saved too", async () => {
   expect(disk.get(GUIDE)).toBe(EDITED);
 });
 
-test("edits that can't be written, in a document no tab shows now, stop the switch instead of being dropped", async () => {
-  disk.set(GUIDE, `# guide.md
+const LINKED = `# guide.md
 
 Original text. [spec](spec.md)
-`);
-  await launch(AUTOSAVE_OFF);
+`;
+
+/**
+ * guide.md (`original` on disk) is edited in the only tab showing it, whose Forward shows spec.md; Forward is
+ * pressed, so no tab shows guide.md and its edits are a draft.
+ */
+async function leaveDraftBehind(prefs: object, original = LINKED) {
+  disk.set(GUIDE, original);
+  await launch(prefs);
   await enter("Handbook");
   await openDoc("guide.md");
   await click(host.querySelector("article a"));
@@ -411,10 +422,45 @@ Original text. [spec](spec.md)
   await type("Changed text.");
   await click(host.querySelector('[aria-label^="Forward"]'));
   await until(() => host.querySelector("article h1")?.textContent?.includes("spec.md"), "the next document");
+}
+
+test("a draft no tab shows is written to its file, with the file's own line endings, BOM and final break", async () => {
+  const original = "﻿" + LINKED.replace(/\n/g, "\r\n").trimEnd();
+  await leaveDraftBehind({}, original);
+  await until(() => disk.get(GUIDE) !== original, "the draft to be written");
+  expect(openTabs()).toEqual(["spec.md"]);
+  expect(disk.get(GUIDE)).toBe(original.replace("Original text. ", "Changed text."));
+  expect(writes).toHaveLength(1);
+});
+
+test("autosave off: the switch saves a draft no tab shows", async () => {
+  await leaveDraftBehind(AUTOSAVE_OFF);
+  await enter("Notes");
+  expect(questions).toEqual(["Save your changes to guide.md before switching?"]);
+  expect(warnings).toEqual([]);
+  expect(disk.get(GUIDE)).toBe(LINKED.replace("Original text. ", "Changed text."));
+});
+
+test("a draft no tab shows isn't written over a file that changed on disk, and the switch stops", async () => {
+  await leaveDraftBehind(AUTOSAVE_OFF);
+  const outside = "# guide.md\n\nChanged elsewhere.\n";
+  disk.set(GUIDE, outside);
   await pickWorkspace("Notes");
   await until(() => warnings.length, "the warning");
   await settle();
-  expect(warnings[0]).toContain("guide.md: it still has unsaved edits.");
+  expect(warnings[0]).toContain("guide.md: The file changed on disk.");
+  expect(disk.get(GUIDE)).toBe(outside);
+  expect(writes).toEqual([]);
+  expect(open()).toBe("Handbook");
+});
+
+test("edits that can't be written, in a document no tab shows now, stop the switch instead of being dropped", async () => {
+  await leaveDraftBehind(AUTOSAVE_OFF);
+  refuse = "The disk is full.";
+  await pickWorkspace("Notes");
+  await until(() => warnings.length, "the warning");
+  await settle();
+  expect(warnings[0]).toContain("guide.md: The disk is full.");
   expect(open()).toBe("Handbook");
 });
 
@@ -763,4 +809,114 @@ test("a file that was missing is read again when its tab comes back", async () =
   await enter("Handbook");
   await until(() => article().includes("guide.md"), "the document");
   expect(host.querySelector(".error.banner")).toBeNull();
+});
+
+/** Starts with `file` open in the tabs of no workspace and the Files tab's offer showing. */
+async function showOffer(file: string, prefs: object = {}) {
+  initialFile = file;
+  await launch(prefs);
+  await until(() => host.querySelector("article h1"), "the document");
+  initialFile = null;
+  await click(byText(".seg button", "Files"));
+  await until(() => byText("button", "Choose folder…"), "the offer");
+}
+
+test("the offer's folder button opens the workspace with the shown document as its shown tab, and it stays in the tabs of no workspace", async () => {
+  await showOffer(SHARED);
+  await click(byText("button", "Open docs folder"));
+  await until(() => open() === "docs", "the workspace");
+  await until(() => shownTab() === "shared.md", "the carried tab");
+  expect(openTabs()).toEqual(["shared.md"]);
+  await until(() => host.querySelector("article h1")?.textContent?.includes("shared.md"), "the document");
+  await closeWorkspace();
+  await until(() => open() === undefined, "the workspace to close");
+  expect(openTabs()).toEqual(["shared.md"]);
+  expect(shownTab()).toBe("shared.md");
+});
+
+test("Choose folder… carries the shown document too", async () => {
+  await showOffer(SHARED);
+  picked = NOTES;
+  await click(byText("button", "Choose folder…"));
+  await until(() => open() === "Notes", "the workspace");
+  await until(() => shownTab() === "shared.md", "the carried tab");
+  expect(openTabs()).toEqual(["shared.md"]);
+});
+
+test("a workspace that has tabs gets the document added after the shown one, and shows it", async () => {
+  await launch();
+  await enter("Notes");
+  await openDoc("ideas.md");
+  await closeWorkspace();
+  await until(() => open() === undefined, "the workspace to close");
+  await act(async () => void (await emit("open-file", SHARED)));
+  await until(() => shownTab() === "shared.md", "the document");
+  await click(byText(".seg button", "Files"));
+  await until(() => byText("button", "Choose folder…"), "the offer");
+  picked = NOTES;
+  await click(byText("button", "Choose folder…"));
+  await until(() => open() === "Notes", "the workspace");
+  await until(() => shownTab() === "shared.md", "the carried tab");
+  expect(openTabs()).toEqual(["ideas.md", "shared.md"]);
+});
+
+test("a workspace that already has the document in a tab shows that tab instead of adding one", async () => {
+  await launch();
+  await enter("Notes");
+  await openDoc("shared.md");
+  await openDoc("ideas.md");
+  await closeWorkspace();
+  await until(() => open() === undefined, "the workspace to close");
+  await act(async () => void (await emit("open-file", SHARED)));
+  await until(() => shownTab() === "shared.md", "the document");
+  await click(byText(".seg button", "Files"));
+  await until(() => byText("button", "Choose folder…"), "the offer");
+  picked = NOTES;
+  await click(byText("button", "Choose folder…"));
+  await until(() => open() === "Notes", "the workspace");
+  await until(() => openTabs().length === 2, "the tabs");
+  expect(openTabs()).toEqual(["shared.md", "ideas.md"]);
+  await until(() => shownTab() === "shared.md", "the shown tab");
+});
+
+test("the offer settles unsaved edits first, then carries the document", async () => {
+  await showOffer(GUIDE);
+  await startEditing();
+  await type("Changed text.");
+  await click(byText("button", "Open Handbook folder"));
+  await until(() => open() === "Handbook", "the workspace");
+  expect(disk.get(GUIDE)).toBe(EDITED);
+  await until(() => shownTab() === "guide.md", "the carried tab");
+  expect(openTabs()).toEqual(["guide.md"]);
+  expect(host.querySelector(".ProseMirror")).toBeNull();
+});
+
+test("Cancel on the offer's question changes nothing", async () => {
+  choice = "Cancel";
+  await showOffer(GUIDE, AUTOSAVE_OFF);
+  await startEditing();
+  await type("Changed text.");
+  await click(byText("button", "Open Handbook folder"));
+  await until(() => questions.length, "the question");
+  await settle();
+  expect(open()).toBeUndefined();
+  expect(writes).toEqual([]);
+  expect(openTabs()).toEqual(["guide.md"]);
+  expect(host.querySelector(".ProseMirror")).not.toBeNull();
+  expect(stored).toHaveLength(2);
+});
+
+test("Open folder… on Home and in the workspace menu carry nothing", async () => {
+  await showOffer(SHARED);
+  await click(host.querySelector('[aria-label="Home"]'));
+  picked = NOTES;
+  await click(byText("button", "Open folder…"));
+  await until(() => open() === "Notes", "the workspace");
+  expect(openTabs()).toEqual([]);
+  await openDoc("ideas.md");
+  picked = ROOT;
+  await click(host.querySelector(".status-workspace"));
+  await click(byText(".menu button", "Open folder…"));
+  await until(() => open() === "Handbook", "the other workspace");
+  expect(openTabs()).toEqual([]);
 });
