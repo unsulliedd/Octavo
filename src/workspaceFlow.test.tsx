@@ -440,7 +440,7 @@ test("with no workspace open, the Files tab names the repository folder and open
   await click(byText("button", "Open docs folder"));
   await until(() => host.querySelector(".workspace-name")?.textContent === "docs", "the workspace");
   expect(dialogs).toEqual([]);
-  expect(openTabs()).toEqual([]);
+  expect(openTabs()).toEqual(["guide.md"]);
 });
 
 test("the offer names the document's own folder outside a repository, and Choose folder starts there", async () => {
