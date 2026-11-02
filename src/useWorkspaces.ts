@@ -151,7 +151,7 @@ export function useWorkspaces(showHidden: boolean) {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  return { workspaces, open, scan, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh };
+  return { workspaces, open, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh };
 }
 
 export type Workspaces = ReturnType<typeof useWorkspaces>;

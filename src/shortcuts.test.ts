@@ -36,6 +36,9 @@ test("window shortcuts with the default keys", () => {
   expect(shortcut(key("o", { ctrlKey: true }), {}, idle)).toBe("open");
   expect(shortcut(key("O", { ctrlKey: true }), {}, idle)).toBe("open");
   expect(shortcut(key("f", { ctrlKey: true }), {}, idle)).toBe("find");
+  expect(shortcut(key("p", { ctrlKey: true }), {}, idle)).toBe("quickOpen");
+  expect(shortcut(key("p", { ctrlKey: true }), { quickOpen: ["Ctrl+Alt+P"] }, idle)).toBeUndefined();
+  expect(shortcut(key("p", { ctrlKey: true, altKey: true }), { quickOpen: ["Ctrl+Alt+P"] }, idle)).toBe("quickOpen");
   expect(shortcut(key("F", { ctrlKey: true, shiftKey: true }), {}, idle)).toBeUndefined();
   expect(shortcut(key("w", { metaKey: true }), {}, idle)).toBe("closeTab");
   expect(shortcut(key("e", { ctrlKey: true }), {}, idle)).toBe("toggleEdit");
@@ -57,9 +60,9 @@ test("window shortcuts with the default keys", () => {
 });
 
 test("changed keys replace the defaults", () => {
-  const bindings = { preview: ["Ctrl+P"], save: [] };
-  expect(shortcut(key("p", { ctrlKey: true }), bindings, idle)).toBe("preview");
-  expect(shortcut(key("P", { ctrlKey: true, shiftKey: true }), bindings, idle)).toBeUndefined();
+  const bindings = { preview: ["Ctrl+L"], save: [] };
+  expect(shortcut(key("l", { ctrlKey: true }), bindings, idle)).toBe("preview");
+  expect(shortcut(key("L", { ctrlKey: true, shiftKey: true }), bindings, idle)).toBeUndefined();
   expect(shortcut(key("s", { ctrlKey: true }), bindings, idle)).toBeUndefined();
 });
 
