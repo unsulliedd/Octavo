@@ -45,7 +45,7 @@ import { KeysContext } from "./useKeys";
 import { dirname, joinPath, relativePath, resolveLocal, safeDecode } from "./paths";
 import { anchorAt, scrollTopFor, type Anchor } from "./scrollAnchor";
 import { createRenderer } from "./renderClient";
-import { loadLastVersion, loadPinned, loadPrefs, loadRecent, loadTableWidths, loadTabs, save } from "./storage";
+import { loadLastVersion, loadOpenWorkspace, loadPinned, loadPrefs, loadRecent, loadTableWidths, loadTabs, save, tabsKey } from "./storage";
 import { addResizeHandles, applyWidths, headersOf } from "./tableResize";
 import { savedWidths, withWidths } from "./tableWidths";
 import type { LineWidth, Prefs, RecentFile } from "./storage";
@@ -166,7 +166,10 @@ export default function App() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [recent, setRecent] = useState<RecentFile[]>(loadRecent);
   const [pinned, setPinned] = useState<string[]>(loadPinned);
-  const [tabs, setTabs] = useState<Tabs>(loadTabs);
+  const [tabs, setTabs] = useState<Tabs>(() => loadTabs(loadOpenWorkspace()));
+  // The tab sets of the workspaces left since launch, by workspace id; these keep what isn't stored, such as closed tabs.
+  const tabSets = useRef(new Map<string | undefined, Tabs>());
+  const switching = useRef(false);
   // Rendered documents by path, for the documents the tabs show.
   const [docs, setDocs] = useState<Record<string, Doc>>({});
   const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
@@ -177,7 +180,11 @@ export default function App() {
   const [showAppSettings, setShowAppSettings] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const updates = useUpdates(prefs.checkUpdates);
-  const workspaces = useWorkspaces(prefs.showHidden);
+  const workspaces = useWorkspaces(
+    prefs.showHidden,
+    () => latest.current.confirmSwitch(),
+    (id) => latest.current.showTabSet(id),
+  );
   // The sidebar tab picked by hand; opening or closing a workspace clears it.
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">();
   const [focusMode, setFocusMode] = useState(false);
@@ -640,7 +647,7 @@ export default function App() {
   async function saveAll() {
     const failed: string[] = [];
     for (const file of filesWithEdits()) {
-      const message = await saveDoc(file);
+      const message = (await saveDoc(file)) ?? (hasEdits(file) ? "it still has unsaved edits." : undefined);
       if (message) failed.push(`${basename(file)}: ${message}`);
     }
     return failed;
@@ -769,10 +776,10 @@ export default function App() {
    * With autosave off, asks whether to save the unsaved edits to `names` before closing. With autosave on,
    * they are saved without asking.
    */
-  async function askToSave(names: string): Promise<"save" | "discard" | "cancel"> {
+  async function askToSave(names: string, doing = "closing"): Promise<"save" | "discard" | "cancel"> {
     if (prefs.autosave) return "save";
     try {
-      const choice = await message(`Save your changes to ${names} before closing?`, {
+      const choice = await message(`Save your changes to ${names} before ${doing}?`, {
         title: "Octavo",
         kind: "warning",
         buttons: { yes: "Save", no: "Don't save", cancel: "Cancel" },
@@ -784,19 +791,61 @@ export default function App() {
     }
   }
 
-  /** Before the window closes: saves unsaved edits, or asks. Resolves to whether the window may close. */
-  async function confirmWindowClose() {
+  /**
+   * Before every document is left: saves unsaved edits, or asks. Resolves to whether to go on; a save that
+   * failed is then the user's choice, in the words of `anyway` and `okLabel`.
+   */
+  async function settleEdits(anyway: string, okLabel: string, doing?: string) {
     const files = filesWithEdits();
     if (!files.length) return true;
-    const choice = await askToSave(files.map(basename).join(", "));
+    const choice = await askToSave(files.map(basename).join(", "), doing);
     if (choice !== "save") return choice === "discard";
     const failed = await saveAll();
     if (!failed.length) return true;
-    return ask(`These documents couldn't be saved:\n\n${failed.join("\n")}\n\nClose Octavo anyway and lose the unsaved edits?`, {
+    return ask(`These documents couldn't be saved:\n\n${failed.join("\n")}\n\n${anyway}`, {
       title: "Octavo",
       kind: "warning",
-      okLabel: "Close without saving",
+      okLabel,
       cancelLabel: "Keep open",
+    });
+  }
+
+  /** Before the window closes: resolves to whether it may. */
+  const confirmWindowClose = () => settleEdits("Close Octavo anyway and lose the unsaved edits?", "Close without saving");
+
+  /**
+   * Before the tabs of another workspace, or of none, replace these: resolves to whether they may. When they
+   * may, no document has unsaved edits, so nothing kept by path can reach the next tabs. A switch asked for
+   * while another is deciding is ignored.
+   */
+  async function confirmSwitch() {
+    if (switching.current) return false;
+    switching.current = true;
+    try {
+      if (!(await settleEdits("Switch anyway and lose the unsaved edits?", "Switch without saving", "switching"))) return false;
+      filesWithEdits().forEach(discardEdits);
+      return true;
+    } finally {
+      switching.current = false;
+    }
+  }
+
+  /**
+   * Shows the tabs of workspace `id`, or those of no workspace, after `confirmSwitch`. Edit sessions end, and
+   * the documents are read again when shown, so a change made to one while its tab was away is seen then.
+   */
+  function showTabSet(id?: string) {
+    if (id === tabs.workspace) return;
+    updateOriginals(() => ({}));
+    setEditingTabs([]);
+    setSourceTabs([]);
+    setSaveStates({});
+    setDocs({});
+    setLoadErrors({});
+    changeTabs((s) => {
+      tabSets.current.set(s.workspace, s);
+      save(tabsKey(s.workspace), toStored(s));
+      return tabSets.current.get(id) ?? loadTabs(id);
     });
   }
 
@@ -978,13 +1027,14 @@ export default function App() {
   /** A tooltip with the action's current keys after it. */
   const tip = (label: string, id: ShortcutId) => withKeys(label, bindings, id);
   const focusKey = keyLabel(bindings, "toggleFocus");
-  const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large || quickOpen });
-  latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large || quickOpen };
+  const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, confirmSwitch, showTabSet, changedOnDisk, dropImages, largeOpen: !!large || quickOpen });
+  latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, confirmSwitch, showTabSet, changedOnDisk, dropImages, largeOpen: !!large || quickOpen };
   const openFromTree = useCallback((file: string) => void latest.current.openPath(file), []);
 
   useEffect(() => {
     // The first launch after an update opens What's new; a file passed on the command line opens after it.
-    Promise.all([getVersion(), invoke<string | null>("initial_file")])
+    // Both open as tabs of the workspace that comes back, so that is known first.
+    Promise.all([getVersion(), invoke<string | null>("initial_file"), workspaces.whenLoaded()])
       .then(async ([current, p]) => {
         setVersion(current);
         const previous = loadLastVersion();
@@ -1046,7 +1096,7 @@ export default function App() {
     const open = (ids: number[]) => (ids.every((id) => tabs.tabs.some((t) => t.id === id)) ? ids : ids.filter((id) => tabs.tabs.some((t) => t.id === id)));
     setEditingTabs(open);
     setSourceTabs(open);
-    save("tabs", toStored(tabs));
+    save(tabsKey(tabs.workspace), toStored(tabs));
   }, [tabs]);
 
   // The title names the document once it is rendered; while it loads the window is just "Octavo".
@@ -1076,7 +1126,8 @@ export default function App() {
     if (!tab) setFocusMode(false);
   }, [tab]);
 
-  // The open documents are watched for changes on disk.
+  // The documents of the tabs shown are watched for changes on disk.
+  // Limitation: a change landing between a document's first read and its folder being watched shows at its next read.
   const watched = openPaths(tabs).join("\n");
   useEffect(() => {
     invoke("watch_docs", { paths: watched ? watched.split("\n") : [] }).catch(() => {});

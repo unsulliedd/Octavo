@@ -19,8 +19,12 @@ import {
 /** Where the workspace menu opens: at `x`, under `y`, or above it when `above`. */
 export type MenuPlace = { x: number; y: number; above?: boolean };
 
-/** The open workspace and the saved ones. One workspace is open at a time; with none, nothing here reads or writes a folder. */
-export function useWorkspaces(showHidden: boolean) {
+/**
+ * The open workspace and the saved ones. One workspace is open at a time; with none, nothing here reads or writes a folder.
+ * Before another workspace opens or the open one closes, `confirmLeave` decides whether it may; `onShown` runs in the same
+ * step as the change, and once the saved list has loaded.
+ */
+export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<boolean>, onShown: (id?: string) => void) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const list = useRef(workspaces);
   const [openId, setOpenId] = useState<string>();
@@ -83,25 +87,28 @@ export function useWorkspaces(showHidden: boolean) {
     setScanned((previous) => scanResult(open.id, folders, results, previous));
   }
 
-  function show(next: Workspace[], id: string) {
+  async function show(next: Workspace[], id: string) {
+    const other = id !== openId;
+    if (other && !(await confirmLeave())) return;
     const ordered = toFront(next, id);
     if (ordered !== list.current) commit(ordered);
     save("workspace", id);
-    if (id === openId) void rescan();
-    else setOpenId(id);
+    if (!other) return void rescan();
+    setOpenId(id);
+    onShown(id);
   }
 
   /** Opens a saved workspace. */
   async function openWorkspace(id: string) {
     await loaded.current;
-    show(list.current, id);
+    await show(list.current, id);
   }
 
   /** Opens the workspace of `folder`, saving a new one the first time. */
   async function openFolderAt(folder: string) {
     await loaded.current;
     const { workspaces: next, workspace } = workspaceForFolder(list.current, folder);
-    show(next, workspace.id);
+    await show(next, workspace.id);
   }
 
   /** Lets the user pick a folder, starting at `defaultPath`, and opens it. */
@@ -110,11 +117,13 @@ export function useWorkspaces(showHidden: boolean) {
     if (typeof folder === "string") await openFolderAt(folder);
   }
 
-  /** Closes the open workspace. Its tabs stay. */
-  function closeWorkspace() {
+  /** Closes the open workspace. */
+  async function closeWorkspace() {
+    if (!(await confirmLeave())) return;
     setRefreshing(false);
     save("workspace", null);
     setOpenId(undefined);
+    onShown(undefined);
   }
 
   function refresh() {
@@ -129,10 +138,13 @@ export function useWorkspaces(showHidden: boolean) {
         setWorkspaces(list.current);
         if (result?.problem) tellProblem(result.problem);
         const id = loadOpenWorkspace();
-        if (list.current.some((w) => w.id === id)) setOpenId(id);
+        const found = list.current.some((w) => w.id === id);
+        if (found) setOpenId(id);
+        onShown(found ? id : undefined);
       },
       (e) => {
         unread.current = true;
+        onShown(undefined);
         tellError(`The saved workspaces couldn't be read, so changes to them won't be saved until Octavo restarts: ${e}`);
       },
     );
@@ -151,7 +163,10 @@ export function useWorkspaces(showHidden: boolean) {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  return { workspaces, open, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh };
+  /** Resolves once the saved list has loaded and the open workspace, if any, is known. */
+  const whenLoaded = () => loaded.current;
+
+  return { workspaces, open, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, whenLoaded, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh };
 }
 
 export type Workspaces = ReturnType<typeof useWorkspaces>;

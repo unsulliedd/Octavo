@@ -6,6 +6,7 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ### Added
 - Workspaces: Open folder… on Home and in the sidebar's new Files tab lists a folder's Markdown documents as a tree and opens them with a click. Home shows recent workspaces, the status bar and the Files tab switch between them, the open workspace comes back after a restart, and the tree refreshes when the window gets focus or with Refresh. Settings › Reading › Show hidden folders includes folders whose names start with a dot
+- Each workspace keeps its own tabs: switching or closing a workspace puts its tabs away and brings back the next one's, with the shown tab, each tab's history and Reopen closed tab, and with no workspace open Octavo keeps its own tabs. Unsaved edits are saved first, or with autosave off Octavo asks, and Cancel stays where you are. The tabs come back after a restart
 - Quick open (Ctrl+P) searches the open workspace by folder and file name: `audit econ` finds `audit/economy.md`. Up and Down move through the results, Enter or a click opens one and Escape closes the box. It can be given other keys in Settings › Shortcuts
 - The sidebar can be resized by dragging its edge or with the arrow keys on it; a double-click goes back to the usual width. The width is kept between launches
 
