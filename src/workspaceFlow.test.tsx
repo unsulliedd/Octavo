@@ -39,6 +39,11 @@ let dialogs: { directory?: boolean; defaultPath?: string }[];
 let told: { message: string; kind?: string }[];
 let initialFile: string | null;
 let gitRoot: string | undefined;
+/** Added documents gone from disk. */
+let gone: string[];
+let asked: string[];
+let agree: boolean;
+let filePicked: string | null;
 
 const settle = (ms = 0) => act(() => new Promise<void>((done) => setTimeout(done, ms)));
 async function until(check: () => unknown, what: string) {
@@ -70,6 +75,10 @@ beforeEach(() => {
   told = [];
   initialFile = null;
   gitRoot = undefined;
+  gone = [];
+  asked = [];
+  agree = false;
+  filePicked = null;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
   Element.prototype.scrollTo = () => {};
@@ -99,6 +108,8 @@ beforeEach(() => {
           return saveProblem;
         case "workspace_folder":
           return gitRoot ?? a.dir;
+        case "missing_documents":
+          return a.paths.filter((p: string) => gone.includes(p));
         case "scan_folder": {
           const result = await new Promise<Scan | string | undefined>((finish) =>
             held ? held.push({ path: a.path, showHidden: a.showHidden, finish }) : finish(folders.get(a.path)),
@@ -109,8 +120,12 @@ beforeEach(() => {
         }
         case "plugin:dialog|open":
           dialogs.push(a.options);
-          return picked;
+          return a.options.directory ? picked : filePicked;
         case "plugin:dialog|message":
+          if (a.buttons) {
+            asked.push(a.message);
+            return agree ? a.buttons.OkCancelCustom[0] : a.buttons.OkCancelCustom[1];
+          }
           told.push({ message: a.message, kind: a.kind });
           return "Ok";
         default:
@@ -204,7 +219,7 @@ test("Open folder picks a folder in one step and shows its documents", async () 
   expect(dialogs).toEqual([expect.objectContaining({ directory: true })]);
   expect(host.querySelector(".workspace-name")?.textContent).toBe("Handbook");
   expect(rows()).toEqual(["Handbook", "specs", "spec.md", "guide.md"]);
-  expect(saves).toEqual([[expect.objectContaining({ name: "Handbook", items: [{ kind: "folder", path: ROOT }] })]]);
+  expect(saves).toEqual([[expect.objectContaining({ name: "Handbook", items: [{ kind: "folder", path: ROOT }] }), expect.objectContaining({ id: "pinned" })]]);
   expect(localStorage.getItem("workspace")).toBe(JSON.stringify((stored[0] as { id: string }).id));
 });
 
@@ -256,7 +271,7 @@ test("Home lists workspaces most recent first, opens one with a click and marks 
   await click(byText("[aria-labelledby=workspaces-h] .file-open .file-name", "Handbook"));
   await until(() => rows().includes("guide.md"), "the tree");
   expect(names()).toEqual(["Handbook", "Notes"]);
-  expect(saves.map((s) => s.map((w) => w.id))).toEqual([["h", "n"]]);
+  expect(saves.map((s) => s.map((w) => w.id))).toEqual([["h", "n", "pinned"]]);
   expect(host.querySelector("[aria-labelledby=workspaces-h] .file-when")?.textContent).toBe("Open");
 });
 
@@ -465,6 +480,7 @@ test("the workspace menu switches workspaces, and each has its own tabs", async 
   expect(all(".menu [role=menuitemradio]").map((i) => [i.textContent, i.getAttribute("aria-checked")])).toEqual([
     ["Handbook", "true"],
     ["Notes", "false"],
+    ["Pinned", "false"],
   ]);
   await click(byText(".menu [role=menuitemradio]", "Notes"));
   await until(() => rows().includes("ideas.md"), "the other tree");
@@ -618,7 +634,7 @@ test("a folder opened while the saved list loads joins it, and nothing saved is 
   await act(async () => finish());
   await until(() => saves.length, "the save");
   expect(saves[0].map((w: { id: string }) => w.id)).toContain("n");
-  expect(saves[0]).toHaveLength(2);
+  expect(saves[0]).toHaveLength(3);
 });
 
 test("saves run in order, so the last list written is the latest", async () => {
@@ -631,7 +647,7 @@ test("saves run in order, so the last list written is the latest", async () => {
   expect(calls.filter((c) => c === "save_workspaces")).toHaveLength(1);
   await act(async () => finish());
   await until(() => saves.length === 2, "both saves");
-  expect(saves[1].map((w) => (w as unknown as { name: string }).name)).toEqual(["Notes", "Handbook"]);
+  expect(saves[1].map((w) => (w as unknown as { name: string }).name)).toEqual(["Notes", "Handbook", "Pinned"]);
 });
 
 test("opening the workspace that is already open scans it again", async () => {
@@ -699,4 +715,357 @@ test("folders have their own icon, and a child sits under its folder with a guid
   const child = byText(".tree-row", "spec.md")!;
   expect(child.closest(".tree-children")?.previousElementSibling).toBe(specs);
   expect(parseInt(child.style.paddingLeft) - parseInt(specs.style.paddingLeft)).toBe(18);
+});
+
+const rightClick = (el: Element | null | undefined) => {
+  if (!el) throw new Error("Nothing to right-click");
+  return act(async () => void el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 40, clientY: 40 })));
+};
+const menuItems = () => all(".menu button, .menu [role=separator]").map((i) => (i.getAttribute("role") === "separator" ? "-" : i.textContent));
+const menuPick = (text: string) => click(byText(".menu button", text));
+const inFile = (id: string) => (stored as { id: string; items: { path: string }[]; removed: string[] }[]).find((w) => w.id === id);
+const removedList = () => all(".files-removed-row .tree-name").map((n) => n.textContent);
+const homePins = () => all("[aria-labelledby=pinned-h] .file-name").map((n) => n.textContent);
+const pins = (paths: string[]) => localStorage.setItem("pinned", JSON.stringify(paths));
+const storedPins = () => localStorage.getItem("pinned");
+const pinnedIn = (paths: string[]) => ({ id: "pinned", name: "Pinned", items: paths.map((path) => ({ kind: "document", path })), removed: [] });
+const handPicked = (id: string, paths: string[]) => ({ ...pinnedIn(paths), id, name: id });
+
+test("the tree's menu holds what the board shows, for a document and for a folder", async () => {
+  await launch();
+  await openFolder(ROOT);
+  await rightClick(byText(".tree-row", "guide.md"));
+  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Add folder to workspace…", "Add document to workspace…", "-", "Remove from workspace"]);
+  expect(host.querySelector(".menu")?.getAttribute("aria-label")).toBe("guide.md");
+  await act(async () => void document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })));
+  expect(host.querySelector(".menu")).toBeNull();
+  await rightClick(byText(".tree-row", "specs"));
+  expect(host.querySelector(".menu")?.getAttribute("aria-label")).toBe("specs");
+});
+
+test("Remove from workspace hides a document in this workspace only, and Restore brings it back", async () => {
+  stored = [saved("h", ROOT), { ...saved("other", ROOT), name: "Other" }];
+  await launch();
+  await openFolder(ROOT);
+  await rightClick(byText(".tree-row", "guide.md"));
+  await menuPick("Remove from workspace");
+  await until(() => !rows().includes("guide.md"), "the document to go");
+  expect(removedList()).toEqual(["guide.md"]);
+  expect(inFile("h")!.removed).toEqual([GUIDE]);
+  expect(inFile("h")!.items).toEqual([{ kind: "folder", path: ROOT }]);
+  expect(inFile("other")!.removed).toEqual([]);
+  await click(host.querySelector("[aria-label='Restore guide.md']"));
+  await until(() => rows().includes("guide.md"), "the document to return");
+  expect(removedList()).toEqual([]);
+  expect(host.querySelector(".files-removed")).toBeNull();
+  await until(() => inFile("h")!.removed.length === 0, "the save");
+});
+
+test("removing a folder hides what is under it, and it stays removed after a restart", async () => {
+  await launch();
+  await openFolder(ROOT);
+  await rightClick(byText(".tree-row", "specs"));
+  await menuPick("Remove from workspace");
+  await until(() => !rows().includes("spec.md"), "the folder to go");
+  expect(rows()).toEqual(["Handbook", "guide.md"]);
+  await until(() => saves.length === 2, "the save");
+  await restart();
+  await until(() => rows().includes("guide.md"), "the tree");
+  expect(removedList()).toEqual(["specs"]);
+});
+
+test("removing the workspace's folder itself leaves a way back", async () => {
+  await launch();
+  await openFolder(ROOT);
+  await rightClick(byText(".tree-row", "Handbook"));
+  await menuPick("Remove from workspace");
+  await until(() => !rows().length, "the tree to empty");
+  expect(host.querySelector(".files-note")?.textContent).toBe("No Markdown documents in this workspace.");
+  await click(host.querySelector("[aria-label='Restore Handbook']"));
+  await until(() => rows().includes("guide.md"), "the tree");
+});
+
+test("a tab's menu adds its document, grouped under its project folder, with Add to workspace third", async () => {
+  stored = [saved("h", ROOT)];
+  localStorage.setItem("workspace", JSON.stringify("h"));
+  initialFile = "C:\\repo\\docs\\deep\\draft.md";
+  gitRoot = "C:\\repo";
+  await launch();
+  await until(() => openTabs().length, "the tab");
+  await until(() => rows().includes("guide.md"), "the tree");
+  await rightClick(host.querySelector(".tab"));
+  expect(menuItems().slice(0, 4)).toEqual(["Open containing folder", "Copy path", "Add to workspace", "-"]);
+  await menuPick("Add to workspace");
+  await until(() => rows().includes("draft.md"), "the document in the tree");
+  expect(rows()).toEqual(["Handbook", "specs", "spec.md", "guide.md", "repo", "docs", "deep", "draft.md"]);
+  await rightClick(host.querySelector(".tab"));
+  expect((byText(".menu button", "Add to workspace") as HTMLButtonElement).disabled).toBe(true);
+});
+
+test("with no workspace open a tab's menu has no Add to workspace, and with the document covered it is disabled", async () => {
+  initialFile = GUIDE;
+  await launch();
+  await until(() => openTabs().length, "the tab");
+  await rightClick(host.querySelector(".tab"));
+  expect(menuItems()).not.toContain("Add to workspace");
+  await act(async () => void document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })));
+  await clickText("Files");
+  await until(() => byText("button", "Open Handbook folder"), "the offer");
+  await clickText("Open Handbook folder");
+  await until(() => rows().includes("guide.md"), "the tree");
+  const before = saves.length;
+  await rightClick(host.querySelector(".tab"));
+  expect((byText(".menu button", "Add to workspace") as HTMLButtonElement).disabled).toBe(true);
+  expect(saves).toHaveLength(before);
+});
+
+test("the tree's menu adds another folder through the picker", async () => {
+  await launch();
+  await openFolder(ROOT);
+  picked = NOTES;
+  await rightClick(byText(".tree-row", "guide.md"));
+  await menuPick("Add folder to workspace…");
+  await until(() => rows().includes("ideas.md"), "the added folder");
+  expect(rows()).toEqual(["Handbook", "specs", "spec.md", "guide.md", "Notes", "ideas.md"]);
+  expect(dialogs[dialogs.length - 1]).toEqual(expect.objectContaining({ directory: true }));
+  await until(() => inFile(inFileId())!.items.length === 2, "the save");
+});
+const inFileId = () => (stored[0] as { id: string }).id;
+
+test("the tree's menu adds a document through the picker; one already covered changes nothing", async () => {
+  await launch();
+  await openFolder(ROOT);
+  const before = saves.length;
+  filePicked = SPEC;
+  await rightClick(byText(".tree-row", "guide.md"));
+  await menuPick("Add document to workspace…");
+  await until(() => dialogs.length === 2, "the picker");
+  await settle();
+  expect(saves).toHaveLength(before);
+  filePicked = IDEAS;
+  await rightClick(byText(".tree-row", "guide.md"));
+  await menuPick("Add document to workspace…");
+  await until(() => rows().includes("ideas.md"), "the added document");
+  expect(inFile(inFileId())!.items.map((i) => i.path)).toEqual([ROOT, IDEAS]);
+});
+
+test("a document added by hand and gone from disk shows as not found, leaves Quick open, and Remove takes it out", async () => {
+  gone = [IDEAS];
+  stored = [handPicked("list", [IDEAS, SPEC])];
+  localStorage.setItem("workspace", JSON.stringify("list"));
+  await launch();
+  await until(() => host.querySelector(".tree-missing"), "the not found row");
+  expect(host.querySelector(".tree-missing")?.textContent).toBe("ideas.mdNot foundRemove");
+  expect(rows()).toEqual(["Notes", "specs", "spec.md"]);
+  await act(async () => void document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "p", ctrlKey: true, bubbles: true, cancelable: true })));
+  await until(() => host.querySelector(".quick-row"), "Quick open");
+  expect(all(".quick-row").map((r) => r.textContent)).toEqual(["spec.md"]);
+  await act(async () => void document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+  await click(host.querySelector("[aria-label='Remove ideas.md']"));
+  await until(() => !host.querySelector(".tree-missing"), "the row to go");
+  await until(() => inFile("list")!.items.length === 1, "the save");
+  expect(inFile("list")!.removed).toEqual([]);
+  expect(removedList()).toEqual([]);
+});
+
+test("a saved document that comes back is found again on the next rescan", async () => {
+  gone = [IDEAS];
+  stored = [handPicked("list", [IDEAS])];
+  localStorage.setItem("workspace", JSON.stringify("list"));
+  await launch();
+  await until(() => host.querySelector(".tree-missing"), "the not found row");
+  gone = [];
+  await focusWindow();
+  await until(() => rows().includes("ideas.md"), "the document");
+  expect(host.querySelector(".tree-missing")).toBeNull();
+});
+
+test("first launch moves the pins into Pinned, removes them from local storage, and a second launch changes nothing", async () => {
+  pins([GUIDE, IDEAS]);
+  await launch();
+  await until(() => storedPins() === null, "the move");
+  expect(inFile("pinned")!.items).toEqual([{ kind: "document", path: GUIDE }, { kind: "document", path: IDEAS }]);
+  expect(saves).toHaveLength(1);
+  expect(homePins()).toEqual(["guide.md", "ideas.md"]);
+  await restart();
+  await settle();
+  expect(saves).toHaveLength(1);
+  expect(calls).not.toContain("save_workspaces");
+  expect(homePins()).toEqual(["guide.md", "ideas.md"]);
+});
+
+test("the pins stay in local storage until the save has reported success", async () => {
+  pins([GUIDE]);
+  let finish = () => {};
+  saveGate = new Promise((done) => (finish = done));
+  await launch();
+  await until(() => calls.includes("save_workspaces"), "the save to start");
+  await settle();
+  expect(storedPins()).toBe(JSON.stringify([GUIDE]));
+  await act(async () => finish());
+  await until(() => storedPins() === null, "the pins to go");
+});
+
+test("with no stored pins nothing is written at launch", async () => {
+  await launch();
+  await settle();
+  expect(calls).not.toContain("save_workspaces");
+  expect(homePins()).toEqual([]);
+});
+
+test("a failed save keeps the pins where they are, working, and the next launch moves them", async () => {
+  pins([GUIDE, IDEAS]);
+  saveRefusal = "Disk full";
+  await launch();
+  await until(() => told.length, "the error");
+  expect(storedPins()).toBe(JSON.stringify([GUIDE, IDEAS]));
+  expect(homePins()).toEqual(["guide.md", "ideas.md"]);
+  await click(host.querySelector("[aria-label='Unpin ideas.md']"));
+  await until(() => homePins().length === 1, "the unpin");
+  expect(storedPins()).toBe(JSON.stringify([GUIDE]));
+  saveRefusal = undefined;
+  await restart();
+  await until(() => storedPins() === null, "the move");
+  expect(inFile("pinned")!.items).toEqual([{ kind: "document", path: GUIDE }]);
+});
+
+test("a saved file that couldn't be read means no move, nothing written, and pins that keep working", async () => {
+  pins([GUIDE]);
+  loadRefusal = "Access is denied";
+  await launch();
+  await until(() => told.length, "the error");
+  expect(calls).not.toContain("save_workspaces");
+  expect(storedPins()).toBe(JSON.stringify([GUIDE]));
+  expect(homePins()).toEqual(["guide.md"]);
+  await click(host.querySelector("[aria-label='Unpin guide.md']"));
+  await until(() => !homePins().length, "the unpin");
+  expect(storedPins()).toBe(JSON.stringify([]));
+  await restart();
+  await settle();
+  expect(calls).not.toContain("save_workspaces");
+  loadRefusal = undefined;
+  pins([IDEAS]);
+  await restart();
+  await until(() => storedPins() === null, "the move on the next launch");
+  expect(inFile("pinned")!.items).toEqual([{ kind: "document", path: IDEAS }]);
+});
+
+test("a pin made while the saved file can't be read is kept for the next launch", async () => {
+  localStorage.setItem("recent", JSON.stringify([{ path: GUIDE, at: 1 }]));
+  loadRefusal = "Access is denied";
+  await launch();
+  await click(host.querySelector("[aria-label='Pin guide.md']"));
+  await until(() => homePins().length, "the pin");
+  expect(storedPins()).toBe(JSON.stringify([GUIDE]));
+  expect(calls).not.toContain("save_workspaces");
+  loadRefusal = undefined;
+  await restart();
+  await until(() => storedPins() === null, "the move");
+  expect(homePins()).toEqual(["guide.md"]);
+});
+
+test("the move merges with what Pinned holds, without duplicates", async () => {
+  stored = [pinnedIn([GUIDE, SPEC])];
+  pins([GUIDE.toUpperCase(), IDEAS]);
+  await launch();
+  await until(() => storedPins() === null, "the move");
+  expect(inFile("pinned")!.items.map((i) => i.path)).toEqual([GUIDE, SPEC, IDEAS]);
+  expect(stored).toHaveLength(1);
+});
+
+test.each(["corrupt", "newer"])("a %s saved file isn't replaced at launch: the pins wait for the user's first change", async (reason) => {
+  pins([GUIDE]);
+  loadProblem = { reason, copy: `C:\\data\\workspaces.${reason}.json` };
+  await launch();
+  await until(() => told.length, "the message");
+  await settle();
+  expect(told).toEqual([expect.objectContaining({ kind: "warning" })]);
+  expect(told[0].message).toContain(`workspaces.${reason}.json`);
+  expect(calls).not.toContain("save_workspaces");
+  expect(storedPins()).not.toBeNull();
+  await openFolder(ROOT);
+  await until(() => storedPins() === null, "the move");
+  expect(inFile("pinned")!.items).toEqual([{ kind: "document", path: GUIDE }]);
+});
+
+test("a problem the move's save reports still counts as saved, and is told", async () => {
+  pins([GUIDE]);
+  saveProblem = { reason: "corrupt", copy: "C:\\data\\workspaces.corrupt.json" };
+  await launch();
+  await until(() => storedPins() === null, "the move");
+  expect(told[0].message).toContain("workspaces.corrupt.json");
+});
+
+test("the pin button adds to and really removes from Pinned, and Home shows it", async () => {
+  localStorage.setItem("recent", JSON.stringify([{ path: GUIDE, at: 1 }]));
+  await launch();
+  await click(host.querySelector("[aria-label='Pin guide.md']"));
+  await until(() => inFile("pinned")?.items.length === 1, "the pin");
+  expect(homePins()).toEqual(["guide.md"]);
+  await click(host.querySelector("[aria-label='Unpin guide.md']"));
+  await until(() => inFile("pinned")!.items.length === 0, "the unpin");
+  expect(inFile("pinned")!.removed).toEqual([]);
+  expect(homePins()).toEqual([]);
+});
+
+test("Pinned opens like any workspace, with its own tabs, and Remove from workspace unpins", async () => {
+  stored = [pinnedIn([GUIDE, IDEAS])];
+  await launch();
+  await clickText("Open as workspace");
+  await until(() => rows().includes("guide.md"), "the tree");
+  expect(host.querySelector(".status-workspace")?.textContent).toBe("Pinned");
+  expect(rows()).toEqual(["Handbook", "guide.md", "Notes", "ideas.md"]);
+  await click(byText(".tree-row", "guide.md"));
+  await until(() => localStorage.getItem("tabs:pinned")?.includes("guide.md"), "its tabs");
+  await rightClick(byText(".tree-row", "ideas.md"));
+  await menuPick("Remove from workspace");
+  await until(() => !rows().includes("ideas.md"), "the unpin");
+  expect(inFile("pinned")!.items.map((i) => i.path)).toEqual([GUIDE]);
+  expect(removedList()).toEqual([]);
+});
+
+test("Pinned can't be removed and isn't listed as a recent workspace", async () => {
+  stored = [saved("h", ROOT), pinnedIn([GUIDE])];
+  await launch();
+  expect(all("[aria-labelledby=workspaces-h] .file-name").map((n) => n.textContent)).toEqual(["Handbook"]);
+  expect(host.querySelector("[aria-label='Remove workspace Pinned']")).toBeNull();
+  expect(host.querySelector("[aria-label='Remove workspace Handbook']")).not.toBeNull();
+});
+
+test("removing a saved workspace asks first, says nothing on disk changes, and takes its tabs with it", async () => {
+  stored = [saved("h", ROOT), saved("n", NOTES)];
+  localStorage.setItem("tabs:n", JSON.stringify({ tabs: [], active: null }));
+  await launch();
+  await click(host.querySelector("[aria-label='Remove workspace Notes']"));
+  await until(() => asked.length, "the question");
+  await settle();
+  expect(asked[0]).toContain("Nothing on disk changes");
+  expect(stored).toHaveLength(2);
+  expect(localStorage.getItem("tabs:n")).not.toBeNull();
+  agree = true;
+  await click(host.querySelector("[aria-label='Remove workspace Notes']"));
+  await until(() => localStorage.getItem("tabs:n") === null, "its tabs to go");
+  await until(() => !inFile("n"), "the save");
+  expect(inFile("h")).toBeDefined();
+  expect(all("[aria-labelledby=workspaces-h] .file-name").map((n) => n.textContent)).toEqual(["Handbook"]);
+  expect(calls).not.toContain("delete");
+});
+
+test("removing the open workspace closes it first, and its stored tabs don't come back", async () => {
+  stored = [saved("h", ROOT)];
+  agree = true;
+  await launch();
+  await openFolder(ROOT);
+  await click(byText(".tree-row", "guide.md"));
+  await until(() => localStorage.getItem("tabs:h")?.includes("guide.md"), "its tabs");
+  await click(host.querySelector("[aria-label=Home]"));
+  await click(host.querySelector("[aria-label='Remove workspace Handbook']"));
+  await until(() => !inFile("h"), "the save");
+  await settle(50);
+  expect(localStorage.getItem("tabs:h")).toBeNull();
+  expect(host.querySelector(".status-workspace")).toBeNull();
+  expect(JSON.parse(localStorage.getItem("workspace")!)).toBeNull();
+  await restart();
+  expect(host.querySelector(".status-workspace")).toBeNull();
+  expect(localStorage.getItem("tabs:h")).toBeNull();
 });

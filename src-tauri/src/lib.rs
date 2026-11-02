@@ -170,7 +170,18 @@ async fn scan_folder(path: String, show_hidden: bool) -> Result<scan::Scan, Stri
 async fn workspace_folder(dir: String) -> Result<String, String> {
     let dir = std::path::absolute(&dir).map_err(|e| e.to_string())?;
     tauri::async_runtime::spawn_blocking(move || {
-        images::link_root(&dir).to_string_lossy().into_owned()
+        scan::project_folder(&dir).to_string_lossy().into_owned()
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// The ones of `paths` known to be gone.
+#[tauri::command]
+async fn missing_documents(paths: Vec<String>) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let missing = |p: &String| scan::reach(std::path::Path::new(p)) == scan::Reach::Missing;
+        paths.into_iter().filter(missing).collect()
     })
     .await
     .map_err(|e| e.to_string())
@@ -288,6 +299,7 @@ pub fn run() {
             write_licenses,
             scan_folder,
             workspace_folder,
+            missing_documents,
             load_workspaces,
             save_workspaces,
             initial_file,

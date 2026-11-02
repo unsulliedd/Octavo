@@ -1,5 +1,6 @@
+// @vitest-environment jsdom
 import { expect, test } from "vitest";
-import { DEFAULT_PREFS, lineWidth, openLarge, recentFiles } from "./storage";
+import { DEFAULT_PREFS, forget, lineWidth, loadPinned, openLarge, recentFiles, save } from "./storage";
 
 test("a stored line width is kept; anything else is the default width", () => {
   expect(lineWidth("wider")).toBe("wider");
@@ -26,4 +27,16 @@ test("recent files keep only entries with a path and a time", () => {
 
 test("hidden folders are left out of workspaces by default", () => {
   expect(DEFAULT_PREFS.showHidden).toBe(false);
+});
+
+test("stored pins are read as paths, undefined when there are none to move", () => {
+  localStorage.clear();
+  expect(loadPinned()).toBeUndefined();
+  save("pinned", ["C:/a.md", 3, null, "C:/b.md"]);
+  expect(loadPinned()).toEqual(["C:/a.md", "C:/b.md"]);
+  save("pinned", { a: 1 });
+  expect(loadPinned()).toEqual([]);
+  forget("pinned");
+  expect(localStorage.getItem("pinned")).toBeNull();
+  expect(loadPinned()).toBeUndefined();
 });

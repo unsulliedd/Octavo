@@ -128,6 +128,12 @@ body > .mermaidTooltip {
 .error {
   color: var(--danger);
 }
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .section-label {
   margin: 0;
   font-size: 11px;
@@ -2786,6 +2792,57 @@ kbd {
   margin-left: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.tree-missing {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  gap: 4px;
+  padding: 5px 8px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.tree-missing svg {
+  flex: none;
+  margin-top: 2px;
+}
+.tree-missing-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tree-missing-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 2px;
+  font-size: 12px;
+}
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+.files-removed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 16px 16px;
+  color: var(--muted);
+}
+.files-removed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
 }
 .sidebar-handle {
   position: relative;

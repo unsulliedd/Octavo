@@ -62,9 +62,17 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
-export function save(key: "prefs" | "recent" | "pinned" | "tabs" | `tabs:${string}` | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy", value: unknown) {
+type Key = "prefs" | "recent" | "pinned" | "tabs" | `tabs:${string}` | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy";
+
+export function save(key: Key, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+export function forget(key: Key) {
+  try {
+    localStorage.removeItem(key);
   } catch {}
 }
 
@@ -98,7 +106,11 @@ const loadString = (key: string) => {
 export const loadOpenWorkspace = () => loadString("workspace");
 /** The kept copy of a saved workspaces file the user was last told about. */
 export const loadToldCopy = () => loadString("workspaceCopy");
-export const loadPinned = () => load<string[]>("pinned", []).filter((p) => typeof p === "string");
+/** The pins not yet moved to the Pinned workspace; undefined when there is nothing left to move. */
+export const loadPinned = () => {
+  const stored = load<unknown>("pinned", undefined);
+  return stored === undefined ? undefined : Array.isArray(stored) ? stored.filter((p): p is string => typeof p === "string") : [];
+};
 
 /** The recent files in `raw`, skipping anything that isn't a path with the time it was opened. */
 export const recentFiles = (raw: unknown): RecentFile[] =>

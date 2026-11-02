@@ -7,12 +7,12 @@ export type ItemKind = "folder" | "document";
 export type Item = { kind: ItemKind; path: string };
 export type Workspace = { id: string; name: string; items: Item[]; removed: string[] };
 
-/** A document a workspace shows. `root` is the folder it is listed under; `relative` is its path from there, with forward slashes. */
-export type WorkspaceDoc = { path: string; root: string; relative: string };
+/** A document a workspace shows. `root` is the folder it is listed under; `relative` is its path from there, with forward slashes. `missing`: an added document that is gone from disk. */
+export type WorkspaceDoc = { path: string; root: string; relative: string; missing?: boolean };
 
 export type TreeNode =
   | { kind: "folder"; name: string; path: string; children: TreeNode[] }
-  | { kind: "document"; name: string; path: string };
+  | { kind: "document"; name: string; path: string; missing?: boolean };
 
 export const PINNED: Workspace = { id: "pinned", name: "Pinned", items: [], removed: [] };
 
@@ -20,8 +20,11 @@ export const PINNED: Workspace = { id: "pinned", name: "Pinned", items: [], remo
 export type FolderScan = { files: string[]; truncated: boolean };
 /** What `load_workspaces` and `save_workspaces` report about a saved file they couldn't use. */
 export type Problem = { reason: "corrupt" | "newer"; copy: string };
-/** The latest scan of the workspace `id`. `scans` holds the Markdown files of each folder that could be read. */
-export type ScanResult = { id: string; scans: Record<string, string[]>; truncated: boolean; errors: string[] };
+/**
+ * The latest scan of the workspace `id`. `scans` holds the Markdown files of each folder that could be read, `roots`
+ * the folder each added document groups under, and `missing` the added documents that are gone from disk.
+ */
+export type ScanResult = { id: string; scans: Record<string, string[]>; truncated: boolean; errors: string[]; roots: Record<string, string>; missing: string[] };
 
 /**
  * `path` as paths compare here. It follows `samePath` for case and also evens out separators, so that a file picked
@@ -33,15 +36,30 @@ function key(path: string) {
   return /^[a-z]:|^[\\/]{2}|\\/i.test(clean) ? `${clean.replace(/\//g, "\\").toLowerCase()}\\` : `${clean}/`;
 }
 
-const same = (a: string, b: string) => key(a) === key(b);
+/** Whether two paths name the same file or folder. */
+export const same = (a: string, b: string) => key(a) === key(b);
 
 /** The last name in `path`: the folder "C:\Docs\Notes" gives "Notes". */
 const lastName = (path: string) => path.split(/[\\/]+/).filter(Boolean).pop() ?? path;
 
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-/** `workspaces`, with Pinned first when it is not there yet. */
-export const withPinned = (workspaces: Workspace[]) => (workspaces.some((w) => w.id === PINNED.id) ? workspaces : [PINNED, ...workspaces]);
+/** `workspaces`, with Pinned last when it is not there yet. */
+export const withPinned = (workspaces: Workspace[]) => (workspaces.some((w) => w.id === PINNED.id) ? workspaces : [...workspaces, PINNED]);
+
+/** The documents pinned, in order. */
+export const pinnedPaths = (workspaces: Workspace[]) => {
+  const pinned = workspaces.find((w) => w.id === PINNED.id);
+  return pinned ? visibleDocuments(pinned, {}).map((d) => d.path) : [];
+};
+
+/** `workspaces` with `paths` added to Pinned, which must be there. A path Pinned holds already stays as it is. */
+export const withPins = (workspaces: Workspace[], paths: string[]) =>
+  workspaces.map((w) => (w.id === PINNED.id ? paths.reduce((pinned, path) => addItem(pinned, { kind: "document", path }), w) : w));
+
+/** Pinned with `path` pinned, or no longer pinned if it was. */
+export const togglePin = (pinned: Workspace, path: string) =>
+  visibleDocuments(pinned, {}).some((d) => same(d.path, path)) ? dropItem(pinned, path) : addItem(pinned, { kind: "document", path });
 
 /** `workspaces` without the workspace `id`. Pinned stays. */
 export const deleteWorkspace = (workspaces: Workspace[], id: string) => (id === PINNED.id ? workspaces : workspaces.filter((w) => w.id !== id));
@@ -82,8 +100,8 @@ export function problemText({ reason, copy }: Problem) {
 }
 
 /** The result of scanning `folders` in order, each giving its scan or an error message. `previous` when nothing changed, so that the tree stays as it is. */
-export function scanResult(id: string, folders: string[], results: (FolderScan | string)[], previous?: ScanResult) {
-  const next: ScanResult = { id, scans: {}, truncated: false, errors: [] };
+export function scanResult(id: string, folders: string[], results: (FolderScan | string)[], previous?: ScanResult, roots: Record<string, string> = {}, missing: string[] = []) {
+  const next: ScanResult = { id, scans: {}, truncated: false, errors: [], roots, missing };
   folders.forEach((folder, i) => {
     const result = results[i];
     if (typeof result === "string") {
@@ -105,17 +123,34 @@ export function latestRun() {
   };
 }
 
-/** Adds a folder or document, showing it again if it was removed. */
+/**
+ * Adds a folder or document, showing it again if it, or a folder around it, was removed. A folder inside a folder of
+ * the workspace is not added on its own.
+ */
+// Limitation: a folder the scan skips, inside a folder of the workspace, stays out when added.
 export function addItem(workspace: Workspace, item: Item): Workspace {
+  const inside = (path: string) => key(item.path).startsWith(key(path));
+  const held = workspace.items.some((i) => same(i.path, item.path) || (item.kind === "folder" && i.kind === "folder" && inside(i.path)));
   return {
-    ...restorePath(workspace, item.path),
-    items: workspace.items.some((i) => same(i.path, item.path)) ? workspace.items : [...workspace.items, item],
+    ...workspace,
+    removed: workspace.removed.filter((p) => !inside(p)),
+    items: held ? workspace.items : [...workspace.items, item],
   };
 }
 
 /** Hides a folder or document from this workspace. Its item stays, so `restorePath` brings it back. */
 export function removeItem(workspace: Workspace, path: string): Workspace {
   return workspace.removed.some((p) => same(p, path)) ? workspace : { ...workspace, removed: [...workspace.removed, path] };
+}
+
+/** Takes a folder or document out of this workspace for good: nothing is left to bring back. */
+export function dropItem(workspace: Workspace, path: string): Workspace {
+  return { ...restorePath(workspace, path), items: workspace.items.filter((i) => !same(i.path, path)) };
+}
+
+/** What Remove from workspace does: in Pinned an entry of its own is unpinned, and anything else is hidden. */
+export function removeEntry(workspace: Workspace, path: string) {
+  return workspace.id === PINNED.id && workspace.items.some((i) => same(i.path, path)) ? dropItem(workspace, path) : removeItem(workspace, path);
 }
 
 /** Shows a removed path again. */
@@ -125,22 +160,24 @@ export function restorePath(workspace: Workspace, path: string): Workspace {
 
 /**
  * The documents `workspace` shows. `scans` holds the Markdown files of each folder item, by the item's path. A document
- * in two overlapping folders shows once, under the outer one.
+ * in two overlapping folders shows once, under the outer one. An added document groups under its folder in `roots`, or
+ * its own folder, and is marked if it is in `missing`.
  */
-// Limitation: a document added by hand stays hidden while a folder around it is removed.
-export function visibleDocuments(workspace: Workspace, scans: Record<string, string[]>) {
+// Limitation: a document added by hand stays hidden while a folder around it is removed after it was added.
+export function visibleDocuments(workspace: Workspace, scans: Record<string, string[]>, roots: Record<string, string> = {}, missing: string[] = []) {
   const removed = workspace.removed.map(key);
+  const gone = new Set(missing);
   const seen = new Set<string>();
   const docs: WorkspaceDoc[] = [];
   const add = (path: string, root: string) => {
     const k = key(path);
     if (seen.has(k) || removed.some((r) => k.startsWith(r))) return;
     seen.add(k);
-    docs.push({ path, root, relative: relativePath(root, path) });
+    docs.push({ path, root, relative: relativePath(root, path), ...(gone.has(path) && { missing: true }) });
   };
   const folders = workspace.items.filter((i) => i.kind === "folder").sort((a, b) => key(a.path).length - key(b.path).length);
   for (const folder of folders) for (const path of scans[folder.path] ?? []) add(path, folder.path);
-  for (const item of workspace.items) if (item.kind === "document") add(item.path, dirname(item.path));
+  for (const item of workspace.items) if (item.kind === "document") add(item.path, roots[item.path] ?? dirname(item.path));
   return docs;
 }
 
@@ -172,7 +209,7 @@ export function fileTree(docs: WorkspaceDoc[]) {
     const name = parts.pop()!;
     let folder = folderIn(top, lastName(doc.root), doc.root);
     for (const part of parts) folder = folderIn(folder.children, part, joinPath(folder.path, part));
-    folder.children.push({ kind: "document", name, path: doc.path });
+    folder.children.push({ kind: "document", name, path: doc.path, missing: doc.missing });
   }
   return sortTree(top);
 }

@@ -103,7 +103,7 @@ pub fn image_dir(doc_dir: &Path) -> PathBuf {
 pub fn link_root(doc_dir: &Path) -> &Path {
     doc_dir
         .ancestors()
-        .find(|dir| dir.join(".git").exists())
+        .find(|dir| std::fs::symlink_metadata(dir.join(".git")).is_ok())
         .unwrap_or(doc_dir)
 }
 

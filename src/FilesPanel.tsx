@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { memo, useEffect, useState, type CSSProperties, type MouseEvent } from "react";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { memo, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { folderTrail } from "./Home";
 import { Icon } from "./icons";
 import { dirname } from "./paths";
@@ -22,16 +23,34 @@ type TreeProps = {
   active?: string;
   onToggle: (path: string, open: boolean) => void;
   onOpen: (path: string) => void;
+  onMenu: (e: MouseEvent, node: TreeNode) => void;
+  onDrop: (path: string) => void;
 };
 
 /** Memoized: the app draws often while reading and editing, and a tree can hold thousands of rows. */
 const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
-  const { openBelowTop, expanded, active, onToggle, onOpen } = rest;
+  const { openBelowTop, expanded, active, onToggle, onOpen, onMenu, onDrop } = rest;
   const padding = { paddingLeft: 8 + depth * INDENT };
   return nodes.map((node) => {
+    if (node.kind === "document" && node.missing) {
+      return (
+        <div key={node.path} className="tree-missing" style={padding} title={node.path}>
+          <Icon name="file" size={14} />
+          <span className="tree-missing-text">
+            <span className="tree-name">{node.name}</span>
+            <span className="tree-missing-note">
+              Not found
+              <button className="link-btn" aria-label={`Remove ${node.name}`} onClick={() => onDrop(node.path)}>
+                Remove
+              </button>
+            </span>
+          </span>
+        </div>
+      );
+    }
     if (node.kind === "document") {
       return (
-        <button key={node.path} className="tree-row" style={padding} title={node.path} aria-current={!!active && samePath(active, node.path) ? "page" : undefined} onClick={() => onOpen(node.path)}>
+        <button key={node.path} className="tree-row" style={padding} title={node.path} aria-current={!!active && samePath(active, node.path) ? "page" : undefined} onClick={() => onOpen(node.path)} onContextMenu={(e) => onMenu(e, node)}>
           <Icon name="file" size={14} />
           <span className="tree-name">{node.name}</span>
         </button>
@@ -40,7 +59,7 @@ const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
     const open = expanded[node.path] ?? (depth === 0 || openBelowTop);
     return (
       <div key={node.path} className="tree-folder">
-        <button className="tree-row" data-folder style={padding} title={node.path} aria-expanded={open} onClick={() => onToggle(node.path, !open)}>
+        <button className="tree-row" data-folder style={padding} title={node.path} aria-expanded={open} onClick={() => onToggle(node.path, !open)} onContextMenu={(e) => onMenu(e, node)}>
           <Icon name={open ? "down" : "forward"} size={14} />
           <Icon name="folder" size={15} />
           <span className="tree-name">{node.name}</span>
@@ -72,8 +91,31 @@ export function WorkspaceStatus({ ws }: { ws: Workspaces }) {
   );
 }
 
-/** The menu for switching workspaces, opening a folder and closing the open workspace. */
+/** The right-click menu of a row in the tree. */
+function RowMenu({ ws, menu }: { ws: Workspaces; menu: NonNullable<Workspaces["rowMenu"]> }) {
+  const failed = (e: unknown) => ws.tellError(String(e));
+  return (
+    <TabMenu
+      name={menu.name}
+      x={menu.x}
+      y={menu.y}
+      items={[
+        { label: "Open containing folder", run: () => void revealItemInDir(menu.path).catch(failed) },
+        { label: "Copy path", run: () => void navigator.clipboard.writeText(menu.path).catch(failed) },
+        "separator",
+        { label: "Add folder to workspace…", run: () => void ws.pickItem("folder") },
+        { label: "Add document to workspace…", run: () => void ws.pickItem("document") },
+        "separator",
+        { label: "Remove from workspace", run: () => void ws.removeRow(menu.path) },
+      ]}
+      onClose={() => ws.setRowMenu(undefined)}
+    />
+  );
+}
+
+/** The menu for switching workspaces, opening a folder and closing the open workspace, or the menu of a row in the tree. */
 export function WorkspaceMenu({ ws }: { ws: Workspaces }) {
+  if (ws.rowMenu) return <RowMenu ws={ws} menu={ws.rowMenu} />;
   if (!ws.menu) return null;
   return (
     <TabMenu
@@ -135,9 +177,16 @@ type Props = {
 
 /** The Files tab: the open workspace's documents, or the offer to open a workspace. */
 export function FilesPanel({ ws, document, onOpen }: Props) {
-  const { open, scan, tree, setExpanded } = ws;
+  const { open, scan, tree, setExpanded, setRowMenu } = ws;
   // Stable, so that the memoized tree is drawn again only when it changes.
   const [onToggle] = useState(() => (path: string, shown: boolean) => setExpanded((all) => ({ ...all, [path]: shown })));
+  const [onMenu] = useState(() => (e: MouseEvent, node: TreeNode) => {
+    e.preventDefault();
+    setRowMenu({ name: node.name, path: node.path, x: e.clientX, y: e.clientY });
+  });
+  const dropMissing = useRef(ws.dropMissing);
+  dropMissing.current = ws.dropMissing;
+  const [onDrop] = useState(() => (path: string) => void dropMissing.current(path));
   if (!open) return document ? <Offer ws={ws} document={document} /> : null;
   return (
     <>
@@ -165,8 +214,21 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
       {scan && !scan.errors.length && !tree?.length && <p className="files-note">No Markdown documents in this workspace.</p>}
       {tree && (
         <nav className="tree" aria-label="Workspace documents">
-          <Tree nodes={tree} depth={0} openBelowTop={ws.documents <= OPEN_FOLDERS_UP_TO} expanded={ws.expanded} active={document} onToggle={onToggle} onOpen={onOpen} />
+          <Tree nodes={tree} depth={0} openBelowTop={ws.documents <= OPEN_FOLDERS_UP_TO} expanded={ws.expanded} active={document} onToggle={onToggle} onOpen={onOpen} onMenu={onMenu} onDrop={onDrop} />
         </nav>
+      )}
+      {open.removed.length > 0 && (
+        <section className="files-removed" aria-labelledby="removed-h">
+          <h3 id="removed-h" className="section-label">Removed</h3>
+          {open.removed.map((path) => (
+            <div key={path} className="files-removed-row" title={path}>
+              <span className="tree-name">{workspaceFolderName(path)}</span>
+              <button className="link-btn" aria-label={`Restore ${workspaceFolderName(path)}`} onClick={() => void ws.restore(path)}>
+                Restore
+              </button>
+            </div>
+          ))}
+        </section>
       )}
     </>
   );
