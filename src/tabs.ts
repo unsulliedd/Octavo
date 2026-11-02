@@ -7,9 +7,10 @@ export type Tab = { id: number; entries: Entry[]; index: number };
 export type ClosedTab = { entries: Entry[]; index: number; at: number };
 /**
  * `home` shows the home screen while tabs stay open; showing any tab leaves it. `closed` holds the tabs closed
- * since launch, the most recent last.
+ * since launch, the most recent last. `workspace` is the id of the workspace these tabs belong to; without one,
+ * they are the tabs shown with no workspace open.
  */
-export type Tabs = { tabs: Tab[]; active?: number; nextId: number; home?: boolean; closed?: ClosedTab[] };
+export type Tabs = { tabs: Tab[]; active?: number; nextId: number; home?: boolean; closed?: ClosedTab[]; workspace?: string };
 
 /** How many closed tabs can be reopened. */
 export const MAX_CLOSED = 20;

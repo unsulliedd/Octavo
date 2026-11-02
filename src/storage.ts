@@ -1,6 +1,6 @@
 import { sanitizeBindings, type Bindings } from "./shortcuts";
 import { DEFAULT_SIDEBAR, storedSidebarWidth } from "./sidebarWidth";
-import { fromStored } from "./tabs";
+import { fromStored, type Tabs } from "./tabs";
 import type { TableWidths } from "./tableWidths";
 
 // UI state kept between launches. Every access is wrapped: storage can be unavailable or hold junk.
@@ -62,7 +62,7 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
-export function save(key: "prefs" | "recent" | "pinned" | "tabs" | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy", value: unknown) {
+export function save(key: "prefs" | "recent" | "pinned" | "tabs" | `tabs:${string}` | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy", value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
@@ -78,7 +78,9 @@ export const loadPrefs = (): Prefs => {
   const stored = load<Partial<Prefs>>("prefs", {});
   return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), sidebarWidth: storedSidebarWidth(stored.sidebarWidth), shortcuts: sanitizeBindings(stored.shortcuts) };
 };
-export const loadTabs = () => fromStored(load<unknown>("tabs", null));
+/** Where the tabs of workspace `id` are kept, or those shown with no workspace open. Deleting a workspace must remove its key too. */
+export const tabsKey = (id?: string) => (id === undefined ? "tabs" : (`tabs:${id}` as const));
+export const loadTabs = (workspace?: string): Tabs => ({ ...fromStored(load<unknown>(tabsKey(workspace), null)), workspace });
 export const loadTableWidths = () => {
   const stored = load<unknown>("tableWidths", {});
   return (stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {}) as TableWidths;

@@ -344,9 +344,9 @@ test("a large workspace draws a capped list and counts the rest", async () => {
 });
 
 test("Ctrl+P opens the box from Source mode and Escape goes back to the source", async () => {
-  initialFile = GUIDE;
   await launch();
   await openFolder(ROOT);
+  await click(byText(".tree-row", "guide.md"));
   await until(() => host.querySelector("article h1"), "the document");
   await clickText("Edit");
   await until(() => byText("button", "Source"), "the editor");

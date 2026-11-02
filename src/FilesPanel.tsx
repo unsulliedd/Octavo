@@ -85,7 +85,7 @@ export function WorkspaceMenu({ ws }: { ws: Workspaces }) {
         ...ws.workspaces.map((w) => ({ label: w.name, checked: w.id === ws.open?.id, run: () => void ws.openWorkspace(w.id) })),
         "separator",
         { label: "Open folder…", run: () => void ws.pickFolder() },
-        { label: "Close workspace", disabled: !ws.open, run: ws.closeWorkspace },
+        { label: "Close workspace", disabled: !ws.open, run: () => void ws.closeWorkspace() },
       ]}
       onClose={() => ws.setMenu(undefined)}
     />

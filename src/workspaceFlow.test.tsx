@@ -440,7 +440,7 @@ test("with no workspace open, the Files tab names the repository folder and open
   await click(byText("button", "Open docs folder"));
   await until(() => host.querySelector(".workspace-name")?.textContent === "docs", "the workspace");
   expect(dialogs).toEqual([]);
-  expect(openTabs()).toEqual(["guide.md"]);
+  expect(openTabs()).toEqual([]);
 });
 
 test("the offer names the document's own folder outside a repository, and Choose folder starts there", async () => {
@@ -455,7 +455,7 @@ test("the offer names the document's own folder outside a repository, and Choose
   expect(calls).not.toContain("save_workspaces");
 });
 
-test("switching workspaces leaves the tabs and the document as they are", async () => {
+test("the workspace menu switches workspaces, and each has its own tabs", async () => {
   stored = [saved("h", ROOT), saved("n", NOTES)];
   await launch();
   await openFolder(ROOT);
@@ -468,8 +468,8 @@ test("switching workspaces leaves the tabs and the document as they are", async 
   ]);
   await click(byText(".menu [role=menuitemradio]", "Notes"));
   await until(() => rows().includes("ideas.md"), "the other tree");
-  expect(openTabs()).toEqual(["guide.md"]);
-  expect(host.querySelector("article h1")?.textContent).toContain("guide.md");
+  expect(openTabs()).toEqual([]);
+  expect(host.querySelector(".home")).not.toBeNull();
   expect(byText(".tree-row", "ideas.md")?.getAttribute("aria-current")).toBeNull();
   expect(host.querySelector(".status-workspace")?.textContent).toBe("Notes");
 });
@@ -492,15 +492,21 @@ test("the status bar opens the same menu, and a second click closes it", async (
   expect(status.getAttribute("aria-expanded")).toBe("false");
 });
 
-test("closing the workspace keeps the tabs, goes back to the outline and stays closed after a restart", async () => {
+test("closing the workspace brings back the tabs of no workspace and the outline, and stays closed after a restart", async () => {
+  initialFile = IDEAS;
   await launch();
-  await openFolder(ROOT);
+  await until(() => host.querySelector("article h1"), "the document");
+  initialFile = null;
+  await click(byText(".seg button", "Files"));
+  picked = ROOT;
+  await click(byText("button", "Choose folder…"));
+  await until(() => rows().includes("guide.md"), "the tree");
   await click(byText(".tree-row", "guide.md"));
   await until(() => host.querySelector("article h1"), "the document");
   await click(host.querySelector(".workspace-name"));
   await click(byText(".menu button", "Close workspace"));
-  await settle();
-  expect(openTabs()).toEqual(["guide.md"]);
+  await until(() => host.querySelector("article h1"), "the document");
+  expect(openTabs()).toEqual(["ideas.md"]);
   expect(host.querySelector(".status-workspace")).toBeNull();
   expect(host.querySelector(".outline")).not.toBeNull();
   await restart();
@@ -645,6 +651,8 @@ test("the tab picked by hand is forgotten when a workspace opens or closes", asy
   await until(() => byText("button", "Open Handbook folder"), "the offer");
   await click(byText("button", "Open Handbook folder"));
   await until(() => rows().includes("guide.md"), "the tree");
+  await click(byText(".tree-row", "guide.md"));
+  await until(() => host.querySelector("article h1"), "the document");
   await click(byText(".seg button", "Outline"));
   picked = NOTES;
   await click(host.querySelector(".workspace-name") ?? host.querySelector(".status-workspace"));
