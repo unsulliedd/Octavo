@@ -1,6 +1,8 @@
 //! Lists the Markdown files under a folder. Symbolic links and junctions are not followed: a link can lead to a
-//! network path, and reading one makes Windows send the user's credentials to that server.
+//! network path, and reading one makes Windows send the user's credentials to that server. The same goes for
+//! looking up a single saved path: `reach` never touches a network path.
 
+use crate::images;
 use serde::Serialize;
 use std::collections::VecDeque;
 use std::ffi::OsStr;
@@ -78,6 +80,63 @@ fn scan_up_to(root: &Path, show_hidden: bool, max_entries: usize) -> io::Result<
         }
     }
     Ok(found)
+}
+
+/// What looking up a path, one step at a time from the top, can say about it.
+#[derive(Debug, PartialEq)]
+pub enum Reach {
+    Found,
+    Missing,
+    /// The path was left alone from here on: it is not a local absolute path, a link leads to it, or a step can't be read.
+    Unknown,
+}
+
+/// Whether `path` is an absolute path whose text names this computer.
+fn is_local(path: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        use std::path::{Component, Prefix};
+        let disk = matches!(path.components().next(), Some(Component::Prefix(p)) if matches!(p.kind(), Prefix::Disk(_)));
+        disk && path.has_root()
+    }
+    #[cfg(not(windows))]
+    path.is_absolute()
+}
+
+/// Looks `path` up without following a link and without touching a network path. A link at `path` itself counts as found.
+// Limitation: a mapped network drive reads as a local path.
+pub fn reach(path: &Path) -> Reach {
+    if !is_local(path) {
+        return Reach::Unknown;
+    }
+    let steps: Vec<&Path> = path.ancestors().collect();
+    for step in steps.into_iter().rev() {
+        match fs::symlink_metadata(step) {
+            Ok(entry) if entry.is_symlink() && step != path => return Reach::Unknown,
+            Ok(_) => {}
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
+                ) =>
+            {
+                return Reach::Missing;
+            }
+            Err(_) => return Reach::Unknown,
+        }
+    }
+    Reach::Found
+}
+
+/// The folder a document in `dir` belongs to: the nearest folder holding `.git`, or `dir` itself, which is also the
+/// answer for a `dir` that `reach` leaves alone.
+// Limitation: a document behind a link or on a network path groups under its own folder.
+pub fn project_folder(dir: &Path) -> &Path {
+    if reach(dir) == Reach::Unknown {
+        dir
+    } else {
+        images::link_root(dir)
+    }
 }
 
 #[cfg(test)]
@@ -267,5 +326,65 @@ mod tests {
             dir.found(&scan_up_to(&dir.0, false, 4).unwrap()),
             ["a/near.md"]
         );
+    }
+
+    #[test]
+    fn a_path_is_found_or_missing_and_a_file_as_a_folder_is_missing() {
+        let dir = TempDir::new("reach", &["sub/a.md"]);
+        let sub = dir.0.join("sub");
+        assert_eq!(reach(&sub.join("a.md")), Reach::Found);
+        assert_eq!(reach(&sub.join("b.md")), Reach::Missing);
+        assert_eq!(reach(&dir.0.join("gone").join("a.md")), Reach::Missing);
+        assert_eq!(reach(&sub.join("a.md").join("b.md")), Reach::Missing);
+    }
+
+    #[test]
+    fn a_relative_path_is_left_alone() {
+        for path in ["a.md", ""] {
+            assert_eq!(reach(Path::new(path)), Reach::Unknown, "{path}");
+        }
+    }
+
+    /// None of these servers exist, so a check that touched one would take seconds and report the path as missing.
+    #[cfg(windows)]
+    #[test]
+    fn a_network_path_is_left_alone() {
+        for path in [
+            r"\\127.0.0.2\share\a.md",
+            "//127.0.0.2/share/a.md",
+            r"\\?\UNC\127.0.0.2\share\a.md",
+            r"\\.\pipe\a.md",
+            r"\\?\C:\a.md",
+            r"C:a.md",
+        ] {
+            assert_eq!(reach(Path::new(path)), Reach::Unknown, "{path}");
+        }
+        let network = Path::new(r"\\127.0.0.2\share\docs");
+        assert_eq!(project_folder(network), network);
+    }
+
+    #[test]
+    fn nothing_past_a_link_is_looked_at() {
+        let dir = TempDir::new("reach-link", &["outside/a.md", "in/x.md"]);
+        let linked = dir.0.join("in").join("linked");
+        assert!(link(&dir.0.join("outside"), &linked));
+        assert_eq!(reach(&linked.join("a.md")), Reach::Unknown);
+        assert_eq!(reach(&linked.join("gone.md")), Reach::Unknown);
+        assert_eq!(reach(&linked), Reach::Found);
+    }
+
+    #[test]
+    fn a_project_folder_is_looked_for_only_where_no_link_leads() {
+        let dir = TempDir::new(
+            "project",
+            &["repo/.git/HEAD", "repo/docs/a.md", "plain/a.md"],
+        );
+        let docs = dir.0.join("repo").join("docs");
+        assert_eq!(project_folder(&docs), dir.0.join("repo"));
+        assert_eq!(project_folder(&dir.0.join("plain")), dir.0.join("plain"));
+        assert_eq!(project_folder(&docs.join("gone")), dir.0.join("repo"));
+        assert!(link(&dir.0.join("repo"), &dir.0.join("linked")));
+        let through = dir.0.join("linked").join("docs");
+        assert_eq!(project_folder(&through), through);
     }
 }

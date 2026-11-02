@@ -4,6 +4,12 @@ import {
   PINNED,
   type Workspace,
   addItem,
+  dropItem,
+  pinnedPaths,
+  removeEntry,
+  same,
+  togglePin,
+  withPins,
   deleteWorkspace,
   fileTree,
   filterDocuments,
@@ -82,10 +88,10 @@ test("a workspace a folder was only added to is not that folder's workspace", ()
   expect(workspaceForFolder([workspace([document("C:\\Notes")])], "C:\\Notes").workspace.id).not.toBe("w");
 });
 
-test("Pinned is added once, first, and can't be deleted", () => {
+test("Pinned is added once, last, and can't be deleted", () => {
   const other = workspace([]);
   const list = withPinned([other]);
-  expect(list).toEqual([PINNED, other]);
+  expect(list).toEqual([other, PINNED]);
   expect(withPinned(list)).toBe(list);
   expect(deleteWorkspace(list, PINNED.id)).toBe(list);
   expect(deleteWorkspace(list, "w")).toEqual([PINNED]);
@@ -266,7 +272,7 @@ test("the problem text names the copy and the reason", () => {
 
 test("a scan result gathers files, errors and whether a scan was cut off", () => {
   const result = scanResult("w", ["C:\\a", "C:\\b", "C:\\c"], [{ files: ["C:\\a\\x.md"], truncated: false }, "denied", { files: [], truncated: true }]);
-  expect(result).toEqual({ id: "w", scans: { "C:\\a": ["C:\\a\\x.md"], "C:\\c": [] }, truncated: true, errors: ["Couldn't read C:\\b: denied"] });
+  expect(result).toEqual({ id: "w", scans: { "C:\\a": ["C:\\a\\x.md"], "C:\\c": [] }, truncated: true, errors: ["Couldn't read C:\\b: denied"], roots: {}, missing: [] });
 });
 
 test("a scan with the same outcome keeps the earlier result, and one that differs replaces it", () => {
@@ -275,6 +281,8 @@ test("a scan with the same outcome keeps the earlier result, and one that differ
   expect(scanResult("w", ["C:\\a"], [{ files: ["y"], truncated: false }], first)).not.toBe(first);
   expect(scanResult("w", ["C:\\a"], [{ files: ["x"], truncated: true }], first)).not.toBe(first);
   expect(scanResult("v", ["C:\\a"], [{ files: ["x"], truncated: false }], first)).not.toBe(first);
+  expect(scanResult("w", ["C:\\a"], [{ files: ["x"], truncated: false }], first, {}, ["C:\\b.md"])).not.toBe(first);
+  expect(scanResult("w", ["C:\\a"], [{ files: ["x"], truncated: false }], first, { "C:\\b.md": "C:\\" })).not.toBe(first);
 });
 
 test("only the latest run holds", () => {
@@ -284,4 +292,84 @@ test("only the latest run holds", () => {
   const second = start();
   expect(first()).toBe(false);
   expect(second()).toBe(true);
+});
+
+const pinned = (items: Workspace["items"], removed: string[] = []): Workspace => ({ ...PINNED, items, removed });
+
+test("dropping an item takes it out for good and leaves nothing to bring back", () => {
+  const w = workspace([document("C:\\A\\a.md"), document("C:\\A\\b.md")], ["c:/a/A.MD", "C:\\A\\c.md"]);
+  const dropped = dropItem(w, "C:\\A\\a.md");
+  expect(dropped.items).toEqual([document("C:\\A\\b.md")]);
+  expect(dropped.removed).toEqual(["C:\\A\\c.md"]);
+  expect(dropItem(w, "C:\\A\\a.md")).not.toBe(w);
+  expect(w.items).toHaveLength(2);
+});
+
+test("hiding leaves the item in place, unlike dropping", () => {
+  const w = workspace([document("C:\\A\\a.md")]);
+  expect(removeItem(w, "C:\\A\\a.md").items).toEqual(w.items);
+  expect(dropItem(w, "C:\\A\\a.md").items).toEqual([]);
+});
+
+test("Remove from workspace hides, except that an entry of Pinned is unpinned", () => {
+  const doc = "C:\\A\\a.md";
+  expect(removeEntry(workspace([document(doc)]), doc)).toEqual(workspace([document(doc)], [doc]));
+  expect(removeEntry(pinned([document(doc)]), doc)).toEqual(pinned([]));
+  const inFolder = pinned([folder("C:\\A")]);
+  expect(removeEntry(inFolder, doc)).toEqual(pinned([folder("C:\\A")], [doc]));
+});
+
+test("adding shows a document again when a folder around it was removed", () => {
+  const w = workspace([folder("C:\\A")], ["C:\\A\\sub", "C:\\A\\other"]);
+  const added = addItem(w, document("C:\\A\\sub\\deep\\a.md"));
+  expect(added.removed).toEqual(["C:\\A\\other"]);
+  expect(paths(added, { "C:\\A": [] })).toEqual(["C:\\A\\sub\\deep\\a.md"]);
+});
+
+test("a folder inside a folder of the workspace is only shown again, not added", () => {
+  const w = workspace([folder("C:\\A")], ["C:\\A\\sub"]);
+  expect(addItem(w, folder("C:\\A\\sub"))).toEqual(workspace([folder("C:\\A")]));
+  expect(addItem(w, folder("C:\\AB")).items).toEqual([folder("C:\\A"), folder("C:\\AB")]);
+  expect(addItem(w, document("C:\\A\\sub\\a.md")).items).toHaveLength(2);
+});
+
+test("an added document groups under its folder in the roots, or its own without one", () => {
+  const w = workspace([document("C:\\Repo\\docs\\a.md"), document("C:\\Other\\b.md")]);
+  const docs = visibleDocuments(w, {}, { "C:\\Repo\\docs\\a.md": "C:\\Repo" });
+  expect(docs).toEqual([
+    { path: "C:\\Repo\\docs\\a.md", root: "C:\\Repo", relative: "docs/a.md" },
+    { path: "C:\\Other\\b.md", root: "C:\\Other", relative: "b.md" },
+  ]);
+  expect(fileTree(docs).map((n) => n.name)).toEqual(["Other", "Repo"]);
+});
+
+test("a document that is gone is marked in the list and the tree", () => {
+  const w = workspace([document("C:\\A\\a.md"), document("C:\\A\\b.md")]);
+  const docs = visibleDocuments(w, {}, {}, ["C:\\A\\b.md"]);
+  expect(docs.map((d) => d.missing)).toEqual([undefined, true]);
+  expect(fileTree(docs)[0]).toMatchObject({ children: [{ name: "a.md" }, { name: "b.md", missing: true }] });
+});
+
+test("pins merge into Pinned without duplicates, and what Pinned holds stays first", () => {
+  const list = withPinned([workspace([])]);
+  const once = withPins(list, ["C:\\A\\a.md", "c:/a/A.MD", "C:\\B\\b.md"]);
+  expect(pinnedPaths(once)).toEqual(["C:\\A\\a.md", "C:\\B\\b.md"]);
+  expect(pinnedPaths(withPins(once, ["C:\\B\\b.md", "C:\\C\\c.md"]))).toEqual(["C:\\A\\a.md", "C:\\B\\b.md", "C:\\C\\c.md"]);
+  expect(once[0]).toBe(list[0]);
+});
+
+test("a pin that was hidden shows again when it is merged", () => {
+  expect(pinnedPaths(withPins([pinned([document("C:\\a.md")], ["C:\\a.md"])], ["C:\\a.md"]))).toEqual(["C:\\a.md"]);
+});
+
+test("the pin button adds a document and really removes it", () => {
+  const on = togglePin(pinned([]), "C:\\a.md");
+  expect(on.items).toEqual([document("C:\\a.md")]);
+  expect(togglePin(on, "C:\\a.md").items).toEqual([]);
+  expect(togglePin(on, "c:/A.md").items).toEqual([]);
+});
+
+test("two spellings of a path are the same one", () => {
+  expect(same("C:\\A\\a.md", "c:/a/A.MD")).toBe(true);
+  expect(same("C:\\A\\a.md", "C:\\A\\b.md")).toBe(false);
 });

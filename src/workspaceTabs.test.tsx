@@ -920,3 +920,28 @@ test("Open folder… on Home and in the workspace menu carry nothing", async () 
   await until(() => open() === "Handbook", "the other workspace");
   expect(openTabs()).toEqual([]);
 });
+
+test("removing the open workspace goes through the close path: Cancel keeps it, and its edits", async () => {
+  choice = "Cancel";
+  agree = true;
+  await editGuide(AUTOSAVE_OFF);
+  await click(host.querySelector("[aria-label=Home]"));
+  await click(host.querySelector("[aria-label='Remove workspace Handbook']"));
+  await until(() => questions.length, "the question");
+  await settle();
+  expect(open()).toBe("Handbook");
+  expect(stored).toHaveLength(2);
+  expect(localStorage.getItem("tabs:h")).not.toBeNull();
+});
+
+test("removing the open workspace saves its edits first", async () => {
+  agree = true;
+  await editGuide();
+  await click(host.querySelector("[aria-label=Home]"));
+  await click(host.querySelector("[aria-label='Remove workspace Handbook']"));
+  await until(() => open() === undefined, "the workspace to close");
+  expect(disk.get(GUIDE)).toBe(EDITED);
+  await until(() => (stored as { id: string }[]).every((w) => w.id !== "h"), "the save");
+  await settle();
+  expect(localStorage.getItem("tabs:h")).toBeNull();
+});

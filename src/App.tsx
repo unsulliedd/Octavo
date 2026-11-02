@@ -45,7 +45,7 @@ import { KeysContext } from "./useKeys";
 import { dirname, joinPath, relativePath, resolveLocal, safeDecode } from "./paths";
 import { anchorAt, scrollTopFor, type Anchor } from "./scrollAnchor";
 import { createRenderer } from "./renderClient";
-import { loadLastVersion, loadOpenWorkspace, loadPinned, loadPrefs, loadRecent, loadTableWidths, loadTabs, save, tabsKey } from "./storage";
+import { loadLastVersion, loadOpenWorkspace, loadPrefs, loadRecent, loadTableWidths, loadTabs, save, tabsKey } from "./storage";
 import { addResizeHandles, applyWidths, headersOf } from "./tableResize";
 import { savedWidths, withWidths } from "./tableWidths";
 import type { LineWidth, Prefs, RecentFile } from "./storage";
@@ -165,7 +165,6 @@ function useSystemDark() {
 export default function App() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [recent, setRecent] = useState<RecentFile[]>(loadRecent);
-  const [pinned, setPinned] = useState<string[]>(loadPinned);
   const [tabs, setTabs] = useState<Tabs>(() => loadTabs(loadOpenWorkspace()));
   // The tab sets of the workspaces left since launch, by workspace id; these keep what isn't stored, such as closed tabs.
   const tabSets = useRef(new Map<string | undefined, Tabs>());
@@ -943,6 +942,7 @@ export default function App() {
     return [
       { label: "Open containing folder", run: () => void revealItemInDir(file).catch((e) => setError(String(e))) },
       { label: "Copy path", run: () => void navigator.clipboard.writeText(file).catch((e) => setError(String(e))) },
+      ...(workspaces.open ? [{ label: "Add to workspace", disabled: workspaces.covers(file), run: () => void workspaces.addToOpen({ kind: "document", path: file }) }] : []),
       "separator",
       { label: "Close", keys: keyLabel(bindings, "closeTab"), run: () => void closeTabById(id) },
       { label: "Close others", disabled: !otherTabIds(tabs, id).length, run: () => void closeTabsById(otherTabIds(tabs, id)) },
@@ -988,14 +988,6 @@ export default function App() {
   }
 
   const closeFind = useCallback(() => setFind((f) => ({ ...f, open: false })), []);
-
-  function togglePin(path: string) {
-    setPinned((p) => {
-      const next = p.includes(path) ? p.filter((x) => x !== path) : [...p, path];
-      save("pinned", next);
-      return next;
-    });
-  }
 
   /** Distraction-free mode hides toolbar, outline and status bar while a document is shown. */
   function setFocus(on: boolean) {
@@ -1697,7 +1689,7 @@ export default function App() {
         ) : (
           <Home
             recent={recent}
-            pinned={pinned}
+            pinned={workspaces.pinned}
             dragging={dragging}
             error={error}
             workspaces={workspaces.workspaces}
@@ -1706,7 +1698,8 @@ export default function App() {
             onPickFolder={() => void workspaces.pickFolder()}
             onOpen={(p) => openPath(p)}
             onOpenWorkspace={(id) => void workspaces.openWorkspace(id)}
-            onTogglePin={togglePin}
+            onRemoveWorkspace={(id) => void workspaces.removeWorkspace(id)}
+            onTogglePin={(p) => void workspaces.togglePin(p)}
           />
         )}
         {(opening.length > 0 || (path && !doc && !loadErrors[path])) && (

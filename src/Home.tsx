@@ -4,7 +4,7 @@ import { dirname } from "./paths";
 import { keyLabel } from "./shortcuts";
 import { useKeys } from "./useKeys";
 import type { RecentFile } from "./storage";
-import { workspacePlace, type Workspace } from "./workspaces";
+import { PINNED, workspacePlace, type Workspace } from "./workspaces";
 
 export const basename = (path: string) => path.split(/[\\/]/).pop() ?? path;
 
@@ -25,17 +25,18 @@ type Props = {
   pinned: string[];
   dragging: boolean;
   error?: string;
-  /** Saved workspaces, most recent first, and the open one. */
+  /** Saved workspaces, most recent first, with Pinned among them, and the open one. */
   workspaces: Workspace[];
   openWorkspace?: Workspace;
   onPick: () => void;
   onPickFolder: () => void;
   onOpen: (path: string) => void;
   onOpenWorkspace: (id: string) => void;
+  onRemoveWorkspace: (id: string) => void;
   onTogglePin: (path: string) => void;
 };
 
-export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onTogglePin }: Props) {
+export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onRemoveWorkspace, onTogglePin }: Props) {
   const recentAt = new Map(recent.map((r) => [r.path, r.at]));
   const openKeys = keyLabel(useKeys(), "open");
   const row = (path: string, isPinned: boolean) => (
@@ -59,6 +60,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
     </li>
   );
   const unpinned = recent.map((r) => r.path).filter((p) => !pinned.includes(p));
+  const saved = workspaces.filter((w) => w.id !== PINNED.id);
 
   return (
     <main className="home">
@@ -95,11 +97,11 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
           {dragging ? "Drop to open" : "Or drop a file anywhere in this window"}
         </div>
 
-        {workspaces.length > 0 && (
+        {saved.length > 0 && (
           <section aria-labelledby="workspaces-h">
             <h2 id="workspaces-h" className="section-label">Recent workspaces</h2>
             <ul className="file-list">
-              {workspaces.map((w) => (
+              {saved.map((w) => (
                 <li key={w.id} className="file-row">
                   <button className="file-open" onClick={() => onOpenWorkspace(w.id)} title={workspacePlace(w)}>
                     <Icon name="folder" size={18} />
@@ -109,6 +111,9 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
                     </span>
                     {w === openWorkspace && <span className="file-when">Open</span>}
                   </button>
+                  <button className="icon-btn pin" aria-label={`Remove workspace ${w.name}`} title="Remove workspace" onClick={() => onRemoveWorkspace(w.id)}>
+                    <Icon name="close" />
+                  </button>
                 </li>
               ))}
             </ul>
@@ -116,7 +121,10 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
         )}
         {pinned.length > 0 && (
           <section aria-labelledby="pinned-h">
-            <h2 id="pinned-h" className="section-label">Pinned</h2>
+            <div className="section-head">
+              <h2 id="pinned-h" className="section-label">Pinned</h2>
+              <button className="link-btn" onClick={() => onOpenWorkspace(PINNED.id)}>Open as workspace</button>
+            </div>
             <ul className="file-list">{pinned.map((p) => row(p, true))}</ul>
           </section>
         )}
