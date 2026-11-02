@@ -23,6 +23,7 @@ import { pastedName, watchBrokenImages } from "./images";
 import { linkTarget } from "./svgLinks";
 import { addOpenButtons, largeContent, type LargeContent } from "./largeView";
 import { LargeViewer } from "./LargeViewer";
+import { QuickOpen } from "./QuickOpen";
 import { widenBlocks } from "./breakout";
 import { afterPaint } from "./paint";
 import { shareInFlight } from "./shared";
@@ -182,6 +183,7 @@ export default function App() {
   const [focusMode, setFocusMode] = useState(false);
   // The diagram, image or table open large over the window.
   const [large, setLarge] = useState<LargeContent>();
+  const [quickOpen, setQuickOpen] = useState(false);
   const [find, setFind] = useState({ open: false, query: "", focusKey: 0 });
   // Counts finished renders of the document (after diagrams), so find searches the final DOM.
   const [rendered, setRendered] = useState(0);
@@ -952,6 +954,7 @@ export default function App() {
     const actions: Record<Action, () => void> = {
       open: pick,
       find: openFind,
+      quickOpen: () => setQuickOpen(true),
       closeTab: () => tab && closeTabById(tab.id),
       reopenTab: () => changeTabs(reopenTab),
       nextTab: () => changeTabs((s) => cycle(s, 1)),
@@ -975,8 +978,8 @@ export default function App() {
   /** A tooltip with the action's current keys after it. */
   const tip = (label: string, id: ShortcutId) => withKeys(label, bindings, id);
   const focusKey = keyLabel(bindings, "toggleFocus");
-  const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large });
-  latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large };
+  const latest = useRef({ openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large || quickOpen });
+  latest.current = { openPath, openWhatsNew, reloadSoon, runShortcut, state, bindings, writeDoc, confirmWindowClose, changedOnDisk, dropImages, largeOpen: !!large || quickOpen };
   const openFromTree = useCallback((file: string) => void latest.current.openPath(file), []);
 
   useEffect(() => {
@@ -1010,7 +1013,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       // A key the editor used for one of its shortcuts is not the window's too.
       if (e.defaultPrevented) return;
-      // The large view takes the keys while it is open.
+      // The large view and quick open take the keys while they are open.
       if (latest.current.largeOpen) return;
       const action = shortcut(e, latest.current.bindings, latest.current.state);
       if (!action) return;
@@ -1755,6 +1758,7 @@ export default function App() {
           </>
         )}
       </footer>
+      {quickOpen && <QuickOpen ws={workspaces} onOpen={(p) => void openPath(p)} onClose={() => setQuickOpen(false)} />}
       {large && (
         <LargeViewer
           content={large}

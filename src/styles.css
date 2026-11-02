@@ -2880,3 +2880,112 @@ kbd {
   background: var(--chrome-2);
   color: var(--ink);
 }
+
+.quick-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 56px 16px 0;
+}
+.quick {
+  width: 560px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--chrome);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  overflow: hidden;
+}
+.quick-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.quick-search input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.quick-list {
+  max-height: min(60vh, 400px);
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+}
+.quick-list:empty {
+  display: none;
+}
+.quick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.quick-row[aria-selected="true"] {
+  background: var(--chrome-2);
+}
+.quick-row svg {
+  flex: none;
+}
+.quick-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quick-part[data-name="true"] {
+  color: var(--ink);
+}
+.quick-part[data-match="true"] {
+  border-radius: 2px;
+  background: var(--find-match);
+  color: var(--ink);
+}
+.quick-note,
+.quick-offer p {
+  margin: 0;
+  padding: 8px 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.quick-offer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0 14px;
+}
+.quick-offer button {
+  margin-left: 14px;
+}
+.quick-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 30px;
+  padding: 0 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}

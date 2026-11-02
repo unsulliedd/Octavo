@@ -177,9 +177,12 @@ export function fileTree(docs: WorkspaceDoc[]) {
   return sortTree(top);
 }
 
+/** The words of a search, lower case, with backslashes as the forward slashes relative paths use. */
+export const queryWords = (query: string) => query.replace(/\\/g, "/").toLowerCase().split(/\s+/).filter(Boolean);
+
 /** The documents whose relative path holds every word of `query`, in any order, without regard to case. */
 export function filterDocuments(docs: WorkspaceDoc[], query: string) {
-  const words = query.replace(/\\/g, "/").toLowerCase().split(/\s+/).filter(Boolean);
+  const words = queryWords(query);
   return docs.filter((doc) => {
     const relative = doc.relative.toLowerCase();
     return words.every((word) => relative.includes(word));
