@@ -22,7 +22,7 @@ export type SourceEditor = {
 
 // Colors come from the app's theme, so light and dark both work.
 const highlight = HighlightStyle.define([
-  { tag: t.heading, fontWeight: "700", color: "var(--accent)" },
+  { tag: t.heading, fontWeight: "700", color: "var(--control)" },
   { tag: t.strong, fontWeight: "700" },
   { tag: t.emphasis, fontStyle: "italic" },
   { tag: t.strikethrough, textDecoration: "line-through" },
@@ -47,7 +47,7 @@ const theme = EditorView.theme({
   ".cm-panels": { backgroundColor: "var(--chrome)", color: "var(--ink)", fontFamily: "var(--ui)", fontSize: "13px" },
   ".cm-panels-top": { borderBottom: "1px solid var(--line)" },
   ".cm-textfield, .cm-button": { border: "1px solid var(--line)", borderRadius: "5px", backgroundColor: "var(--doc)", backgroundImage: "none", color: "var(--ink)", font: "inherit" },
-  ".cm-textfield:focus": { outline: "none", borderColor: "var(--accent)" },
+  ".cm-textfield:focus": { outline: "none", borderColor: "var(--control)" },
   ".cm-search label": { fontSize: "12.5px", color: "var(--muted)" },
   ".cm-panel button[name=close]": { color: "var(--muted)" },
 });
