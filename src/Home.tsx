@@ -1,7 +1,9 @@
-import { Fragment } from "react";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { Fragment, useCallback, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { Icon, Logo } from "./icons";
 import { dirname } from "./paths";
 import { keyLabel } from "./shortcuts";
+import { pathItems, TabMenu, type TabMenuItem } from "./TabMenu";
 import { useKeys } from "./useKeys";
 import type { RecentFile } from "./storage";
 import { PINNED, workspacePlace, type Workspace } from "./workspaces";
@@ -34,13 +36,58 @@ type Props = {
   onOpenWorkspace: (id: string) => void;
   onRemoveWorkspace: (id: string) => void;
   onTogglePin: (path: string) => void;
+  onError: (message: string) => void;
 };
 
-export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onRemoveWorkspace, onTogglePin }: Props) {
+/** The row a menu is open for: a document by its path or a workspace by its id, and where the menu opens. */
+type RowMenu = { doc?: string; workspace?: string; x: number; y: number };
+
+export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onRemoveWorkspace, onTogglePin, onError }: Props) {
+  const [menu, setMenu] = useState<RowMenu>();
+  const opener = useRef<HTMLElement | null>(null);
+  const closeMenu = useCallback(() => {
+    setMenu(undefined);
+    opener.current?.focus();
+  }, []);
+  /** Props for a row: the right-click, or the context-menu key or Shift+F10 on a focused row, opens its menu. */
+  const menuProps = (which: Pick<RowMenu, "doc" | "workspace">) => ({
+    "data-menu": (menu && menu.doc === which.doc && menu.workspace === which.workspace) || undefined,
+    onContextMenu: (e: MouseEvent<HTMLElement>) => {
+      e.preventDefault();
+      opener.current = document.activeElement as HTMLElement | null;
+      setMenu({ ...which, x: e.clientX, y: e.clientY });
+    },
+    onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+      if (e.key !== "ContextMenu" && !(e.key === "F10" && e.shiftKey)) return;
+      e.preventDefault();
+      const at = e.currentTarget.getBoundingClientRect();
+      opener.current = e.target as HTMLElement;
+      setMenu({ ...which, x: at.left + 24, y: at.bottom });
+    },
+  });
+  const rowItems = (m: RowMenu): TabMenuItem[] => {
+    if (m.doc !== undefined) {
+      const path = m.doc;
+      return [
+        { label: "Open", run: () => onOpen(path) },
+        ...pathItems(path, (e) => onError(String(e))),
+        "separator",
+        { label: pinned.includes(path) ? "Unpin" : "Pin", run: () => onTogglePin(path) },
+      ];
+    }
+    const w = workspaces.find((x) => x.id === m.workspace);
+    if (!w) return [];
+    const folder = w.items[0]?.kind === "folder" ? w.items[0].path : undefined;
+    return [
+      { label: "Open", run: () => onOpenWorkspace(w.id) },
+      ...(folder ? [{ label: "Open folder in Explorer", run: () => void revealItemInDir(folder).catch((e) => onError(String(e))) }] : []),
+      ...(w.id === PINNED.id ? [] : (["separator", { label: "Remove workspace", run: () => onRemoveWorkspace(w.id) }] as TabMenuItem[])),
+    ];
+  };
   const recentAt = new Map(recent.map((r) => [r.path, r.at]));
   const openKeys = keyLabel(useKeys(), "open");
   const row = (path: string, isPinned: boolean) => (
-    <li key={path} className="file-row">
+    <li key={path} className="file-row" {...menuProps({ doc: path })}>
       <button className="file-open" onClick={() => onOpen(path)} title={path}>
         <Icon name="file" size={18} />
         <span className="file-text">
@@ -102,7 +149,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
             <h2 id="workspaces-h" className="section-label">Recent workspaces</h2>
             <ul className="file-list">
               {saved.map((w) => (
-                <li key={w.id} className="file-row">
+                <li key={w.id} className="file-row" {...menuProps({ workspace: w.id })}>
                   <button className="file-open" onClick={() => onOpenWorkspace(w.id)} title={workspacePlace(w)}>
                     <Icon name="folder" size={18} />
                     <span className="file-text">
@@ -135,6 +182,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
           </section>
         )}
       </div>
+      {menu && <TabMenu name={menu.doc !== undefined ? basename(menu.doc) : (workspaces.find((w) => w.id === menu.workspace)?.name ?? "Workspace")} x={menu.x} y={menu.y} items={rowItems(menu)} onClose={closeMenu} />}
     </main>
   );
 }

@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask, message, open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
-import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { EditorPane } from "./editor/EditorPane";
 import { DocButtons, type DocActions } from "./editor/FormatBar";
 import { editorLayout } from "./editor/layout";
@@ -34,7 +34,7 @@ import { Sidebar } from "./Sidebar";
 import { outlineDashes } from "./sidePanels";
 import { SourcePane } from "./SourcePane";
 import { UpdatePopover } from "./UpdatePopover";
-import { TabMenu, type TabMenuItem } from "./TabMenu";
+import { pathItems, TabMenu, type TabMenuItem } from "./TabMenu";
 import { tabListItems, useTabOverflow } from "./tabStrip";
 import { releaseUrl } from "./links";
 import { useUpdates } from "./useUpdates";
@@ -49,7 +49,7 @@ import { anchorAt, scrollTopFor, type Anchor } from "./scrollAnchor";
 import { createRenderer } from "./renderClient";
 import { loadLastVersion, loadOpenWorkspace, loadPrefs, loadRecent, loadTableWidths, loadTabs, save, tabsKey } from "./storage";
 import { addResizeHandles, applyWidths, headersOf } from "./tableResize";
-import { savedWidths, withWidths } from "./tableWidths";
+import { savedWidths, withWidths, type Widths } from "./tableWidths";
 import type { LineWidth, Prefs, RecentFile } from "./storage";
 import {
   activate,
@@ -944,8 +944,7 @@ export default function App() {
     if (!t) return [];
     const file = currentEntry(t).path;
     return [
-      { label: "Open containing folder", run: () => void revealItemInDir(file).catch((e) => setError(String(e))) },
-      { label: "Copy path", run: () => void navigator.clipboard.writeText(file).catch((e) => setError(String(e))) },
+      ...pathItems(file, (e) => setError(String(e))),
       ...(workspaces.open ? [{ label: "Add to workspace", disabled: workspaces.covers(file), run: () => void workspaces.addToOpen({ kind: "document", path: file }) }] : []),
       "separator",
       { label: "Close", keys: keyLabel(bindings, "closeTab"), run: () => void closeTabById(id) },
@@ -1134,6 +1133,12 @@ export default function App() {
     invoke("watch_docs", { paths: watched ? watched.split("\n") : [] }).catch(() => {});
   }, [watched]);
 
+  // Remembers a table's column widths, from the reading view or the large view.
+  const storeWidths = (file: string, index: number, headers: string[], widths: Widths) => {
+    tableWidths.current = withWidths(tableWidths.current, file, index, headers, widths);
+    save("tableWidths", tableWidths.current);
+  };
+
   // Column widths set by hand apply, and tables and code blocks wider than the text column grow beside it.
   // This runs before the scroll position is restored, since it changes how tall the document is, and the
   // widening again when the reading area's width changes.
@@ -1148,8 +1153,7 @@ export default function App() {
       if (widths) applyWidths(table, widths);
     });
     const stopResizing = addResizeHandles(root, (table, widths) => {
-      tableWidths.current = withWidths(tableWidths.current, file, tables.indexOf(table), headersOf(table), widths);
-      save("tableWidths", tableWidths.current);
+      storeWidths(file, tables.indexOf(table), headersOf(table), widths);
       widenBlocks(root, area, prefs.wideBlocks);
     });
     widenBlocks(root, area, prefs.wideBlocks);
@@ -1715,6 +1719,7 @@ export default function App() {
             onOpenWorkspace={(id) => void workspaces.openWorkspace(id)}
             onRemoveWorkspace={(id) => void workspaces.removeWorkspace(id)}
             onTogglePin={(p) => void workspaces.togglePin(p)}
+            onError={(m) => setError(m)}
           />
         )}
         {outlineRail("right")}
@@ -1831,6 +1836,15 @@ export default function App() {
             // A fragment scrolls the document behind the view.
             if (href.startsWith("#")) setLarge(undefined);
             followLink(href);
+          }}
+          onResizeTable={(index, headers, widths) => {
+            const root = article.current;
+            const area = scroller.current;
+            const table = root?.querySelectorAll("table")[index];
+            if (!doc?.path || !root || !area || !table) return;
+            storeWidths(doc.path, index, headers, widths);
+            applyWidths(table, widths);
+            widenBlocks(root, area, prefs.wideBlocks);
           }}
         />
       )}

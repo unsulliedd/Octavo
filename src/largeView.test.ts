@@ -53,14 +53,15 @@ test("renaming ids leaves similar ids and markup without an id alone", () => {
   expect(uniqueIds('<svg viewBox="0 0 1 1"></svg>', "x")).toBe('<svg viewBox="0 0 1 1"></svg>');
 });
 
-test("a table is copied without its resize handles and hand-set widths", () => {
+test("a table is copied with its column widths, without its resize handles", () => {
   const root = article(
     '<div class="table-scroll"><table class="sized" style="width: 20em"><thead><tr><th style="width: 10em">A<span class="col-resize"></span></th><th style="width: 10em">B<span class="col-resize"></span></th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table></div>',
   );
   const html = tableMarkup(root.querySelector("table")!);
   expect(html).not.toContain("col-resize");
-  expect(html).not.toContain("sized");
-  expect(html).not.toContain("width");
+  expect(html).toContain('class="sized"');
+  expect(html).toContain("width: 20em");
+  expect(html.match(/width: 10em/g)).toHaveLength(2);
   expect(html).toContain("<td>1</td>");
   // The document's own table is untouched.
   expect(root.querySelector("table")!.className).toBe("sized");
@@ -115,7 +116,7 @@ test("the table's button opens that table, titled by its heading", () => {
   const buttons = root.querySelectorAll<HTMLButtonElement>(".large-open");
   expect(buttons).toHaveLength(2);
   const content = largeContent(buttons[1].querySelector("path")!, root, state);
-  expect(content).toMatchObject({ kind: "table", title: "Two" });
+  expect(content).toMatchObject({ kind: "table", title: "Two", index: 1 });
   expect(content && "markup" in content && content.markup).toContain("<td>b</td>");
   expect(largeContent(buttons[1], root, { ...state, editing: true })).toBeUndefined();
 });

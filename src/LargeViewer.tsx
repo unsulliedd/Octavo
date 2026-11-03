@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { cycleFocus, type LargeContent, type Size } from "./largeView";
 import { svgSize } from "./mermaid";
+import { addResizeHandles, headersOf } from "./tableResize";
+import type { Widths } from "./tableWidths";
 import { linkTarget } from "./svgLinks";
 import { useZoomPan } from "./useZoomPan";
 
@@ -9,15 +11,18 @@ type Props = {
   content: LargeContent;
   onClose: () => void;
   onOpenLink: (href: string) => void;
+  /** A table's columns were resized: its place among the document's tables, its header texts and the new widths. */
+  onResizeTable: (index: number, headers: string[], widths: Widths) => void;
 };
 
 /**
  * A diagram, image or table from the reading view, large over the whole window. Diagrams and images zoom with the
  * slider or Ctrl+wheel, fit again on a double-click and are dragged around when larger than the view; a table
- * fills the view's width and scrolls inside it. Links open through `onOpenLink`. Escape, the close button or a click
+ * fills the view's width, keeps the column widths it has in the document, lets its columns be resized like there and
+ * scrolls inside the view. Links open through `onOpenLink`. Escape, the close button or a click
  * outside the panel closes it, and focus goes back to where it was.
  */
-export function LargeViewer({ content, onClose, onOpenLink }: Props) {
+export function LargeViewer({ content, onClose, onOpenLink, onResizeTable }: Props) {
   const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const [opener] = useState(() => document.activeElement);
@@ -25,6 +30,18 @@ export function LargeViewer({ content, onClose, onOpenLink }: Props) {
   const pressedOutside = useRef(false);
   const close = useRef(onClose);
   close.current = onClose;
+  const resized = useRef(onResizeTable);
+  resized.current = onResizeTable;
+  const tableBox = useRef<HTMLDivElement>(null);
+  const tableIndex = content.kind === "table" ? content.index : undefined;
+  const tableMarkup = content.kind === "table" ? content.markup : undefined;
+
+  // Dragging a header cell's edge resizes a column of the table, as in the reading view.
+  useEffect(() => {
+    const box = tableBox.current;
+    if (!box || tableIndex === undefined) return;
+    return addResizeHandles(box, (table, widths) => resized.current(tableIndex, headersOf(table), widths));
+  }, [tableIndex, tableMarkup]);
 
   useEffect(() => {
     closeButton.current?.focus();
@@ -78,7 +95,7 @@ export function LargeViewer({ content, onClose, onOpenLink }: Props) {
         </header>
         {content.kind === "table" ? (
           <div className="large-body" data-kind="table">
-            <div className="doc large-table" dangerouslySetInnerHTML={{ __html: content.markup }} />
+            <div ref={tableBox} className="doc large-table" dangerouslySetInnerHTML={{ __html: content.markup }} />
           </div>
         ) : (
           <ZoomedView content={content} />

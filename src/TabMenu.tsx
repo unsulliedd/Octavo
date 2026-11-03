@@ -1,8 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { Icon } from "./icons";
 
 /** With `checked`, the item is one choice of a set, and `checked` says whether it is the current one. */
 export type TabMenuItem = { label: ReactNode; keys?: string; disabled?: boolean; checked?: boolean; run: () => void } | "separator";
+
+/** The items every menu on a document or folder has: show it in Explorer, copy its path. `failed` gets what went wrong. */
+export const pathItems = (path: string, failed: (e: unknown) => void): TabMenuItem[] => [
+  { label: "Open containing folder", run: () => void revealItemInDir(path).catch(failed) },
+  { label: "Copy path", run: () => void navigator.clipboard.writeText(path).catch(failed) },
+];
 
 type Props = {
   /** The document the menu is for, read out as its name. */
@@ -58,7 +65,7 @@ export function TabMenu({ name, x, y, above, items, onClose }: Props) {
   }
 
   return (
-    <div className="menu" role="menu" aria-label={name} ref={menu} style={place} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
+    <div className="menu" role="menu" aria-label={name} ref={menu} style={place} onKeyDown={onKeyDown}>
       {items.map((item, i) =>
         item === "separator" ? (
           <div key={i} className="menu-separator" role="separator" />
