@@ -12,7 +12,16 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - The sidebar can be resized by dragging its edge or with the arrow keys on it; a double-click goes back to the usual width. The width is kept between launches
 - The outline can sit beside the text instead of in the sidebar: a new setting in the reading settings, Outline location, puts it on the Right or the Left, where a column of dashes, one per heading, stands in the margin beside the text. Hovering the dashes floats the outline over the document, clicking a dash goes to its heading, and the keyboard reaches it through one button. Show outline in the reading settings now turns the outline off everywhere, and Files can be shown and hidden with `Ctrl+\`, which can be changed in Settings
 
+### Changed
+- Controls use the primary color in the dark theme too, lifted so it reads on dark, instead of the secondary color: checkboxes, sliders, focused fields, Done and the update button's edge, the unsaved-edits dot and the headings in Source mode
+- Selected rows look the same everywhere: the highlighted Ctrl+P result, the current language in the code-language list and pressed formatting buttons use the soft primary color, like the outline, the Files tree and Settings
+- Scrollbars are a thin thumb with no track that widens under the pointer, in both themes, in every part of the window that scrolls
+- The outline's dashes beside the text are a shade darker, so they are easier to see in both themes
+
 ### Fixed
+- Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue
+- Links in the light theme are a shade darker, so they are readable on the sidebar and toolbar
+- The window's background follows the dark theme instead of staying light
 - Right-clicking a document on Home opens a menu with Open, Open containing folder, Copy path and Pin or Unpin; right-clicking a workspace opens Open, Open folder in Explorer (for a workspace of a folder) and Remove workspace. The context-menu key or Shift+F10 on a focused row opens it too
 - Right-clicking Home or any other part of the window no longer shows the browser's own menu (Back, Refresh, Save as, Print); it stays in text fields, the editor and Source mode, for Cut, Copy, Paste and spelling suggestions
 - Tables in the large view open at the column widths they have in the document, and their columns can be dragged and double-clicked like in the reading view; the change is the same remembered width

@@ -1,6 +1,7 @@
 /* Brand colors: primary #5A0E27, secondary #75B7E5, accent #D39D3F. Every role derives from these three,
-   so a future color setting only swaps them. Text uses adjusted shades where a brand color is too light or dark. */
-.app {
+   so a future color setting only swaps them. Text uses adjusted shades where a brand color is too light or dark.
+   They sit on the root, so the page behind the app follows the theme too. */
+:root {
   --brand-primary: #5a0e27;
   --brand-secondary: #75b7e5;
   --brand-accent: #d39d3f;
@@ -19,24 +20,28 @@
   --code-fn: #1f5f99;
   --code-type: #7a4e0c;
   --code-attr: #0e6e78;
-  --accent: var(--brand-primary); /* icons, toggles, outlines */
-  --accent-fill: var(--brand-primary); /* primary buttons */
-  --accent-ink: #ffffff;
-  --accent-soft: color-mix(in srgb, var(--brand-primary) 9%, var(--doc)); /* active outline item */
-  --accent-soft-ink: var(--brand-primary);
-  --link: color-mix(in srgb, var(--brand-secondary) 50%, #003a70); /* the secondary color is too light for text on white */
+  --control: var(--brand-primary); /* checkboxes, sliders, focus borders, spinner */
+  --control-fill: var(--brand-primary); /* primary buttons */
+  --control-ink: #ffffff;
+  --control-soft: color-mix(in srgb, var(--brand-primary) 9%, var(--doc)); /* selected rows, pressed buttons */
+  --control-soft-ink: var(--brand-primary);
+  --link: color-mix(in srgb, var(--brand-secondary) 40%, #003a70); /* the secondary color is too light for text on white */
   --brand-accent-ink: color-mix(in srgb, var(--brand-accent) 72%, black);
   --select: color-mix(in srgb, var(--brand-secondary) 35%, white);
   --find-match: color-mix(in srgb, var(--brand-accent) 38%, white);
   --find-current: var(--brand-accent);
   --drop-soft: color-mix(in srgb, var(--brand-secondary) 18%, var(--doc));
+  --scroll-thumb: color-mix(in srgb, var(--muted) 70%, transparent);
+  --scroll-thumb-hover: var(--muted);
+  --outline-mark: var(--muted); /* the outline's dashes */
+  --outline-mark-active: var(--ink); /* the dash of the heading in view */
   --danger: #c4302b;
   --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --doc-font: var(--ui);
   --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
   color-scheme: light;
 }
-.app[data-theme="dark"] {
+:root:has(.app[data-theme="dark"]) {
   --chrome: #1b1e22;
   --chrome-2: #262a30;
   --line: #30353c;
@@ -51,10 +56,10 @@
   --code-fn: #8ec8f0;
   --code-type: #e6c079;
   --code-attr: #7fd6d0;
-  --accent: var(--brand-secondary);
-  --accent-fill: color-mix(in srgb, var(--brand-primary) 78%, white); /* primary lifted so buttons read on dark */
-  --accent-soft: color-mix(in srgb, var(--brand-primary) 55%, var(--doc));
-  --accent-soft-ink: #f3d9e1;
+  --control: oklch(from var(--brand-primary) 0.74 c calc(h - 6)); /* primary lifted so controls read on dark */
+  --control-fill: color-mix(in srgb, var(--brand-primary) 78%, white); /* primary lifted so buttons read on dark */
+  --control-soft: color-mix(in srgb, var(--brand-primary) 55%, var(--doc));
+  --control-soft-ink: color-mix(in srgb, var(--control) 30%, white);
   --link: var(--brand-secondary);
   --brand-accent-ink: var(--brand-accent);
   --select: color-mix(in srgb, var(--brand-secondary) 35%, var(--doc));
@@ -75,7 +80,27 @@ body {
 }
 body {
   margin: 0;
-  background: #f3f4f6;
+  background: var(--chrome);
+}
+/* Scrollbars: a thin thumb with no track. The gutter is 10px; a transparent border keeps the thumb at 6px
+   until the pointer is on it. */
+.app ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.app ::-webkit-scrollbar-track,
+.app ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.app ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--scroll-thumb) padding-box;
+}
+.app ::-webkit-scrollbar-thumb:hover,
+.app ::-webkit-scrollbar-thumb:active {
+  border-width: 0;
+  background-color: var(--scroll-thumb-hover);
 }
 /* Mermaid adds its tooltip element to the end of the page with an inline position; fixed to the window,
    it can't make the page taller. Mermaid sets its top and left when it shows the tooltip. */
@@ -153,13 +178,16 @@ body > .mermaidTooltip {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--muted) !important;
   cursor: pointer;
+}
+/* Above .app button, which resets the color */
+.app .icon-btn {
+  color: var(--muted);
 }
 .icon-btn:hover:not(:disabled),
 .icon-btn[aria-expanded="true"] {
   background: var(--chrome-2);
-  color: var(--ink) !important;
+  color: var(--ink);
 }
 .icon-btn:disabled {
   opacity: 0.4;
@@ -183,14 +211,16 @@ input:focus-visible {
   padding: 0 16px;
   border: 0;
   border-radius: 8px;
-  background: var(--accent-fill);
-  color: var(--accent-ink) !important;
+  background: var(--control-fill);
   font-size: 14px !important;
   font-weight: 600;
   cursor: pointer;
 }
+.app .primary {
+  color: var(--control-ink);
+}
 .primary:hover {
-  background: color-mix(in srgb, var(--accent-fill) 85%, black);
+  background: color-mix(in srgb, var(--control-fill) 85%, black);
 }
 
 /* Toolbar */
@@ -318,7 +348,7 @@ input:focus-visible {
   z-index: 1;
   transform: translateY(-1px);
   box-shadow:
-    0 0 0 1px var(--accent),
+    0 0 0 1px var(--control),
     0 6px 16px rgb(0 0 0 / 0.18);
 }
 .tab[data-dragging],
@@ -404,8 +434,8 @@ input:focus-visible {
   padding-left: 38px;
 }
 .outline a[aria-current] {
-  background: var(--accent-soft);
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-weight: 600;
 }
 .reader {
@@ -649,7 +679,7 @@ button.save-state {
   width: 28px;
   height: 28px;
   border: 3px solid var(--line);
-  border-top-color: var(--accent);
+  border-top-color: var(--control);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   will-change: transform;
@@ -798,16 +828,16 @@ button.save-state {
   height: 30px;
   margin: 0 2px;
   padding: 0 12px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--control);
   border-radius: 7px;
-  background: var(--accent-soft);
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 .app .done-btn:hover {
-  background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent));
+  background: color-mix(in srgb, var(--control-soft) 80%, var(--control));
 }
 .notice {
   color: var(--muted);
@@ -847,7 +877,7 @@ button.save-state {
 .doc.editor li[data-item-type="task"] > input {
   flex: none;
   margin: 0.4em 0 0;
-  accent-color: var(--accent);
+  accent-color: var(--control);
   cursor: pointer;
 }
 .doc.editor .task-content {
@@ -971,7 +1001,7 @@ button.save-state {
 .properties input:focus,
 .properties textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--control);
   background: var(--doc);
 }
 .properties input.key {
@@ -1072,7 +1102,7 @@ button.save-state {
   height: 7px;
   margin: 0 3px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--control);
 }
 .text-btn {
   height: 28px;
@@ -1103,9 +1133,9 @@ button.save-state {
   color: var(--muted);
 }
 .text-btn.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-ink);
+  border-color: var(--control-fill);
+  background: var(--control-fill);
+  color: var(--control-ink);
 }
 .link-chip {
   display: inline-flex;
@@ -1139,9 +1169,8 @@ button.save-state {
   border-left: 1px solid var(--line);
 }
 .format-bar .icon-btn[aria-pressed="true"] {
-  background: var(--chrome-2);
-  color: var(--ink) !important;
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
 }
 .format-bar .icon-btn:disabled {
   opacity: 0.35;
@@ -1239,7 +1268,8 @@ button.save-state {
   background: var(--chrome-2);
 }
 .app .code-lang-list button[aria-selected="true"] {
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-weight: 600;
 }
 .code-lang-id {
@@ -1279,7 +1309,7 @@ button.save-state {
   resize: vertical;
 }
 .math-editor textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--control);
 }
 .image-editor {
   width: min(360px, 90%);
@@ -1300,7 +1330,7 @@ button.save-state {
   font: inherit;
 }
 .image-editor input:focus {
-  border-color: var(--accent);
+  border-color: var(--control);
 }
 .image-editor .math-editor-foot .muted {
   min-width: 0;
@@ -1373,9 +1403,8 @@ button.save-state {
   height: 28px;
 }
 .table-bar .icon-btn[aria-pressed="true"] {
-  background: var(--chrome-2);
-  color: var(--ink) !important;
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
 }
 /* Down the table's left side: the anchor is as tall as the table, and the bar sticks to the top of the view inside it. */
 .table-bar-anchor[data-side] {
@@ -1420,9 +1449,8 @@ button.save-state {
   height: 28px;
 }
 .floating .icon-btn[aria-pressed="true"] {
-  background: var(--chrome-2);
-  color: var(--ink) !important;
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
 }
 .floating .link-chip {
   border: 0;
@@ -1493,8 +1521,8 @@ button.save-state {
   background: var(--chrome-2);
 }
 .floating-menu button[aria-checked="true"] {
-  background: var(--accent-soft);
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-weight: 600;
 }
 .icon-btn.danger:hover:not(:disabled),
@@ -1529,7 +1557,7 @@ button.save-state {
   font-size: 13px;
 }
 .find:focus-within {
-  border-color: var(--accent);
+  border-color: var(--control);
 }
 .find-count {
   padding: 0 6px;
@@ -1563,15 +1591,15 @@ button.save-state {
   padding: 0 12px;
   border: 0;
   border-radius: 7px;
-  background: var(--accent-soft);
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-size: 13px;
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 .app .update-btn:hover,
 .app .update-btn[aria-expanded="true"] {
-  background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent));
+  background: color-mix(in srgb, var(--control-soft) 80%, var(--control));
 }
 .app .update-btn:active {
   transform: translateY(1px);
@@ -1632,7 +1660,7 @@ button.save-state {
 }
 .setting input[type="range"] {
   width: 100%;
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 .setting-toggle {
   display: flex;
@@ -1718,8 +1746,8 @@ button.save-state {
   color: var(--ink);
 }
 .settings-nav button[aria-current="page"] {
-  background: var(--accent-soft);
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-weight: 600;
 }
 .settings-body {
@@ -1759,7 +1787,7 @@ button.save-state {
   flex: none;
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 /* About: the mark and version, links, then the updates below a line */
 .about-head {
@@ -1863,10 +1891,10 @@ button.save-state {
   background: var(--chrome);
 }
 .shortcut-keys[data-recording] {
-  border-color: var(--accent);
+  border-color: var(--control);
   background: var(--doc);
-  color: var(--accent-soft-ink);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--control-soft-ink);
+  box-shadow: 0 0 0 3px var(--control-soft);
 }
 .shortcut-keys kbd {
   display: inline-flex;
@@ -1900,7 +1928,7 @@ button.save-state {
 .setting-toggle input {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 .seg {
   display: flex;
@@ -1919,13 +1947,13 @@ button.save-state {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--muted) !important;
+  color: var(--muted);
   font-size: 13px !important;
   cursor: pointer;
 }
 .seg button[aria-pressed="true"] {
   background: var(--doc);
-  color: var(--ink) !important;
+  color: var(--ink);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 .seg button[data-value="serif"] {
@@ -2139,7 +2167,7 @@ kbd {
   list-style: none;
 }
 .doc input[type="checkbox"] {
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 /* A table scrolls sideways in its box when it's wider than the column. */
 .doc .table-scroll {
@@ -2357,10 +2385,10 @@ kbd {
   cursor: pointer;
 }
 .doc.editor .mermaid-block:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--control) 45%, var(--line));
 }
 .doc.editor .mermaid-block.ProseMirror-selectednode {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--control);
   outline-offset: 2px;
 }
 .doc.editor .mermaid-block[data-error] {
@@ -2477,7 +2505,7 @@ kbd {
 }
 .mermaid-zoom input {
   width: 200px;
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 .mermaid-zoom output {
   min-width: 4ch;
@@ -2657,7 +2685,7 @@ kbd {
 }
 .large-zoom input {
   width: 200px;
-  accent-color: var(--accent);
+  accent-color: var(--control);
 }
 .large-zoom output {
   min-width: 4ch;
@@ -2794,8 +2822,8 @@ kbd {
   pointer-events: none;
 }
 .tree-row[aria-current] {
-  background: var(--accent-soft);
-  color: var(--accent-soft-ink);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
   font-weight: 600;
 }
 .tree-name {
@@ -3023,7 +3051,8 @@ kbd {
   cursor: pointer;
 }
 .quick-row[aria-selected="true"] {
-  background: var(--chrome-2);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
 }
 .quick-row svg {
   flex: none;
@@ -3114,14 +3143,14 @@ kbd {
   display: block;
   height: 2px;
   border-radius: 1px;
-  background: var(--muted);
-  opacity: 0.55;
+  background: var(--outline-mark);
+  opacity: 0.7;
 }
 .dash-row:hover .dash {
   opacity: 1;
 }
 .dash[data-active] {
-  background: var(--ink);
+  background: var(--outline-mark-active);
   opacity: 1;
 }
 /* Above the document, below the reading settings, menus, dialogs and the large view. */
