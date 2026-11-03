@@ -37,6 +37,8 @@ test("window shortcuts with the default keys", () => {
   expect(shortcut(key("O", { ctrlKey: true }), {}, idle)).toBe("open");
   expect(shortcut(key("f", { ctrlKey: true }), {}, idle)).toBe("find");
   expect(shortcut(key("p", { ctrlKey: true }), {}, idle)).toBe("quickOpen");
+  expect(shortcut(key("\\", { ctrlKey: true }), {}, idle)).toBe("toggleFiles");
+  expect(shortcut(key("b", { ctrlKey: true }), {}, idle)).not.toBe("toggleFiles");
   expect(shortcut(key("p", { ctrlKey: true }), { quickOpen: ["Ctrl+Alt+P"] }, idle)).toBeUndefined();
   expect(shortcut(key("p", { ctrlKey: true, altKey: true }), { quickOpen: ["Ctrl+Alt+P"] }, idle)).toBe("quickOpen");
   expect(shortcut(key("F", { ctrlKey: true, shiftKey: true }), {}, idle)).toBeUndefined();

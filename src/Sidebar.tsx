@@ -1,10 +1,24 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { DEFAULT_SIDEBAR, MIN_SIDEBAR, SIDEBAR_KEY_STEP, sidebarWidth } from "./sidebarWidth";
 
+/** The window's inner width, kept up to date. */
+export function useWindowWidth() {
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return windowWidth;
+}
+
 type Props = {
   /** The saved width, in pixels. */
   width: number;
-  onWidth: (width: number) => void;
+  /** Missing where the width can't be changed, as in the floating panel. */
+  onWidth?: (width: number) => void;
+  /** Floating over the document from a hovered margin, with no handle: the margin it came from and what it is called. */
+  floating?: { side: "left" | "right"; label: string };
   children: ReactNode;
 };
 
@@ -13,18 +27,20 @@ type Props = {
  * the width, a double-click resets it. A window too narrow for the saved width shows less, and the width comes back as
  * the window grows.
  */
-export function Sidebar({ width, onWidth, children }: Props) {
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+export function Sidebar({ width, onWidth, floating, children }: Props) {
+  const windowWidth = useWindowWidth();
   // The width during a drag, saved when it ends.
   const [dragged, setDragged] = useState<number>();
   const drag = useRef<{ x: number; width: number }>(undefined);
   const shown = sidebarWidth(dragged ?? width, windowWidth);
 
-  useEffect(() => {
-    const onResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  if (floating) {
+    return (
+      <aside className="sidebar" data-floating={floating.side} aria-label={floating.label} style={{ width: shown }}>
+        {children}
+      </aside>
+    );
+  }
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
@@ -39,7 +55,7 @@ export function Sidebar({ width, onWidth, children }: Props) {
 
   function endDrag() {
     drag.current = undefined;
-    if (dragged !== undefined) onWidth(shown);
+    if (dragged !== undefined) onWidth?.(shown);
     setDragged(undefined);
   }
 
@@ -47,7 +63,7 @@ export function Sidebar({ width, onWidth, children }: Props) {
     const step = e.key === "ArrowRight" ? SIDEBAR_KEY_STEP : e.key === "ArrowLeft" ? -SIDEBAR_KEY_STEP : 0;
     if (!step) return;
     e.preventDefault();
-    onWidth(sidebarWidth(shown + step, windowWidth));
+    onWidth?.(sidebarWidth(shown + step, windowWidth));
   }
 
   return (
@@ -69,7 +85,7 @@ export function Sidebar({ width, onWidth, children }: Props) {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onDoubleClick={() => onWidth(DEFAULT_SIDEBAR)}
+        onDoubleClick={() => onWidth?.(DEFAULT_SIDEBAR)}
         onKeyDown={onKeyDown}
       />
     </>

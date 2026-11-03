@@ -29,7 +29,9 @@ import { afterPaint } from "./paint";
 import { shareInFlight } from "./shared";
 import { ReadingSettings } from "./ReadingSettings";
 import { Settings } from "./Settings";
+import { EdgeRail } from "./EdgeRail";
 import { Sidebar } from "./Sidebar";
+import { outlineDashes } from "./sidePanels";
 import { SourcePane } from "./SourcePane";
 import { UpdatePopover } from "./UpdatePopover";
 import { TabMenu, type TabMenuItem } from "./TabMenu";
@@ -268,7 +270,9 @@ export default function App() {
   const editorReady = editing && editorShown?.key === editorKey;
   const shownPath = useRef(path);
   shownPath.current = path;
-  const filesShown = !tab || (sidebarTab ?? (workspaces.open ? "files" : "outline")) === "files";
+  // The sidebar has the Files and Outline tabs only while the outline is in it.
+  const outlineInSidebar = prefs.showOutline && prefs.outlineAt === "sidebar";
+  const filesShown = !outlineInSidebar || !tab || (sidebarTab ?? (workspaces.open ? "files" : "outline")) === "files";
 
   const changePrefs = (next: Prefs) => {
     setPrefs(next);
@@ -1000,6 +1004,7 @@ export default function App() {
       open: pick,
       find: openFind,
       quickOpen: () => setQuickOpen(true),
+      toggleFiles: () => (tab || workspaces.open) && changePrefs({ ...prefs, outline: !prefs.outline }),
       closeTab: () => tab && closeTabById(tab.id),
       reopenTab: () => changeTabs(reopenTab),
       nextTab: () => changeTabs((s) => cycle(s, 1)),
@@ -1332,6 +1337,46 @@ export default function App() {
       <Icon name="sidebar" />
     </button>
   );
+  const headingDashes = useMemo(() => outlineDashes(headings, activeId), [headings, activeId]);
+  /** The dashes of an outline that floats from the left or right margin of the text, when it is there. */
+  const outlineRail = (side: "left" | "right") =>
+    prefs.showOutline && prefs.outlineAt === side && doc && !focusMode && (
+      <EdgeRail side={side} label="Show outline panel" panelLabel="Outline" dashes={headingDashes} width={prefs.sidebarWidth} onJump={goToHeading}>
+        {outlinePanel}
+      </EdgeRail>
+    );
+  /** Scrolls to the heading with this index in the outline: in the reading view, the editor or the source. */
+  const goToHeading = (i: number) => {
+    if (source) return void sourceEditor.current?.reveal(sourceHeadingStarts.current[i]);
+    // The editor's headings have no ids; they are in the same order.
+    const target = editing ? article.current?.querySelectorAll("h1, h2, h3, h4")[i] : document.getElementById(headings[i].id);
+    target?.scrollIntoView();
+  };
+  const outlinePanel = doc && (
+    <>
+      <div className="sidebar-head">
+        <span className="section-label">Outline</span>
+        <span className="count">{headings.length}</span>
+      </div>
+      <nav className="outline">
+        {headings.length === 0 && <p className="muted">No headings</p>}
+        {headings.map((h, i) => (
+          <a
+            key={h.id}
+            href={`#${h.id}`}
+            data-level={h.level}
+            aria-current={h.id === activeId ? "location" : undefined}
+            onClick={(e) => {
+              e.preventDefault();
+              goToHeading(i);
+            }}
+          >
+            {h.text}
+          </a>
+        ))}
+      </nav>
+    </>
+  );
 
   const view = (
     <div
@@ -1486,52 +1531,22 @@ export default function App() {
       <div className="body">
         {prefs.outline && (doc || workspaces.open) && (
           <Sidebar width={prefs.sidebarWidth} onWidth={(sidebarWidth) => changePrefs({ ...prefs, sidebarWidth })}>
-            <div className="sidebar-tabs">
-              <div className="seg" role="group" aria-label="Sidebar">
-                <button aria-pressed={filesShown} onClick={() => setSidebarTab("files")}>
-                  Files
-                </button>
-                <button aria-pressed={!filesShown} disabled={!tab} onClick={() => setSidebarTab("outline")}>
-                  Outline
-                </button>
+            {outlineInSidebar && (
+              <div className="sidebar-tabs">
+                <div className="seg" role="group" aria-label="Sidebar">
+                  <button aria-pressed={filesShown} onClick={() => setSidebarTab("files")}>
+                    Files
+                  </button>
+                  <button aria-pressed={!filesShown} disabled={!tab} onClick={() => setSidebarTab("outline")}>
+                    Outline
+                  </button>
+                </div>
               </div>
-            </div>
-            {filesShown ? (
-              <FilesPanel ws={workspaces} document={path} onOpen={openFromTree} />
-            ) : (
-              doc && (
-                <>
-                  <div className="sidebar-head">
-                    <span className="section-label">Outline</span>
-                    <span className="count">{headings.length}</span>
-                  </div>
-                  <nav className="outline">
-                    {headings.length === 0 && <p className="muted">No headings</p>}
-                    {headings.map((h, i) => (
-                      <a
-                        key={h.id}
-                        href={`#${h.id}`}
-                        data-level={h.level}
-                        aria-current={h.id === activeId ? "location" : undefined}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (source) return sourceEditor.current?.reveal(sourceHeadingStarts.current[i]);
-                          // The editor's headings have no ids; they are in the same order.
-                          const target = editing
-                            ? article.current?.querySelectorAll("h1, h2, h3, h4")[i]
-                            : document.getElementById(h.id);
-                          target?.scrollIntoView();
-                        }}
-                      >
-                        {h.text}
-                      </a>
-                    ))}
-                  </nav>
-                </>
-              )
             )}
+            {filesShown ? <FilesPanel ws={workspaces} document={path} onOpen={openFromTree} /> : outlinePanel}
           </Sidebar>
         )}
+        {outlineRail("left")}
         {tab ? (
           <>
             <main className="reader" ref={scroller} onScroll={onScroll}>
@@ -1702,6 +1717,7 @@ export default function App() {
             onTogglePin={(p) => void workspaces.togglePin(p)}
           />
         )}
+        {outlineRail("right")}
         {(opening.length > 0 || (path && !doc && !loadErrors[path])) && (
           <div className="loading" data-solid={(!tab && !workspaces.open) || undefined} role="status">
             <span className="spinner" aria-hidden="true" />

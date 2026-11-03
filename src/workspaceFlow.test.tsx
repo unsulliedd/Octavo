@@ -478,9 +478,19 @@ test("the workspace menu switches workspaces, and each has its own tabs", async 
   await until(() => host.querySelector("article h1"), "the document");
   await click(host.querySelector(".workspace-name"));
   expect(all(".menu [role=menuitemradio]").map((i) => [i.textContent, i.getAttribute("aria-checked")])).toEqual([
+    ["Pinned", "false"],
     ["Handbook", "true"],
     ["Notes", "false"],
-    ["Pinned", "false"],
+  ]);
+  // Pinned stands apart: a separator follows it, and another comes before the actions.
+  expect(all(".menu > *").map((el) => (el.getAttribute("role") === "separator" ? "|" : el.textContent))).toEqual([
+    "Pinned",
+    "|",
+    "Handbook",
+    "Notes",
+    "|",
+    "Open folder…",
+    "Close workspace",
   ]);
   await click(byText(".menu [role=menuitemradio]", "Notes"));
   await until(() => rows().includes("ideas.md"), "the other tree");
@@ -714,7 +724,7 @@ test("folders have their own icon, and a child sits under its folder with a guid
   expect(byText(".tree-row", "guide.md")!.querySelectorAll("svg")).toHaveLength(1);
   const child = byText(".tree-row", "spec.md")!;
   expect(child.closest(".tree-children")?.previousElementSibling).toBe(specs);
-  expect(parseInt(child.style.paddingLeft) - parseInt(specs.style.paddingLeft)).toBe(18);
+  expect(parseInt(child.style.paddingLeft) - parseInt(specs.style.paddingLeft)).toBe(16);
 });
 
 const rightClick = (el: Element | null | undefined) => {
@@ -751,6 +761,9 @@ test("Remove from workspace hides a document in this workspace only, and Restore
   await menuPick("Remove from workspace");
   await until(() => !rows().includes("guide.md"), "the document to go");
   expect(removedList()).toEqual(["guide.md"]);
+  // The Removed list starts closed, with its count on the heading.
+  expect(host.querySelector<HTMLDetailsElement>("details.files-removed")?.open).toBe(false);
+  expect(host.querySelector(".files-removed summary")?.textContent).toBe("Removed1");
   expect(inFile("h")!.removed).toEqual([GUIDE]);
   expect(inFile("h")!.items).toEqual([{ kind: "folder", path: ROOT }]);
   expect(inFile("other")!.removed).toEqual([]);

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Icon, type IconName } from "./icons";
 import { keyLabel } from "./shortcuts";
-import type { LineWidth, Prefs, Theme } from "./storage";
+import type { LineWidth, OutlineAt, Prefs, Theme } from "./storage";
 
 type Props = {
   prefs: Prefs;
@@ -103,8 +103,21 @@ export function ReadingSettings({ prefs, onChange, focusMode, onFocusMode, onClo
       />
       <label className="setting-toggle">
         <span>Show outline</span>
-        <input type="checkbox" checked={prefs.outline} onChange={(e) => set({ outline: e.target.checked })} />
+        <input type="checkbox" checked={prefs.showOutline} onChange={(e) => set({ showOutline: e.target.checked })} />
       </label>
+      {prefs.showOutline && (
+        <Segmented<OutlineAt>
+          label="Outline location"
+          value={prefs.outlineAt}
+          onPick={(outlineAt) => set({ outlineAt })}
+          hint="Right and Left leave dashes beside the text: hover them to float the outline over the document."
+          options={[
+            { value: "sidebar", label: "In sidebar" },
+            { value: "right", label: "Right" },
+            { value: "left", label: "Left" },
+          ]}
+        />
+      )}
       <label className="setting-toggle plain">
         <span>Show properties</span>
         <input type="checkbox" checked={prefs.properties} onChange={(e) => set({ properties: e.target.checked })} />

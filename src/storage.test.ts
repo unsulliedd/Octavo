@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { expect, test } from "vitest";
-import { DEFAULT_PREFS, forget, lineWidth, loadPinned, openLarge, recentFiles, save } from "./storage";
+import { DEFAULT_PREFS, forget, lineWidth, loadPinned, loadPrefs, openLarge, outlineAt, recentFiles, save } from "./storage";
 
 test("a stored line width is kept; anything else is the default width", () => {
   expect(lineWidth("wider")).toBe("wider");
@@ -27,6 +27,29 @@ test("recent files keep only entries with a path and a time", () => {
 
 test("hidden folders are left out of workspaces by default", () => {
   expect(DEFAULT_PREFS.showHidden).toBe(false);
+});
+
+test("the outline is shown in the sidebar by default, and the sidebar is shown", () => {
+  expect(DEFAULT_PREFS).toMatchObject({ outline: true, showOutline: true, outlineAt: "sidebar" });
+});
+
+test("a preference stored before the outline had a place keeps the sidebar as it was, with the outline in it", () => {
+  localStorage.clear();
+  save("prefs", { theme: "dark", outline: false, sidebarWidth: 300 });
+  expect(loadPrefs()).toMatchObject({ theme: "dark", outline: false, showOutline: true, outlineAt: "sidebar", sidebarWidth: 300 });
+  save("prefs", { outline: true });
+  expect(loadPrefs()).toMatchObject({ outline: true, showOutline: true, outlineAt: "sidebar" });
+});
+
+test("a stored outline place is kept, and anything else is the sidebar", () => {
+  expect(outlineAt("right")).toBe("right");
+  expect(outlineAt("left")).toBe("left");
+  expect(outlineAt("sidebar")).toBe("sidebar");
+  expect(outlineAt("top")).toBe("sidebar");
+  expect(outlineAt(undefined)).toBe("sidebar");
+  localStorage.clear();
+  save("prefs", { showOutline: false, outlineAt: "middle" });
+  expect(loadPrefs()).toMatchObject({ showOutline: false, outlineAt: "sidebar" });
 });
 
 test("stored pins are read as paths, undefined when there are none to move", () => {
