@@ -12,12 +12,19 @@ export type LineWidth = (typeof LINE_WIDTHS)[number];
 /** How diagrams and images open large from the reading view: from a button on them, a click on them, or both. */
 export const OPEN_LARGE = ["button", "click", "both"] as const;
 export type OpenLarge = (typeof OPEN_LARGE)[number];
+export const OUTLINE_AT = ["sidebar", "right", "left"] as const;
+export type OutlineAt = (typeof OUTLINE_AT)[number];
 export type Prefs = {
   theme: Theme;
   font: "sans" | "serif";
   size: number;
   width: LineWidth;
+  /** The Files sidebar is shown. */
   outline: boolean;
+  /** The outline is shown somewhere: no tab, dashes or panel with this off. */
+  showOutline: boolean;
+  /** Where the outline is: a tab in the sidebar, or floating from a margin of the text when it is hovered. */
+  outlineAt: OutlineAt;
   /** The frontmatter above the document while reading. */
   properties: boolean;
   /** Edits are saved a second after typing stops, when leaving a document and before closing. */
@@ -51,7 +58,7 @@ export type Prefs = {
 };
 export type RecentFile = { path: string; at: number };
 
-export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR };
+export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, showOutline: true, outlineAt: "sidebar", properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR };
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -82,9 +89,12 @@ export const lineWidth = (v: unknown): LineWidth => (LINE_WIDTHS.includes(v as L
 /** A stored way of opening diagrams and images large, or the default one for anything else. */
 export const openLarge = (v: unknown): OpenLarge => (OPEN_LARGE.includes(v as OpenLarge) ? (v as OpenLarge) : DEFAULT_PREFS.openLarge);
 
+/** A stored outline place, or the sidebar for anything else. */
+export const outlineAt = (v: unknown): OutlineAt => (OUTLINE_AT.includes(v as OutlineAt) ? (v as OutlineAt) : DEFAULT_PREFS.outlineAt);
+
 export const loadPrefs = (): Prefs => {
   const stored = load<Partial<Prefs>>("prefs", {});
-  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), sidebarWidth: storedSidebarWidth(stored.sidebarWidth), shortcuts: sanitizeBindings(stored.shortcuts) };
+  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), sidebarWidth: storedSidebarWidth(stored.sidebarWidth), outlineAt: outlineAt(stored.outlineAt), shortcuts: sanitizeBindings(stored.shortcuts) };
 };
 /** Where the tabs of workspace `id` are kept, or those shown with no workspace open. Deleting a workspace must remove its key too. */
 export const tabsKey = (id?: string) => (id === undefined ? "tabs" : (`tabs:${id}` as const));

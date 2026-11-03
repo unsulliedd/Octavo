@@ -7,13 +7,13 @@ import { dirname } from "./paths";
 import { TabMenu } from "./TabMenu";
 import { samePath } from "./tabs";
 import type { Workspaces } from "./useWorkspaces";
-import { workspaceFolderName, workspacePlace, type TreeNode } from "./workspaces";
+import { PINNED, workspaceFolderName, workspacePlace, type TreeNode, type Workspace } from "./workspaces";
 
 /** With more documents than this, a folder below the top starts closed, so that a large workspace stays quick to draw. */
 const OPEN_FOLDERS_UP_TO = 500;
 
-/** How far each level of the tree is indented: a child's icon sits under its folder's. */
-const INDENT = 18;
+/** How far each level of the tree is indented: a folder's contents start one level in from the folder itself. */
+const INDENT = 16;
 
 type TreeProps = {
   nodes: TreeNode[];
@@ -35,6 +35,7 @@ const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
     if (node.kind === "document" && node.missing) {
       return (
         <div key={node.path} className="tree-missing" style={padding} title={node.path}>
+          <span className="tree-slot" />
           <Icon name="file" size={14} />
           <span className="tree-missing-text">
             <span className="tree-name">{node.name}</span>
@@ -51,6 +52,7 @@ const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
     if (node.kind === "document") {
       return (
         <button key={node.path} className="tree-row" style={padding} title={node.path} aria-current={!!active && samePath(active, node.path) ? "page" : undefined} onClick={() => onOpen(node.path)} onContextMenu={(e) => onMenu(e, node)}>
+          <span className="tree-slot" />
           <Icon name="file" size={14} />
           <span className="tree-name">{node.name}</span>
         </button>
@@ -117,6 +119,9 @@ function RowMenu({ ws, menu }: { ws: Workspaces; menu: NonNullable<Workspaces["r
 export function WorkspaceMenu({ ws }: { ws: Workspaces }) {
   if (ws.rowMenu) return <RowMenu ws={ws} menu={ws.rowMenu} />;
   if (!ws.menu) return null;
+  const item = (w: Workspace) => ({ label: w.name, checked: w.id === ws.open?.id, run: () => void ws.openWorkspace(w.id) });
+  const pinned = ws.workspaces.filter((w) => w.id === PINNED.id);
+  const others = ws.workspaces.filter((w) => w.id !== PINNED.id);
   return (
     <TabMenu
       name="Workspaces"
@@ -124,7 +129,10 @@ export function WorkspaceMenu({ ws }: { ws: Workspaces }) {
       y={ws.menu.y}
       above={ws.menu.above}
       items={[
-        ...ws.workspaces.map((w) => ({ label: w.name, checked: w.id === ws.open?.id, run: () => void ws.openWorkspace(w.id) })),
+        // Pinned first, apart from the others.
+        ...pinned.map(item),
+        ...(pinned.length && others.length ? ["separator" as const] : []),
+        ...others.map(item),
         "separator",
         { label: "Open folder…", run: () => void ws.pickFolder() },
         { label: "Close workspace", disabled: !ws.open, run: () => void ws.closeWorkspace() },
@@ -218,8 +226,12 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
         </nav>
       )}
       {open.removed.length > 0 && (
-        <section className="files-removed" aria-labelledby="removed-h">
-          <h3 id="removed-h" className="section-label">Removed</h3>
+        <details className="files-removed">
+          <summary className="section-label">
+            <Icon name="forward" size={12} />
+            Removed
+            <span className="count">{open.removed.length}</span>
+          </summary>
           {open.removed.map((path) => (
             <div key={path} className="files-removed-row" title={path}>
               <span className="tree-name">{workspaceFolderName(path)}</span>
@@ -228,7 +240,7 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
               </button>
             </div>
           ))}
-        </section>
+        </details>
       )}
     </>
   );

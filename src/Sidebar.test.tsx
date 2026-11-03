@@ -148,3 +148,24 @@ test("a narrower window shrinks the sidebar, and the saved width comes back as i
   expect(aside().style.width).toBe("480px");
   expect(saved).toEqual([]);
 });
+
+test("a floating panel has no handle, takes its saved width and says where it came from", async () => {
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () => root.render(<Sidebar floating={{ side: "right", label: "Outline" }} width={300}><p>Headings</p></Sidebar>));
+  expect(host.querySelector("[role=separator]")).toBeNull();
+  expect(aside().dataset.floating).toBe("right");
+  expect(aside().getAttribute("aria-label")).toBe("Outline");
+  expect(aside().style.width).toBe("300px");
+});
+
+test("a sidebar with no way to change its width ignores the handle", async () => {
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () => root.render(<Sidebar width={252}><p>Files</p></Sidebar>));
+  await key("ArrowRight");
+  await fire(new MouseEvent("dblclick", { bubbles: true }));
+  expect(aside().style.width).toBe("252px");
+});
