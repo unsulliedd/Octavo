@@ -2011,7 +2011,8 @@ kbd {
   gap: 4px;
   border-radius: 8px;
 }
-.file-row:hover {
+.file-row:hover,
+.file-row[data-menu] {
   background: var(--chrome-2);
 }
 .file-open {
@@ -2630,6 +2631,10 @@ kbd {
 .large-table table {
   min-width: 100%;
   margin: 0;
+}
+/* A table with hand-set widths is as wide as its columns. */
+.large-table table.sized {
+  min-width: 0;
 }
 .large-foot {
   flex: none;

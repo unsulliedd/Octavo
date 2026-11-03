@@ -13,6 +13,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - The outline can sit beside the text instead of in the sidebar: a new setting in the reading settings, Outline location, puts it on the Right or the Left, where a column of dashes, one per heading, stands in the margin beside the text. Hovering the dashes floats the outline over the document, clicking a dash goes to its heading, and the keyboard reaches it through one button. Show outline in the reading settings now turns the outline off everywhere, and Files can be shown and hidden with `Ctrl+\`, which can be changed in Settings
 
 ### Fixed
+- Right-clicking a document on Home opens a menu with Open, Open containing folder, Copy path and Pin or Unpin; right-clicking a workspace opens Open, Open folder in Explorer (for a workspace of a folder) and Remove workspace. The context-menu key or Shift+F10 on a focused row opens it too
+- Right-clicking Home or any other part of the window no longer shows the browser's own menu (Back, Refresh, Save as, Print); it stays in text fields, the editor and Source mode, for Cut, Copy, Paste and spelling suggestions
+- Tables in the large view open at the column widths they have in the document, and their columns can be dragged and double-clicked like in the reading view; the change is the same remembered width
 - Edits to a document that no tab shows any more, left by going Back or Forward in a tab, are saved to its file like any others; if the file changed on disk meanwhile, nothing is overwritten and the save reports it
 - A document with struck-through bold text (`~~**text**~~`) opens in the editor instead of Source mode: the editor writes it as `**~~text~~**`, which looks the same
 - With many documents open, tabs shrink to fit instead of running off the end of the toolbar, the mouse wheel scrolls the tab strip sideways, and a button at the end of the strip lists every open tab when they still don't fit

@@ -365,6 +365,36 @@ test("an empty link in the document stays on the page", async () => {
   expect(opened).toEqual([]);
 });
 
+test("dragging a column edge in the large table sets the width the document's table shows and remembers", async () => {
+  await openTableLarge();
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 160 } as DOMRect);
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  const handle = document.querySelector<HTMLElement>('[role="dialog"] .col-resize')!;
+  const fire = (type: string, clientX: number) => act(async () => void handle.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX })));
+  await fire("pointerdown", 100);
+  await fire("pointermove", 140);
+  await fire("pointerup", 140);
+  const cell = (where: ParentNode) => where.querySelector<HTMLElement>("table th")!.style.width;
+  expect(cell(host)).toBe("12.5em");
+  expect(JSON.stringify(JSON.parse(localStorage.getItem("tableWidths")!))).toContain("12.5");
+  // The large table keeps the width it was dragged to, and the document shows it after the view closes.
+  expect(cell(document.querySelector('[role="dialog"]')!)).toBe("12.5em");
+  await click(document.querySelector('button[aria-label="Close (Escape)"]'));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(cell(host)).toBe("12.5em");
+});
+
+test("a large table opens at the widths the document's table has", async () => {
+  await launch(TABLE);
+  await until(() => host.querySelector(".table-scroll .large-open"), "the open button");
+  const header = host.querySelector<HTMLTableCellElement>("table th")!;
+  act(() => void (header.style.width = "9em"));
+  host.querySelector("table")!.classList.add("sized");
+  await click(host.querySelector(".table-scroll .large-open"));
+  await until(() => document.querySelector('[role="dialog"]'), "the large view");
+  expect(document.querySelector<HTMLElement>('[role="dialog"] table th')!.style.width).toBe("9em");
+});
+
 test("a web link in a large table goes to the browser and the view stays open", async () => {
   await openTableLarge();
   await click(largeLink("site"));

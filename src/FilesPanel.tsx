@@ -1,10 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { memo, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { folderTrail } from "./Home";
 import { Icon } from "./icons";
 import { dirname } from "./paths";
-import { TabMenu } from "./TabMenu";
+import { pathItems, TabMenu } from "./TabMenu";
 import { samePath } from "./tabs";
 import type { Workspaces } from "./useWorkspaces";
 import { PINNED, workspaceFolderName, workspacePlace, type TreeNode, type Workspace } from "./workspaces";
@@ -102,8 +101,7 @@ function RowMenu({ ws, menu }: { ws: Workspaces; menu: NonNullable<Workspaces["r
       x={menu.x}
       y={menu.y}
       items={[
-        { label: "Open containing folder", run: () => void revealItemInDir(menu.path).catch(failed) },
-        { label: "Copy path", run: () => void navigator.clipboard.writeText(menu.path).catch(failed) },
+        ...pathItems(menu.path, failed),
         "separator",
         { label: "Add folder to workspace…", run: () => void ws.pickItem("folder") },
         { label: "Add document to workspace…", run: () => void ws.pickItem("document") },

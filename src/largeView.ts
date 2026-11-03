@@ -10,7 +10,7 @@ export type Size = { width: number; height: number };
 export type LargeContent =
   | { kind: "diagram"; title: string; markup: string }
   | { kind: "image"; title: string; src: string; alt: string; size?: Size }
-  | { kind: "table"; title: string; markup: string };
+  | { kind: "table"; title: string; markup: string; index: number };
 
 /** An open button's side and its distance from the top and right edges of what it opens, in px. */
 const BUTTON = 28;
@@ -47,17 +47,21 @@ export function uniqueIds(markup: string, suffix: string) {
   return markup.replace(new RegExp(`${escaped}(?!\\d)`, "g"), `${id}-${suffix}`);
 }
 
-/** A copy of a table's markup as it is shown large: without resize handles, open buttons or hand-set column widths. */
+/** A copy of a table's markup as it is shown large: with its column widths, without resize handles or open buttons. */
 export function tableMarkup(table: HTMLTableElement) {
   const copy = table.cloneNode(true) as HTMLTableElement;
   for (const handle of copy.querySelectorAll(".col-resize, .large-open")) handle.remove();
-  copy.classList.remove("sized", "resizing");
-  copy.style.width = "";
-  for (const cell of copy.querySelectorAll<HTMLElement>("th, td")) cell.style.width = "";
+  copy.classList.remove("resizing");
   return copy.outerHTML;
 }
 
-const tableContent = (root: Element, table: HTMLTableElement): LargeContent => ({ kind: "table", title: headingBefore(root, table, "Table"), markup: tableMarkup(table) });
+/** A table's `index` is its place among the tables of the document, which is how its column widths are remembered. */
+const tableContent = (root: Element, table: HTMLTableElement): LargeContent => ({
+  kind: "table",
+  title: headingBefore(root, table, "Table"),
+  markup: tableMarkup(table),
+  index: [...root.querySelectorAll("table")].indexOf(table),
+});
 
 function diagramContent(root: Element, diagram: Element): LargeContent | undefined {
   const svg = diagram.querySelector("svg");

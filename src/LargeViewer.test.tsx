@@ -24,8 +24,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(content: LargeContent, onClose = vi.fn(), onOpenLink = vi.fn()) {
-  act(() => root.render(<LargeViewer content={content} onClose={onClose} onOpenLink={onOpenLink} />));
+function show(content: LargeContent, onClose = vi.fn(), onOpenLink = vi.fn(), onResizeTable = vi.fn()) {
+  act(() => root.render(<LargeViewer content={content} onClose={onClose} onOpenLink={onOpenLink} onResizeTable={onResizeTable} />));
   return onClose;
 }
 
@@ -49,7 +49,7 @@ test("a diagram opens as a dialog titled by its heading, with the zoom controls 
 });
 
 test("a table opens as a copy at the panel's width, without the zoom controls", () => {
-  show({ kind: "table", title: "Data", markup: "<table><tr><td>cell</td></tr></table>" });
+  show({ kind: "table", title: "Data", markup: "<table><tr><td>cell</td></tr></table>", index: 0 });
   const dialog = document.querySelector('[role="dialog"]')!;
   expect(dialog.querySelector(".doc.large-table td")!.textContent).toBe("cell");
   expect(dialog.querySelector('input[type="range"]')).toBeNull();
@@ -61,7 +61,7 @@ test("an image shows its source", () => {
 });
 
 test("Escape closes the view and goes no further", () => {
-  const onClose = show({ kind: "table", title: "Data", markup: "<table></table>" });
+  const onClose = show({ kind: "table", title: "Data", markup: "<table></table>", index: 0 });
   const later = vi.fn();
   window.addEventListener("keydown", later);
   press("Escape");
@@ -71,7 +71,7 @@ test("Escape closes the view and goes no further", () => {
 });
 
 test("the close button and a click on the backdrop close it; a click in the panel does not", () => {
-  const onClose = show({ kind: "table", title: "Data", markup: "<table></table>" });
+  const onClose = show({ kind: "table", title: "Data", markup: "<table></table>", index: 0 });
   const backdrop = document.querySelector<HTMLElement>(".large-backdrop")!;
   const click = (el: Element) =>
     act(() => {
@@ -90,7 +90,7 @@ test("focus goes back to where it was when the view closes", () => {
   const opener = document.createElement("button");
   document.body.append(opener);
   opener.focus();
-  show({ kind: "table", title: "Data", markup: "<table></table>" });
+  show({ kind: "table", title: "Data", markup: "<table></table>", index: 0 });
   expect(document.activeElement).not.toBe(opener);
   act(() => root.render(<div />));
   expect(document.activeElement).toBe(opener);
@@ -105,7 +105,7 @@ function clickLink(el: Element) {
 
 test("a link in a table goes to onOpenLink instead of navigating the window", () => {
   const onOpenLink = vi.fn();
-  show({ kind: "table", title: "Data", markup: '<table><tr><td><a href="https://example.com/"><b>site</b></a></td></tr></table>' }, vi.fn(), onOpenLink);
+  show({ kind: "table", title: "Data", markup: '<table><tr><td><a href="https://example.com/"><b>site</b></a></td></tr></table>', index: 0 }, vi.fn(), onOpenLink);
   expect(clickLink(document.querySelector("b")!)).toBe(true);
   expect(onOpenLink).toHaveBeenCalledWith("https://example.com/");
 });
@@ -120,7 +120,7 @@ test("a link in a diagram goes to onOpenLink, by its xlink:href", () => {
 
 test("a click outside a link opens nothing, and a link with no target goes nowhere", () => {
   const onOpenLink = vi.fn();
-  show({ kind: "table", title: "Data", markup: '<table><tr><td>cell</td><td><a href="">empty</a></td></tr></table>' }, vi.fn(), onOpenLink);
+  show({ kind: "table", title: "Data", markup: '<table><tr><td>cell</td><td><a href="">empty</a></td></tr></table>', index: 0 }, vi.fn(), onOpenLink);
   expect(clickLink(document.querySelector("td")!)).toBe(false);
   expect(clickLink(document.querySelector("a")!)).toBe(true);
   expect(onOpenLink).not.toHaveBeenCalled();
@@ -140,7 +140,7 @@ test("a press on a link in a zoomed diagram leaves the click to the link; elsewh
 });
 
 test("Tab reaches the links in the panel", () => {
-  show({ kind: "table", title: "Data", markup: '<table><tr><td><a href="other.md">other</a></td></tr></table>' });
+  show({ kind: "table", title: "Data", markup: '<table><tr><td><a href="other.md">other</a></td></tr></table>', index: 0 });
   press("Tab");
   expect(document.activeElement).toBe(document.querySelector("a"));
 });
@@ -167,4 +167,37 @@ test("Tab stays inside the panel", () => {
   expect(document.activeElement).toBe(close);
   press("Tab", { shiftKey: true });
   expect(document.activeElement).toBe(fit);
+});
+
+const TABLE = '<table class="sized" style="width: 20em"><thead><tr><th style="width: 10em">A</th><th style="width: 10em">B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>';
+
+test("a table opens at the widths it has in the document, with a handle on every header cell", () => {
+  show({ kind: "table", title: "Data", markup: TABLE, index: 3 });
+  const table = document.querySelector<HTMLTableElement>(".large-table table")!;
+  expect(table.classList.contains("sized")).toBe(true);
+  expect([...table.rows[0].cells].map((c) => c.style.width)).toEqual(["10em", "10em"]);
+  expect(table.querySelectorAll(".col-resize")).toHaveLength(2);
+});
+
+test("dragging a column edge in the large table reports the new widths for that table", () => {
+  const onResizeTable = vi.fn();
+  show({ kind: "table", title: "Data", markup: TABLE, index: 3 }, vi.fn(), vi.fn(), onResizeTable);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 160 } as DOMRect);
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  const handle = document.querySelector<HTMLElement>(".large-table .col-resize")!;
+  const fire = (type: string, clientX: number) => act(() => void handle.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX })));
+  fire("pointerdown", 100);
+  fire("pointermove", 140);
+  fire("pointerup", 140);
+  expect(onResizeTable).toHaveBeenCalledWith(3, ["A", "B"], [12.5, 10]);
+  vi.restoreAllMocks();
+});
+
+test("double-clicking a column edge in the large table resets its widths", () => {
+  const onResizeTable = vi.fn();
+  show({ kind: "table", title: "Data", markup: TABLE, index: 3 }, vi.fn(), vi.fn(), onResizeTable);
+  const handle = document.querySelector<HTMLElement>(".large-table .col-resize")!;
+  act(() => void handle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true })));
+  expect(onResizeTable).toHaveBeenCalledWith(3, ["A", "B"], [null, null]);
+  expect(document.querySelector(".large-table table")!.classList.contains("sized")).toBe(false);
 });
