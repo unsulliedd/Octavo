@@ -1,4 +1,4 @@
-import { ask } from "@tauri-apps/plugin-dialog";
+import { ask } from "../dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { diagramSvg, indentLines, svgSize } from "../mermaid";
@@ -42,7 +42,7 @@ export function MermaidEditor({ value, dark, onDone, onCancel, onCode }: Props) 
 
   // A click beside the dialog cancels it, after asking when there are changes that would be lost.
   async function cancelOutside() {
-    if (source === value || (await ask("Discard your changes to the diagram?", { kind: "warning", okLabel: "Discard", cancelLabel: "Keep editing" }))) onCancel();
+    if (source === value || (await ask("Discard your changes to the diagram?", { okLabel: "Discard", cancelLabel: "Keep editing", danger: true }))) onCancel();
     else field.current?.focus();
   }
 

@@ -9,6 +9,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { EditorView } from "@codemirror/view";
 import App from "./App";
+import { answerDialogs } from "./dialogTesting";
 
 // Limitation: no edit made in the editor was found whose Markdown reopens differently, so the "not exact"
 // test makes the real editor session report its snapshot as inexact instead.
@@ -60,6 +61,7 @@ let choice: Choice;
 /** Picked before `choice`, one per dialog, when several dialogs come in a row. */
 let choices: Choice[];
 let questions: string[];
+let stopAnswering: () => void;
 /** The path the Save As dialog returns. */
 let savePath: string | null;
 /** How many times the window was destroyed (closed). */
@@ -88,6 +90,16 @@ beforeEach(async () => {
   choices = [];
   questions = [];
   savePath = null;
+  // ask() resolves to whether the answer is its first, confirming button.
+  stopAnswering = answerDialogs((text, labels) => {
+    if (labels.length === 1) return labels[0];
+    if (labels.includes("Don't save")) {
+      questions.push(text);
+      return choices.shift() ?? choice;
+    }
+    askings.push(text);
+    return answer ? labels[0] : labels[1];
+  });
   destroyed = 0;
   inexact.on = false;
   update.installed = [];
@@ -129,16 +141,6 @@ beforeEach(async () => {
           savedPaths.push(a.path);
           return true;
         }
-        case "plugin:dialog|message": {
-          // ask() resolves to whether the answer is the button it named as the confirming one.
-          if (a.buttons.YesNoCancelCustom) {
-            questions.push(a.message);
-            return choices.shift() ?? choice;
-          }
-          askings.push(a.message);
-          const [ok, cancel] = a.buttons.OkCancelCustom;
-          return answer ? ok : cancel;
-        }
         case "plugin:dialog|save":
           return savePath;
         case "plugin:window|destroy":
@@ -164,6 +166,7 @@ async function launch(prefs: object = {}) {
 }
 
 afterEach(async () => {
+  stopAnswering();
   await act(async () => root?.unmount());
   document.body.innerHTML = "";
   clearMocks();

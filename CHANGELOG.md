@@ -24,9 +24,11 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Checkboxes in Settings, the reading settings and task lists are drawn in the app's colors instead of the system's gray box, in both themes; ticked boxes use the primary color. Task boxes in the reading view show at full strength
 - Tooltips are the app's own, in its colors, with the keys of a shortcut set apart. They show after a short hover or when the keyboard reaches a control, stay inside the window and close with Escape. Paths in the Files tab, tabs, Home and Ctrl+P still show in full
 - Ctrl+P dims the window behind it, like Settings and the large view, which now share one shade
+- Questions and messages are the app's own dialogs instead of the system's message boxes, in the app's colors and both themes: saving before closing a tab, the window or a workspace, Revert, removing a workspace, discarding a diagram's changes and errors such as a missing licenses document. The first button has the focus, Enter picks the focused button, Escape or a click beside the dialog cancels, and the app's shortcuts wait until it closes. Answers that lose edits, such as Don't save, Discard and Revert, are marked in red
 
 ### Fixed
 - Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue
+- Small primary buttons, such as Compare, Done and Restart, keep their color under the pointer instead of turning gray
 - Links in the light theme are a shade darker, so they are readable on the sidebar and toolbar
 - The window's background follows the dark theme instead of staying light
 - Right-clicking a document on Home opens a menu with Open, Open containing folder, Copy path and Pin or Unpin; right-clicking a workspace opens Open, Open folder in Explorer (for a workspace of a folder) and Remove workspace. The context-menu key or Shift+F10 on a focused row opens it too

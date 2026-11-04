@@ -36,6 +36,7 @@
   --outline-mark: var(--muted); /* the outline's dashes */
   --outline-mark-active: var(--ink); /* the dash of the heading in view */
   --danger: #c4302b;
+  --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--doc)); /* a danger button under the pointer */
   --line-strong: color-mix(in srgb, var(--muted) 75%, var(--doc)); /* field borders, at least 3:1 on every surface */
   --focus: var(--link); /* the keyboard focus ring */
   --file-markdown: var(--control); /* the folded corner of a Markdown document's icon; every document type adds its own --file-<type> */
@@ -1249,6 +1250,17 @@ button.save-state {
   color: var(--control-ink);
   font-size: var(--text-md);
 }
+.text-btn.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--control-fill) 85%, black);
+}
+/* An answer that loses something: Don't save, Discard, Revert */
+.text-btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.text-btn.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
 .link-chip {
   display: inline-flex;
   align-items: center;
@@ -1752,6 +1764,52 @@ button.save-state {
   font-weight: 400;
   line-height: 1.45;
   color: var(--muted);
+}
+
+/* Confirmations and messages (dialog.ts): on the body, above everything else */
+.app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--backdrop);
+  color: var(--ink);
+  font: var(--text-md) / 1.5 var(--ui);
+}
+.app-dialog {
+  width: 420px;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--doc);
+  box-shadow: var(--shadow-lg);
+}
+.app-dialog h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+.app-dialog p {
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.app-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 /* Settings: everything that isn't about reading */

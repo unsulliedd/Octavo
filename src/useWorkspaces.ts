@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ask, message, open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "./dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dirname } from "./paths";
 import { forget, loadOpenWorkspace, loadPinned, loadToldCopy, save, tabsKey } from "./storage";
@@ -87,13 +88,13 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   function tellProblem(problem: Problem) {
     if (problem.copy === loadToldCopy()) return;
     save("workspaceCopy", problem.copy);
-    void message(problemText(problem), { title: "Octavo", kind: "warning" });
+    void message(problemText(problem));
   }
 
   function tellError(text: string) {
     if (toldErrors.current.has(text)) return;
     toldErrors.current.add(text);
-    void message(text, { title: "Octavo", kind: "error" });
+    void message(text);
   }
 
   function commit(next: Workspace[]) {
@@ -206,8 +207,6 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
     const workspace = list.current.find((w) => w.id === id);
     if (!workspace || id === PINNED.id) return;
     const yes = await ask(`Remove the workspace "${workspace.name}" from Octavo? Its list of folders, documents and tabs goes. Nothing on disk changes.`, {
-      title: "Octavo",
-      kind: "warning",
       okLabel: "Remove",
       cancelLabel: "Keep",
     });

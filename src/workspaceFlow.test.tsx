@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App";
+import { answerDialogs } from "./dialogTesting";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -36,7 +37,8 @@ let saveGate: Promise<void> | undefined;
 let held: Held[] | undefined;
 let picked: string | null;
 let dialogs: { directory?: boolean; defaultPath?: string }[];
-let told: { message: string; kind?: string }[];
+let told: { message: string }[];
+let stopAnswering: () => void;
 let initialFile: string | null;
 let gitRoot: string | undefined;
 /** Added documents gone from disk. */
@@ -78,6 +80,14 @@ beforeEach(() => {
   gone = [];
   asked = [];
   agree = false;
+  stopAnswering = answerDialogs((text, labels) => {
+    if (labels.length === 1) {
+      told.push({ message: text });
+      return labels[0];
+    }
+    asked.push(text);
+    return agree ? labels[0] : labels[1];
+  });
   filePicked = null;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
@@ -121,13 +131,6 @@ beforeEach(() => {
         case "plugin:dialog|open":
           dialogs.push(a.options);
           return a.options.directory ? picked : filePicked;
-        case "plugin:dialog|message":
-          if (a.buttons) {
-            asked.push(a.message);
-            return agree ? a.buttons.OkCancelCustom[0] : a.buttons.OkCancelCustom[1];
-          }
-          told.push({ message: a.message, kind: a.kind });
-          return "Ok";
         default:
           return null;
       }
@@ -138,6 +141,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  stopAnswering();
   await act(async () => root?.unmount());
   document.body.innerHTML = "";
   clearMocks();
@@ -992,7 +996,7 @@ test.each(["corrupt", "newer"])("a %s saved file isn't replaced at launch: the p
   await launch();
   await until(() => told.length, "the message");
   await settle();
-  expect(told).toEqual([expect.objectContaining({ kind: "warning" })]);
+  expect(told).toHaveLength(1);
   expect(told[0].message).toContain(`workspaces.${reason}.json`);
   expect(calls).not.toContain("save_workspaces");
   expect(storedPins()).not.toBeNull();

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { message } from "@tauri-apps/plugin-dialog";
+import { message } from "./dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { Icon, Logo } from "./icons";
@@ -182,7 +182,7 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                   <span className="setting-hint">The backups folder is in Octavo's data folder.</span>
                   <button
                     className="text-btn with-icon"
-                    onClick={() => invoke("open_backups").catch((e) => message(String(e), { kind: "error" }))}
+                    onClick={() => invoke("open_backups").catch((e) => message(String(e)))}
                   >
                     <Icon name="folder" size="inline" />
                     Open folder
