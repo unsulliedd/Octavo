@@ -8,6 +8,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { EditorView } from "@codemirror/view";
 import App from "./App";
+import { answerDialogs } from "./dialogTesting";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -42,6 +43,7 @@ let holdDialog: Promise<void> | undefined;
 /** The "couldn't be saved" questions shown, and whether they are confirmed. */
 let warnings: string[];
 let agree: boolean;
+let stopAnswering: () => void;
 let held: Held[] | undefined;
 let initialFile: string | null;
 /** Every document read, the refusal of the saved list, and what its load waits for. */
@@ -75,6 +77,16 @@ beforeEach(() => {
   holdDialog = undefined;
   warnings = [];
   agree = false;
+  stopAnswering = answerDialogs(async (text, labels) => {
+    if (labels.length === 1) return labels[0];
+    if (labels.includes("Don't save")) {
+      questions.push(text);
+      await holdDialog;
+      return choice;
+    }
+    warnings.push(text);
+    return agree ? labels[0] : labels[1];
+  });
   held = undefined;
   initialFile = null;
   reads = [];
@@ -129,15 +141,6 @@ beforeEach(() => {
         case "scan_folder":
           await new Promise<void>((finish) => (held ? held.push({ path: a.path, finish }) : finish()));
           return { files: scans.get(a.path) ?? [], truncated: false };
-        case "plugin:dialog|message":
-          if (!a.buttons) return "Ok";
-          if (a.buttons.YesNoCancelCustom) {
-            questions.push(a.message);
-            await holdDialog;
-            return choice;
-          }
-          warnings.push(a.message);
-          return agree ? a.buttons.OkCancelCustom[0] : a.buttons.OkCancelCustom[1];
         default:
           return null;
       }
@@ -148,6 +151,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  stopAnswering();
   await act(async () => root?.unmount());
   document.body.innerHTML = "";
   clearMocks();

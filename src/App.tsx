@@ -4,7 +4,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ask, message, open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { EditorPane } from "./editor/EditorPane";
 import { DocButtons, type DocActions } from "./editor/FormatBar";
@@ -13,6 +13,7 @@ import { sameRendering } from "./editor/sameRendering";
 import type { EditorSession, Snapshot } from "./editor/session";
 import { editedText, editorText, eolLabel, fileFormat, textToSave } from "./fileText";
 import { CompareView } from "./CompareView";
+import { ask, choose, message } from "./dialog";
 import { diskChange } from "./conflict";
 import { canRevert, revertText } from "./editSession";
 import { FilesPanel, WorkspaceMenu, WorkspaceStatus } from "./FilesPanel";
@@ -85,7 +86,7 @@ const MD = /\.(md|markdown)$/i;
  */
 const placeImages = (doc: string, files: string[]) =>
   invoke<string[]>("place_images", { dir: dirname(doc), paths: files }).catch(async (e) => {
-    await message(`The image couldn't be added: ${e}`, { kind: "error" });
+    await message(`The image couldn't be added: ${e}`);
     return [] as string[];
   });
 
@@ -356,7 +357,7 @@ export default function App() {
       const file = await invoke<string>("write_licenses", { text });
       await openPath(file, undefined, false);
     } catch (e) {
-      await message(String(e), { kind: "error" });
+      await message(String(e));
     }
   }
 
@@ -724,10 +725,9 @@ export default function App() {
     const onDisk = docs[file]?.text;
     if (original === undefined || onDisk === undefined) return;
     const revert = await ask(`Revert ${basename(file)} to how it was when you started editing? The edits made since then are lost.`, {
-      title: "Octavo",
-      kind: "warning",
       okLabel: "Revert",
       cancelLabel: "Keep editing",
+      danger: true,
     });
     if (!revert) return;
     // No autosave may write over the original; a save already running finishes first.
@@ -784,17 +784,15 @@ export default function App() {
    */
   async function askToSave(names: string, doing = "closing"): Promise<"save" | "discard" | "cancel"> {
     if (prefs.autosave) return "save";
-    try {
-      const choice = await message(`Save your changes to ${names} before ${doing}?`, {
-        title: "Octavo",
-        kind: "warning",
-        buttons: { yes: "Save", no: "Don't save", cancel: "Cancel" },
-      });
-      return choice === "Save" ? "save" : choice === "Don't save" ? "discard" : "cancel";
-    } catch {
-      // Without the dialog, the edits are saved as with autosave.
-      return "save";
-    }
+    return choose<"save" | "discard" | "cancel">(
+      `Save your changes to ${names} before ${doing}?`,
+      [
+        { value: "save", label: "Save", look: "primary" },
+        { value: "discard", label: "Don't save", look: "danger" },
+        { value: "cancel", label: "Cancel" },
+      ],
+      "cancel",
+    );
   }
 
   /**
@@ -808,12 +806,7 @@ export default function App() {
     if (choice !== "save") return choice === "discard";
     const failed = await saveAll();
     if (!failed.length) return true;
-    return ask(`These documents couldn't be saved:\n\n${failed.join("\n")}\n\n${anyway}`, {
-      title: "Octavo",
-      kind: "warning",
-      okLabel,
-      cancelLabel: "Keep open",
-    });
+    return ask(`These documents couldn't be saved:\n\n${failed.join("\n")}\n\n${anyway}`, { okLabel, cancelLabel: "Keep open", danger: true });
   }
 
   /** Before the window closes: resolves to whether it may. */
@@ -917,10 +910,9 @@ export default function App() {
       if (choice === "discard") discardEdits(file);
       else if (message) {
         const discard = await ask(`${basename(file)} couldn't be saved: ${message}\n\nClose it anyway and lose the unsaved edits?`, {
-          title: "Octavo",
-          kind: "warning",
           okLabel: "Close without saving",
           cancelLabel: "Keep open",
+          danger: true,
         });
         if (!discard) return false;
         discardEdits(file);
@@ -1650,7 +1642,7 @@ export default function App() {
                           const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
                           await invoke<string>("save_image", { dir: dirname(path), name, bytes }).then(
                             (full) => saved.push(imageRef(path, full)),
-                            (e) => message(`The image couldn't be saved: ${e}`, { kind: "error" }),
+                            (e) => message(`The image couldn't be saved: ${e}`),
                           );
                         }
                         return saved;

@@ -7,6 +7,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App";
+import { answerDialogs } from "./dialogTesting";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -19,6 +20,7 @@ let disk: Map<string, string>;
 let writes: string[];
 let opened: string[];
 let dialogs: string[];
+let stopAnswering: () => void;
 let scrolled: Element[];
 /** The file passed on the command line. */
 let initial: string;
@@ -42,6 +44,10 @@ beforeEach(() => {
   initial = FILE;
   opened = [];
   dialogs = [];
+  stopAnswering = answerDialogs((text, labels) => {
+    dialogs.push(text);
+    return labels[0];
+  });
   scrolled = [];
   unreadable = undefined;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
@@ -82,9 +88,6 @@ beforeEach(() => {
         case "write_licenses":
           disk.set(LICENSES, a.text);
           return LICENSES;
-        case "plugin:dialog|message":
-          dialogs.push(a.message);
-          return "Ok";
         default:
           return null;
       }
@@ -95,6 +98,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  stopAnswering();
   await act(async () => root?.unmount());
   root = undefined as never;
   document.body.innerHTML = "";

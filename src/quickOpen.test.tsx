@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App";
+import { answerDialogs } from "./dialogTesting";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -36,7 +37,8 @@ let saveGate: Promise<void> | undefined;
 let held: Held[] | undefined;
 let picked: string | null;
 let dialogs: { directory?: boolean; defaultPath?: string }[];
-let told: { message: string; kind?: string }[];
+let told: { message: string }[];
+let stopAnswering: () => void;
 let initialFile: string | null;
 let gitRoot: string | undefined;
 
@@ -68,6 +70,10 @@ beforeEach(() => {
   picked = null;
   dialogs = [];
   told = [];
+  stopAnswering = answerDialogs((text, labels) => {
+    told.push({ message: text });
+    return labels[0];
+  });
   initialFile = null;
   gitRoot = undefined;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
@@ -110,9 +116,6 @@ beforeEach(() => {
         case "plugin:dialog|open":
           dialogs.push(a.options);
           return picked;
-        case "plugin:dialog|message":
-          told.push({ message: a.message, kind: a.kind });
-          return "Ok";
         default:
           return null;
       }
@@ -123,6 +126,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  stopAnswering();
   await act(async () => root?.unmount());
   document.body.innerHTML = "";
   clearMocks();
