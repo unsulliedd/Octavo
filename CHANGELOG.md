@@ -26,6 +26,7 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Ctrl+P dims the window behind it, like Settings and the large view, which now share one shade
 - Questions and messages are the app's own dialogs instead of the system's message boxes, in the app's colors and both themes: saving before closing a tab, the window or a workspace, Revert, removing a workspace, discarding a diagram's changes and errors such as a missing licenses document. The first button has the focus, Enter picks the focused button, Escape or a click beside the dialog cancels, and the app's shortcuts wait until it closes. Answers that lose edits, such as Don't save, Discard and Revert, are marked in red
 
+- Inline code stands out from the text around it in the reading view and the editor: accent-colored text on a tinted chip in both themes, a deeper shade on the light theme. Inside a link it keeps the link's color
 ### Fixed
 - Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue
 - Small primary buttons, such as Compare, Done and Restart, keep their color under the pointer instead of turning gray

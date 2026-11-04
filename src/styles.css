@@ -20,6 +20,10 @@
   --code-fn: #1f5f99;
   --code-type: #7a4e0c;
   --code-attr: #0e6e78;
+  /* Inline code: accent text on a pale accent chip, apart from the body text and from code blocks */
+  --code-inline-ink: color-mix(in srgb, var(--brand-accent) 55%, black);
+  --code-inline-bg: color-mix(in srgb, var(--brand-accent) 20%, var(--doc));
+  --code-inline-line: color-mix(in srgb, var(--brand-accent) 30%, var(--doc));
   --control: var(--brand-primary); /* checkboxes, sliders, focus borders, spinner */
   --control-fill: var(--brand-primary); /* primary buttons */
   --control-ink: #ffffff;
@@ -83,6 +87,8 @@
   --code-fn: #8ec8f0;
   --code-type: #e6c079;
   --code-attr: #7fd6d0;
+  --code-inline-ink: color-mix(in srgb, var(--brand-accent) 80%, white);
+  --code-inline-bg: color-mix(in srgb, var(--brand-accent) 15%, var(--doc));
   --control: oklch(from var(--brand-primary) 0.74 c calc(h - 6)); /* primary lifted so controls read on dark */
   --control-fill: color-mix(in srgb, var(--brand-primary) 78%, white); /* primary lifted so buttons read on dark */
   --control-soft: color-mix(in srgb, var(--brand-primary) 55%, var(--doc));
@@ -2358,10 +2364,15 @@ kbd {
 .doc code {
   font-family: var(--mono);
   font-size: 0.86em;
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  color: var(--code-inline-ink);
+  background: var(--code-inline-bg);
+  border: 1px solid var(--code-inline-line);
+  border-radius: var(--radius-sm);
   padding: 1px 5px;
+}
+/* Code inside a link keeps the link's color, so the link still shows. */
+.doc a code {
+  color: var(--link);
 }
 .doc pre {
   margin: 0 0 18px;
@@ -2377,6 +2388,7 @@ kbd {
   font-variant-ligatures: none; /* show => and != as typed, not as joined symbols */
 }
 .doc pre code {
+  color: inherit;
   background: none;
   border: 0;
   padding: 0;
