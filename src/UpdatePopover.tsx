@@ -38,7 +38,7 @@ export function UpdatePopover({ version, installing, notesInApp, onRestart, onLa
       </div>
       <button className="link-btn" onClick={onWhatsNew}>
         What's new
-        {!notesInApp && <Icon name="external" size={13} />}
+        {!notesInApp && <Icon name="external" size="inline" />}
       </button>
       <div className="update-actions">
         <button className="text-btn" disabled={installing} onClick={onLater}>

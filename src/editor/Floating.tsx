@@ -49,13 +49,13 @@ export function LinkChip({ href, onEdit, onOpen, onRemove }: { href: string; onE
         {href}
       </button>
       <button className="icon-btn small" aria-label={edit} title={edit} onClick={onEdit}>
-        <Icon name="pencil" size={13} />
+        <Icon name="pencil" size="inline" />
       </button>
       <button className="icon-btn small" aria-label="Open the link" title="Open the link" onClick={onOpen}>
-        <Icon name="openLink" size={13} />
+        <Icon name="openLink" size="inline" />
       </button>
       <button className="icon-btn small danger" aria-label="Remove the link" title="Remove the link" onClick={onRemove}>
-        <Icon name="close" size={13} />
+        <Icon name="close" size="inline" />
       </button>
     </span>
   );
@@ -95,7 +95,7 @@ export function FloatingBar({ state, onAction, onLink }: { state: FormatState; o
       <span className="floating-menu-anchor">
         <button className="floating-text" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
           Text
-          <Icon name="down" size={12} />
+          <Icon name="down" size="inline" />
         </button>
         {menu && (
           <span className="floating-menu" role="menu">
@@ -110,7 +110,7 @@ export function FloatingBar({ state, onAction, onLink }: { state: FormatState; o
                   onAction(action);
                 }}
               >
-                <Icon name={action} size={14} />
+                <Icon name={action} size="inline" />
                 {INFO.get(action)!.label}
               </button>
             ))}
@@ -126,7 +126,7 @@ export function FloatingBar({ state, onAction, onLink }: { state: FormatState; o
                   onAction(action);
                 }}
               >
-                <Icon name={action} size={14} />
+                <Icon name={action} size="inline" />
                 {INFO.get(action)!.label}
               </button>
             ))}

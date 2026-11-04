@@ -89,7 +89,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
   const row = (path: string, isPinned: boolean) => (
     <li key={path} className="file-row" {...menuProps({ doc: path })}>
       <button className="file-open" onClick={() => onOpen(path)} title={path}>
-        <Icon name="file" size={18} />
+        <Icon name="markdown" size="home" />
         <span className="file-text">
           <span className="file-name">{basename(path)}</span>
           <span className="file-folder">{folderTrail(path)}</span>
@@ -118,11 +118,11 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
           <p>Double-click any .md file, or open one here. Octavo shows it as a formatted document right away.</p>
           <div className="home-actions">
             <button className="primary" onClick={onPick}>
-              <Icon name="open" />
+              <Icon name="open" size="inline" />
               Open file…
             </button>
             <button className="secondary" onClick={onPickFolder}>
-              <Icon name="folder" />
+              <Icon name="folder" size="inline" />
               Open folder…
             </button>
             {openKeys && (
@@ -140,7 +140,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
         </div>
 
         <div className="drop-zone" data-active={dragging}>
-          <Icon name="drop" size={18} />
+          <Icon name="drop" size="home" />
           {dragging ? "Drop to open" : "Or drop a file anywhere in this window"}
         </div>
 
@@ -151,7 +151,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
               {saved.map((w) => (
                 <li key={w.id} className="file-row" {...menuProps({ workspace: w.id })}>
                   <button className="file-open" onClick={() => onOpenWorkspace(w.id)} title={workspacePlace(w)}>
-                    <Icon name="folder" size={18} />
+                    <Icon name="folder" size="home" />
                     <span className="file-text">
                       <span className="file-name">{w.name}</span>
                       <span className="file-folder">{workspacePlace(w)}</span>

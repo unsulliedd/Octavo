@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState, type RefObject } from "react";
 import { basename } from "./Home";
+import { Icon } from "./icons";
 import { currentEntry, type Tabs } from "./tabs";
 import type { TabMenuItem } from "./TabMenu";
 
@@ -52,7 +53,7 @@ export function tabListItems(tabs: Tabs, shown: number | undefined, unsaved: (pa
     return {
       label: (
         <span className="menu-tab">
-          {unsaved(path) && <span className="unsaved-dot" title="Unsaved changes" />}
+          {unsaved(path) ? <span className="unsaved-dot" title="Unsaved changes" /> : <Icon name="markdown" size="row" />}
           <span>{basename(path)}</span>
         </span>
       ),

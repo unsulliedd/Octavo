@@ -19,6 +19,8 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - The outline's dashes beside the text are a shade darker, so they are easier to see in both themes
 - Buttons share a few set heights and the same corners, and text fields look alike everywhere: the find bar, Ctrl+P, the link, image and math fields, properties, the code-language search and the shortcut recorder have a border that is easy to see and the same border when they have the focus
 - Moving through the app with the keyboard shows one focus ring everywhere, now also on menu items and the highlighted language in the code-language list; a mouse click shows none
+- Documents have their own icon: the page with its folded corner in the primary color, lifted on the dark theme, in the Files tab, tabs, Home, Ctrl+P and the list of open tabs, which now shows it too. A document that is not found keeps its icon gray
+- Icons have one size for each use: buttons and the document and folder icons of rows are 16 px, icons beside text and the arrows of lists 14 px, and the icons of Home's rows 18 px
 
 ### Fixed
 - Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue

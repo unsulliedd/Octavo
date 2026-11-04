@@ -25,7 +25,7 @@ export function Segmented<T extends string>({ label, value, options, onPick, hin
       <div className="seg" role="group" aria-label={label}>
         {options.map((o) => (
           <button key={o.value} aria-pressed={o.value === value} onClick={() => onPick(o.value)} data-value={o.value}>
-            {o.icon && <Icon name={o.icon} />}
+            {o.icon && <Icon name={o.icon} size="inline" />}
             {o.label}
           </button>
         ))}

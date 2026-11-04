@@ -38,6 +38,8 @@
   --danger: #c4302b;
   --line-strong: color-mix(in srgb, var(--muted) 75%, var(--doc)); /* field borders, at least 3:1 on every surface */
   --focus: var(--link); /* the keyboard focus ring */
+  --file-markdown: var(--control); /* the folded corner of a Markdown document's icon; every document type adds its own --file-<type> */
+  --mark-page-2: color-mix(in srgb, var(--brand-secondary) 22%, var(--control-ink)); /* the right page of the Octavo mark */
   /* The app's scales. The document's own type follows the reading settings instead. */
   --text-xs: 11px; /* section labels, keys */
   --text-sm: 12px; /* hints, meta, the status bar */
@@ -365,7 +367,7 @@ body > .mermaidTooltip {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 .menu-tab > span:last-child {
   overflow: hidden;
@@ -1945,7 +1947,7 @@ button.save-state {
   box-shadow: var(--shadow-sm);
 }
 .seg button[data-value="serif"] {
-  font-family: Charter, "Iowan Old Style", Georgia, serif !important;
+  font-family: Charter, "Iowan Old Style", Georgia, serif;
 }
 
 /* Home */
@@ -2821,7 +2823,9 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* A document that is gone keeps its icon muted, corner included */
 .tree-missing {
+  --file-markdown: currentColor;
   flex: none;
   box-sizing: border-box;
   display: flex;

@@ -45,7 +45,7 @@ export function ShortcutSettings({ bindings, onChange }: Props) {
                     {label}
                     {clash && (
                       <span className="shortcut-note">
-                        <Icon name="warning" size={13} />
+                        <Icon name="warning" size="inline" />
                         Also used by {clash.join(", ")}
                       </span>
                     )}
@@ -71,7 +71,7 @@ export function ShortcutSettings({ bindings, onChange }: Props) {
                     hidden={!bindings[id]}
                     onClick={() => onChange(setKeys(bindings, id, defaultKeys(id)))}
                   >
-                    <Icon name="revert" size={14} />
+                    <Icon name="revert" />
                   </button>
                 </li>
               );

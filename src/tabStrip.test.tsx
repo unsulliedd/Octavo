@@ -156,6 +156,8 @@ test("the list has every tab, the shown one checked, the unsaved ones marked, an
   );
   expect([...host.children].map((c) => c.textContent)).toEqual(["one.md", "two.md", "three.md"]);
   expect([...host.children].map((c) => !!c.querySelector(".unsaved-dot"))).toEqual([false, false, true]);
+  // The document icon stands in front of every tab but the unsaved one, which shows the dot in its place, as the strip does.
+  expect([...host.children].map((c) => !!c.querySelector("svg"))).toEqual([true, true, false]);
   (items[2] as { run: () => void }).run();
   expect(shown).toEqual([s.tabs[2].id]);
 });

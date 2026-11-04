@@ -35,7 +35,7 @@ const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
       return (
         <div key={node.path} className="tree-missing" style={padding} title={node.path}>
           <span className="tree-slot" />
-          <Icon name="file" size={14} />
+          <Icon name="markdown" size="row" />
           <span className="tree-missing-text">
             <span className="tree-name">{node.name}</span>
             <span className="tree-missing-note">
@@ -52,7 +52,7 @@ const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
       return (
         <button key={node.path} className="tree-row" style={padding} title={node.path} aria-current={!!active && samePath(active, node.path) ? "page" : undefined} onClick={() => onOpen(node.path)} onContextMenu={(e) => onMenu(e, node)}>
           <span className="tree-slot" />
-          <Icon name="file" size={14} />
+          <Icon name="markdown" size="row" />
           <span className="tree-name">{node.name}</span>
         </button>
       );
@@ -61,8 +61,8 @@ const Tree = memo(function Tree({ nodes, depth, ...rest }: TreeProps) {
     return (
       <div key={node.path} className="tree-folder">
         <button className="tree-row" data-folder style={padding} title={node.path} aria-expanded={open} onClick={() => onToggle(node.path, !open)} onContextMenu={(e) => onMenu(e, node)}>
-          <Icon name={open ? "down" : "forward"} size={14} />
-          <Icon name="folder" size={15} />
+          <Icon name={open ? "down" : "forward"} size="inline" />
+          <Icon name="folder" size="row" />
           <span className="tree-name">{node.name}</span>
         </button>
         {open && (
@@ -86,7 +86,7 @@ export function WorkspaceStatus({ ws }: { ws: Workspaces }) {
   if (!ws.open) return null;
   return (
     <button className="status-workspace" data-menu-toggle aria-haspopup="menu" aria-expanded={!!ws.menu?.above} title={`Workspace: ${workspacePlace(ws.open)}`} onClick={toggleMenu(ws, true)}>
-      <Icon name="folder" size={13} />
+      <Icon name="folder" size="inline" />
       {ws.open.name}
     </button>
   );
@@ -161,7 +161,7 @@ function Offer({ ws, document }: { ws: Workspaces; document: string }) {
       {folder && (
         <div className="files-offer-folder">
           <button className="primary" onClick={() => void ws.openFolderAt(folder, document)}>
-            <Icon name="folder" size={14} />
+            <Icon name="folder" size="inline" />
             <span>Open {workspaceFolderName(folder)} folder</span>
           </button>
           <span title={folder}>{folderTrail(`${folder}/`)}</span>
@@ -199,10 +199,10 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
       <div className="files-head">
         <button className="workspace-name" data-menu-toggle aria-haspopup="menu" aria-expanded={!!ws.menu && !ws.menu.above} title={workspacePlace(open)} onClick={toggleMenu(ws, false)}>
           <span className="tree-name">{open.name}</span>
-          <Icon name="down" size={13} />
+          <Icon name="down" size="inline" />
         </button>
         <button className="icon-btn" data-busy={ws.refreshing || undefined} aria-label="Refresh" title="Refresh" onClick={ws.refresh}>
-          <Icon name="refresh" size={14} />
+          <Icon name="refresh" />
         </button>
       </div>
       {!scan && (
@@ -226,7 +226,7 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
       {open.removed.length > 0 && (
         <details className="files-removed">
           <summary className="section-label">
-            <Icon name="forward" size={12} />
+            <Icon name="forward" size="inline" />
             Removed
             <span className="count">{open.removed.length}</span>
           </summary>

@@ -1428,11 +1428,11 @@ export default function App() {
                     onAuxClick={(e) => e.button === 1 && closeTabById(t.id)}
                   >
                     <button className="tab-open" onClick={() => changeTabs((s) => activate(s, t.id))}>
-                      {unsavedAt(tabPath) ? <span className="unsaved-dot" title="Unsaved changes" /> : <Icon name="file" size={14} />}
+                      {unsavedAt(tabPath) ? <span className="unsaved-dot" title="Unsaved changes" /> : <Icon name="markdown" size="row" />}
                       <span>{basename(tabPath)}</span>
                     </button>
                     <button className="icon-btn small" aria-label={tip(`Close ${basename(tabPath)}`, "closeTab")} onClick={() => closeTabById(t.id)}>
-                      <Icon name="close" size={13} />
+                      <Icon name="close" size="inline" />
                     </button>
                   </div>
                 );
@@ -1475,22 +1475,22 @@ export default function App() {
               title={path && editBlocked[path] ? editBlocked[path] : "Edit the document"}
               onClick={() => void setMode("edit")}
             >
-              <Icon name="pencil" size={14} />
+              <Icon name="pencil" size="inline" />
               Edit
             </button>
             <button aria-pressed={source} title={tip("Source: the document's Markdown", "source")} onClick={() => void setMode("source")}>
-              <Icon name="code" size={14} />
+              <Icon name="code" size="inline" />
               Source
             </button>
             <button aria-pressed={!editing && !source} title={tip("Preview: the reading view of your edits", "preview")} onClick={() => void setMode("preview")}>
-              <Icon name="preview" size={14} />
+              <Icon name="preview" size="inline" />
               Preview
             </button>
           </div>
         )}
         {tab && inSession && (
           <button className="done-btn" title={tip("Done: save and stop editing", "toggleEdit")} onClick={() => void toggleEdit()}>
-            <Icon name="check" size={14} />
+            <Icon name="check" size="inline" />
             Done
           </button>
         )}
@@ -1501,7 +1501,7 @@ export default function App() {
             title={tip(path && editBlocked[path] ? "Edit the Markdown source" : "Edit", "toggleEdit")}
             onClick={() => void toggleEdit()}
           >
-            <Icon name="pencil" size={14} />
+            <Icon name="pencil" size="inline" />
             Edit
           </button>
         )}
@@ -1558,7 +1558,7 @@ export default function App() {
               {path && editBlocked[path] && <p className="notice banner">{editBlocked[path]}</p>}
               {path && conflicts[path] !== undefined ? (
                 <div className="banner conflict" role="alert">
-                  <Icon name="warning" />
+                  <Icon name="warning" size="inline" />
                   <span className="conflict-text">
                     <strong>{basename(path)} changed on disk.</strong> Your unsaved edits are kept here; nothing was saved.
                   </span>

@@ -81,7 +81,7 @@ export function QuickOpen({ ws, onOpen, onClose }: Props) {
         {ws.open ? (
           <>
             <div className="quick-search">
-              <Icon name="search" size={16} />
+              <Icon name="search" />
               <input
                 ref={input}
                 role="combobox"
@@ -113,7 +113,7 @@ export function QuickOpen({ ws, onOpen, onClose }: Props) {
                   onMouseMove={() => active !== i && setActive(i)}
                   onClick={() => pick(doc.path)}
                 >
-                  <Icon name="file" size={15} />
+                  <Icon name="markdown" size="row" />
                   <span className="quick-path">
                     {parts.map((p, n) => (
                       <span key={n} className="quick-part" data-name={p.name} data-match={p.match}>

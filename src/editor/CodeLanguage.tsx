@@ -48,7 +48,7 @@ export function CodeLanguage({ language, top, right, onPick, onCancel }: Props) 
     <div className="code-lang-anchor" style={{ top, left: right }} onMouseDown={(e) => !(e.target instanceof HTMLInputElement) && e.preventDefault()}>
       <button className="code-lang-button" aria-haspopup="listbox" aria-expanded={open} title="Code block language" onClick={() => (open ? close() : setOpen(true))}>
         {language ? languageName(language) : "Plain text"}
-        <Icon name="down" size={12} />
+        <Icon name="down" size="inline" />
       </button>
       {open && (
         <div className="code-lang-menu">
