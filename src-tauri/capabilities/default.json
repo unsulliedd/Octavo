@@ -11,8 +11,6 @@
     "core:window:allow-set-background-color",
     "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-ask",
-    "dialog:allow-message",
     "opener:default",
     "opener:allow-reveal-item-in-dir",
     "updater:default"
