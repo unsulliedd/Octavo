@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { memo, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { folderTrail } from "./Home";
 import { Icon } from "./icons";
 import { dirname } from "./paths";
@@ -104,9 +104,6 @@ function RowMenu({ ws, menu }: { ws: Workspaces; menu: NonNullable<Workspaces["r
       items={[
         ...pathItems(menu.path, failed),
         "separator",
-        { label: "Add folder to workspace…", run: () => void ws.pickItem("folder") },
-        { label: "Add document to workspace…", run: () => void ws.pickItem("document") },
-        "separator",
         { label: "Remove from workspace", run: () => void ws.removeRow(menu.path) },
       ]}
       onClose={() => ws.setRowMenu(undefined)}
@@ -191,6 +188,17 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
     e.preventDefault();
     setRowMenu({ name: node.name, path: node.path, x: e.clientX, y: e.clientY });
   });
+  // Where the + button's menu opens, under the button.
+  const [add, setAdd] = useState<{ x: number; y: number }>();
+  const addButton = useRef<HTMLButtonElement>(null);
+  const closeAdd = useCallback(() => {
+    setAdd(undefined);
+    addButton.current?.focus();
+  }, []);
+  // One menu at a time: the workspace menu and a row's menu take over from this one.
+  useEffect(() => {
+    if (ws.menu || ws.rowMenu) setAdd(undefined);
+  }, [ws.menu, ws.rowMenu]);
   const dropMissing = useRef(ws.dropMissing);
   dropMissing.current = ws.dropMissing;
   const [onDrop] = useState(() => (path: string) => void dropMissing.current(path));
@@ -205,6 +213,35 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
         <button className="icon-btn" data-busy={ws.refreshing || undefined} aria-label="Refresh" data-tip="Refresh" onClick={ws.refresh}>
           <Icon name="refresh" />
         </button>
+        <button
+          ref={addButton}
+          className="icon-btn"
+          data-menu-toggle
+          aria-haspopup="menu"
+          aria-expanded={!!add}
+          aria-label="Add to workspace"
+          data-tip="Add to workspace"
+          onClick={(e) => {
+            ws.setMenu(undefined);
+            ws.setRowMenu(undefined);
+            const box = e.currentTarget.getBoundingClientRect();
+            setAdd((menu) => (menu ? undefined : { x: box.left, y: box.bottom }));
+          }}
+        >
+          <Icon name="plus" />
+        </button>
+        {add && (
+          <TabMenu
+            name="Add to workspace"
+            x={add.x}
+            y={add.y}
+            items={[
+              { label: "Add document…", run: () => void ws.pickItem("document") },
+              { label: "Add folder…", run: () => void ws.pickItem("folder") },
+            ]}
+            onClose={closeAdd}
+          />
+        )}
       </div>
       {!scan && (
         <p className="files-note" role="status">
