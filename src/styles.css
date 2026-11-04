@@ -36,6 +36,27 @@
   --outline-mark: var(--muted); /* the outline's dashes */
   --outline-mark-active: var(--ink); /* the dash of the heading in view */
   --danger: #c4302b;
+  --line-strong: color-mix(in srgb, var(--muted) 75%, var(--doc)); /* field borders, at least 3:1 on every surface */
+  --focus: var(--link); /* the keyboard focus ring */
+  /* The app's scales. The document's own type follows the reading settings instead. */
+  --text-xs: 11px; /* section labels, keys */
+  --text-sm: 12px; /* hints, meta, the status bar */
+  --text-md: 13px; /* everything else in the app */
+  --text-lg: 14px; /* large buttons, Home rows, Ctrl+P */
+  --text-xl: 16px; /* dialog titles */
+  --text-xxl: 26px; /* the Home title */
+  --height-sm: 24px; /* small icon buttons */
+  --height-md: 28px; /* buttons and fields in bars, popovers and dialogs */
+  --height-lg: 32px; /* the toolbar */
+  --height-xl: 36px; /* large buttons on Home */
+  --radius-sm: 4px; /* keys, chips, the parts inside a segmented control */
+  --radius-md: 6px; /* buttons, fields and rows */
+  --radius-lg: 10px; /* menus, popovers and panels */
+  --radius-xl: 12px; /* dialogs */
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.12); /* raised inside a control */
+  --shadow-md: 0 6px 20px rgb(0 0 0 / 0.16); /* menus, popovers, floating bars */
+  --shadow-lg: 0 24px 64px rgb(0 0 0 / 0.3); /* dialogs, Ctrl+P, the large view */
   --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --doc-font: var(--ui);
   --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
@@ -94,7 +115,7 @@ body {
 }
 .app ::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--scroll-thumb) padding-box;
 }
 .app ::-webkit-scrollbar-thumb:hover,
@@ -115,7 +136,7 @@ body > .mermaidTooltip {
   flex-direction: column;
   background: var(--chrome);
   color: var(--ink);
-  font: 13px/1.4 var(--ui);
+  font: var(--text-md) / 1.4 var(--ui);
 }
 .app button {
   font: inherit;
@@ -161,22 +182,22 @@ body > .mermaidTooltip {
 }
 .section-label {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-/* Buttons */
+/* Buttons: 24, 28, 32 and 36px tall, all with the same corners. */
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--height-lg);
+  height: var(--height-lg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
 }
@@ -194,33 +215,75 @@ body > .mermaidTooltip {
   cursor: default;
 }
 .icon-btn.small {
-  width: 22px;
-  height: 22px;
+  width: var(--height-sm);
+  height: var(--height-sm);
 }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--link);
-  outline-offset: 1px;
+/* One keyboard focus ring. A click with the mouse shows none; rows and controls packed side by side draw it inside. */
+:where(button, a, input, select, textarea, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+:where(.tabs button, .seg button, .mode-switch button, .menu-item, .floating-menu button, .code-lang-list button, .tree-row, .file-open, .settings-nav button, .outline a):focus-visible {
+  outline-offset: -2px;
+}
+/* The code-language list keeps the focus in its search field; the option Enter picks shows the ring. */
+.app .code-lang-list button[data-active] {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 .primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
+  height: var(--height-xl);
   padding: 0 16px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--control-fill);
-  font-size: 14px !important;
   font-weight: 600;
   cursor: pointer;
 }
+/* Above .app button, which resets the font */
 .app .primary {
   color: var(--control-ink);
+  font-size: var(--text-lg);
 }
 .primary:hover {
   background: color-mix(in srgb, var(--control-fill) 85%, black);
+}
+/* Fields: text boxes, text areas and the shortcut recorder share one look. */
+.properties input,
+.properties textarea,
+.link-field input,
+.code-lang-menu input,
+.math-editor textarea,
+.image-editor input,
+.find input,
+.quick-search input,
+.shortcut-keys {
+  min-width: 0;
+  height: var(--height-md);
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  outline: none;
+  background: var(--doc);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-md);
+}
+.properties input:focus,
+.properties textarea:focus,
+.link-field input:focus,
+.code-lang-menu input:focus,
+.math-editor textarea:focus,
+.image-editor input:focus,
+.find input:focus,
+.quick-search input:focus,
+.shortcut-keys[data-recording] {
+  border-color: var(--control);
+  box-shadow: 0 0 0 1px var(--control);
 }
 
 /* Toolbar */
@@ -259,7 +322,7 @@ input:focus-visible {
   height: 30px;
   max-width: 220px;
   padding: 0 4px 0 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   color: var(--muted);
 }
 /* The tab shown keeps its width while the others shrink */
@@ -292,9 +355,9 @@ input:focus-visible {
   padding: 4px;
   background: var(--chrome);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
-  font-size: 13px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-md);
   max-height: calc(100vh - 8px);
   overflow-y: auto;
 }
@@ -317,7 +380,7 @@ input:focus-visible {
   height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -327,7 +390,6 @@ input:focus-visible {
 .menu-item:hover:not(:disabled),
 .menu-item:focus-visible {
   background: var(--chrome-2);
-  outline: none;
 }
 .menu-item:disabled {
   opacity: 0.45;
@@ -335,7 +397,7 @@ input:focus-visible {
 }
 .menu-keys {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .menu-separator {
   height: 1px;
@@ -349,7 +411,7 @@ input:focus-visible {
   transform: translateY(-1px);
   box-shadow:
     0 0 0 1px var(--control),
-    0 6px 16px rgb(0 0 0 / 0.18);
+    var(--shadow-md);
 }
 .tab[data-dragging],
 .tab[data-dragging] .tab-open {
@@ -366,7 +428,7 @@ input:focus-visible {
   height: 100%;
   padding: 0 4px 0 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
 }
@@ -399,7 +461,7 @@ input:focus-visible {
   padding: 14px 14px 8px 18px;
 }
 .count {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .outline {
@@ -414,7 +476,7 @@ input:focus-visible {
 .outline a {
   display: block;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   text-decoration: none;
   line-height: 1.35;
@@ -451,7 +513,7 @@ input:focus-visible {
 }
 .breadcrumb {
   margin-bottom: 14px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -506,9 +568,9 @@ input:focus-visible {
   flex-direction: column;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
   background: var(--doc);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 0.18);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 .compare-head {
@@ -528,7 +590,7 @@ input:focus-visible {
 }
 .compare-title .muted,
 .compare-foot .muted {
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .compare-foot {
   display: flex;
@@ -545,18 +607,18 @@ input:focus-visible {
 .compare-legend {
   display: flex;
   gap: 10px;
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .compare-legend span {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 .compare-body {
   flex: 1;
   overflow: auto;
   padding: 8px 0;
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--text-md);
   line-height: 1.55;
 }
 .compare-body > p {
@@ -586,7 +648,7 @@ input:focus-visible {
   color: var(--muted);
   background: var(--chrome);
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: var(--text-sm);
 }
 
 .drop-overlay {
@@ -596,10 +658,10 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   border: 2px dashed var(--brand-secondary);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--doc) 85%, transparent);
   color: var(--link);
-  font-size: 15px;
+  font-size: var(--text-xl);
   font-weight: 600;
   pointer-events: none;
 }
@@ -625,7 +687,7 @@ input:focus-visible {
   gap: 16px;
   padding: 0 14px;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .status-right {
@@ -665,7 +727,7 @@ button.save-state {
   gap: 14px;
   background: color-mix(in srgb, var(--doc) 80%, transparent);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-md);
   opacity: 0;
   animation: loading-in 0.15s ease 0.15s forwards;
   will-change: opacity;
@@ -680,7 +742,7 @@ button.save-state {
   height: 28px;
   border: 3px solid var(--line);
   border-top-color: var(--control);
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   animation: spin 0.8s linear infinite;
   will-change: transform;
 }
@@ -717,11 +779,11 @@ button.save-state {
   padding: 6px 12px;
   transform: translateX(-50%);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--chrome);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-md);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
   pointer-events: none;
   animation: focus-hint 3s ease forwards;
@@ -742,7 +804,7 @@ button.save-state {
   }
 }
 
-/* Edit mode. Toolbar controls share one height (30px) and radius (7px); Done stands out in the primary color. */
+/* Edit mode. Toolbar controls are as tall as the toolbar's icon buttons; Done stands out in the primary color. */
 .app .icon-btn,
 .app .edit-btn,
 .app .done-btn,
@@ -760,14 +822,14 @@ button.save-state {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
+  height: var(--height-lg);
   margin: 0 2px;
   padding: 0 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--chrome-2);
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--text-md);
   cursor: pointer;
 }
 .app .edit-btn:hover:not(:disabled) {
@@ -777,16 +839,16 @@ button.save-state {
   opacity: 0.5;
   cursor: default;
 }
-/* Editing: Edit and Preview as a two-way switch, then Done. */
+/* Editing: Edit and Preview as a two-way switch, then Done. Shaped like the segmented controls below. */
 .mode-switch {
   flex: none;
   display: inline-flex;
   gap: 2px;
-  height: 30px;
+  height: var(--height-lg);
   margin: 0 4px;
   padding: 2px;
   box-sizing: border-box;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--chrome-2);
 }
 .app .mode-switch button {
@@ -795,10 +857,10 @@ button.save-state {
   gap: 6px;
   padding: 0 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: var(--text-md);
   cursor: pointer;
 }
 .app .mode-switch button:hover {
@@ -807,7 +869,7 @@ button.save-state {
 .app .mode-switch button[aria-pressed="true"] {
   background: var(--doc);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+  box-shadow: var(--shadow-sm);
 }
 .app .mode-switch button:disabled {
   opacity: 0.45;
@@ -825,14 +887,14 @@ button.save-state {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
+  height: var(--height-lg);
   margin: 0 2px;
   padding: 0 12px;
   border: 1px solid var(--control);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--control-soft);
   color: var(--control-soft-ink);
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
 }
@@ -952,10 +1014,10 @@ button.save-state {
 .doc.editor .properties {
   margin: 0 0 22px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--code-bg);
   font-family: var(--ui);
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.4;
 }
 .properties-head {
@@ -982,28 +1044,6 @@ button.save-state {
   gap: 4px;
   padding: 2px 6px 2px 4px;
 }
-.properties input,
-.properties textarea {
-  min-width: 0;
-  height: 28px;
-  box-sizing: border-box;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-}
-.properties input:hover,
-.properties textarea:hover {
-  border-color: var(--line);
-}
-.properties input:focus,
-.properties textarea:focus {
-  outline: none;
-  border-color: var(--control);
-  background: var(--doc);
-}
 .properties input.key {
   color: var(--muted);
   font-weight: 600;
@@ -1015,7 +1055,6 @@ button.save-state {
   margin: 6px;
   padding: 8px;
   font-family: var(--mono);
-  font-size: 12.5px;
   resize: vertical;
 }
 .properties-foot {
@@ -1093,7 +1132,7 @@ button.save-state {
 
 .toolbar-status {
   margin-left: 6px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 .unsaved-dot {
@@ -1101,18 +1140,17 @@ button.save-state {
   width: 7px;
   height: 7px;
   margin: 0 3px;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background: var(--control);
 }
 .text-btn {
-  height: 28px;
+  height: var(--height-md);
   padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--doc);
   color: var(--ink);
   font: inherit;
-  font-size: 12.5px;
   cursor: pointer;
 }
 .text-btn:hover:not(:disabled) {
@@ -1132,10 +1170,12 @@ button.save-state {
   background: transparent;
   color: var(--muted);
 }
+/* The small primary button: .primary's colors at the text button's size */
 .text-btn.primary {
   border-color: var(--control-fill);
   background: var(--control-fill);
   color: var(--control-ink);
+  font-size: var(--text-md);
 }
 .link-chip {
   display: inline-flex;
@@ -1144,7 +1184,7 @@ button.save-state {
   max-width: 340px;
   padding: 0 2px 0 8px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--doc);
 }
 .link-address {
@@ -1154,7 +1194,7 @@ button.save-state {
   background: none;
   color: var(--link);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--text-md);
   white-space: nowrap;
   text-overflow: ellipsis;
   cursor: text;
@@ -1177,13 +1217,6 @@ button.save-state {
 }
 .link-field input {
   width: 280px;
-  height: 26px;
-  padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--doc);
-  color: var(--ink);
-  font: inherit;
 }
 
 /* The language of the code block at the cursor, above its top right corner */
@@ -1200,14 +1233,14 @@ button.save-state {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 26px;
+  height: var(--height-md);
   padding: 0 8px 0 10px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--doc);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-md);
   font-family: var(--ui);
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -1226,22 +1259,15 @@ button.save-state {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--doc);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  box-shadow: var(--shadow-md);
   font-family: var(--ui);
-  font-size: 13px;
+  font-size: var(--text-md);
   overflow: hidden;
 }
 .code-lang-menu input {
-  height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  outline: none;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
+  margin: 6px 6px 2px;
 }
 .code-lang-list {
   max-height: 260px;
@@ -1257,7 +1283,7 @@ button.save-state {
   height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--ink);
   text-align: left;
@@ -1274,7 +1300,7 @@ button.save-state {
 }
 .code-lang-id {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   font-weight: 400;
   color: var(--muted);
 }
@@ -1289,27 +1315,20 @@ button.save-state {
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--doc);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  box-shadow: var(--shadow-md);
   font-family: var(--ui);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .math-editor textarea {
+  height: auto;
   min-height: 56px;
   padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  outline: none;
   background: var(--code-bg);
-  color: var(--ink);
   font-family: var(--mono);
-  font-size: 13px;
   line-height: 1.5;
   resize: vertical;
-}
-.math-editor textarea:focus {
-  border-color: var(--control);
 }
 .image-editor {
   width: min(360px, 90%);
@@ -1318,19 +1337,6 @@ button.save-state {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-.image-editor input {
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  outline: none;
-  background: var(--doc);
-  color: var(--ink);
-  font: inherit;
-}
-.image-editor input:focus {
-  border-color: var(--control);
 }
 .image-editor .math-editor-foot .muted {
   min-width: 0;
@@ -1343,12 +1349,12 @@ button.save-state {
   padding: 6px 4px;
   overflow-x: auto;
   color: var(--ink);
-  font-size: 16px;
+  font-size: var(--text-xl);
 }
 .math-preview:empty::before {
   content: "Preview";
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .math-editor-foot {
   display: flex;
@@ -1357,7 +1363,7 @@ button.save-state {
 }
 .math-editor-foot .muted {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 /* Table actions, above the document while the cursor is in a table */
@@ -1385,9 +1391,9 @@ button.save-state {
   width: max-content;
   padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--doc);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-md);
 }
 .table-bar-group {
   display: flex;
@@ -1399,8 +1405,8 @@ button.save-state {
   border-left: 1px solid var(--line);
 }
 .table-bar .icon-btn {
-  width: 28px;
-  height: 28px;
+  width: var(--height-md);
+  height: var(--height-md);
 }
 .table-bar .icon-btn[aria-pressed="true"] {
   background: var(--control-soft);
@@ -1437,16 +1443,16 @@ button.save-state {
   gap: 1px;
   padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--doc);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  box-shadow: var(--shadow-md);
   font-family: var(--ui);
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.4;
 }
 .floating .icon-btn {
-  width: 28px;
-  height: 28px;
+  width: var(--height-md);
+  height: var(--height-md);
 }
 .floating .icon-btn[aria-pressed="true"] {
   background: var(--control-soft);
@@ -1468,13 +1474,13 @@ button.save-state {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 28px;
+  height: var(--height-md);
   padding: 0 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: var(--text-md);
   cursor: pointer;
 }
 .floating .floating-text:hover,
@@ -1491,9 +1497,9 @@ button.save-state {
   min-width: 180px;
   padding: 4px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   background: var(--doc);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  box-shadow: var(--shadow-md);
 }
 .floating-menu button {
   display: flex;
@@ -1502,7 +1508,7 @@ button.save-state {
   height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--ink);
   text-align: left;
@@ -1542,26 +1548,16 @@ button.save-state {
   padding: 6px 6px 6px 12px;
   background: var(--chrome);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   color: var(--muted);
 }
 .find input {
   width: 200px;
-  height: 28px;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-}
-.find:focus-within {
-  border-color: var(--control);
 }
 .find-count {
   padding: 0 6px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
@@ -1578,22 +1574,22 @@ button.save-state {
   padding: 16px;
   background: var(--chrome);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 /* Update ready: a quiet toolbar button and its popover */
 .app .update-btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 30px;
+  height: var(--height-lg);
   margin: 0 2px;
   padding: 0 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--control-soft);
   color: var(--control-soft-ink);
-  font-size: 13px;
+  font-size: var(--text-md);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
@@ -1615,13 +1611,14 @@ button.save-state {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--muted);
 }
 .update-text strong {
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--ink);
 }
+/* A button that reads as a link, in the text size around it */
 .link-btn {
   align-self: flex-start;
   display: inline-flex;
@@ -1632,7 +1629,6 @@ button.save-state {
   background: none;
   color: var(--link);
   font: inherit;
-  font-size: 13px;
   cursor: pointer;
 }
 .link-btn:hover {
@@ -1651,7 +1647,7 @@ button.save-state {
 .setting-label {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--muted);
 }
@@ -1668,7 +1664,7 @@ button.save-state {
   justify-content: space-between;
   padding-top: 12px;
   border-top: 1px solid var(--line);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .setting-toggle.plain {
   padding-top: 0;
@@ -1680,7 +1676,7 @@ button.save-state {
 .setting-hint {
   display: block;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 400;
   line-height: 1.45;
   color: var(--muted);
@@ -1704,9 +1700,9 @@ button.save-state {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--chrome);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 .settings-head {
@@ -1715,7 +1711,7 @@ button.save-state {
   justify-content: space-between;
   padding: 12px 12px 12px 20px;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
+  font-size: var(--text-xl);
 }
 .settings-main {
   flex: 1;
@@ -1735,7 +1731,7 @@ button.save-state {
   height: 32px;
   padding: 0 12px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted);
   text-align: left;
@@ -1767,7 +1763,7 @@ button.save-state {
 }
 .settings-title {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 600;
 }
 .settings-section {
@@ -1781,7 +1777,7 @@ button.save-state {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .setting-row input[type="checkbox"] {
   flex: none;
@@ -1796,7 +1792,7 @@ button.save-state {
   gap: 14px;
 }
 .about-head strong {
-  font-size: 16px;
+  font-size: var(--text-xl);
 }
 .about-links {
   display: flex;
@@ -1833,7 +1829,7 @@ button.save-state {
   padding: 0;
   list-style: none;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 .shortcut-row {
@@ -1842,7 +1838,7 @@ button.save-state {
   gap: 8px;
   min-height: 40px;
   padding: 4px 6px 4px 12px;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .shortcut-row + .shortcut-row {
   border-top: 1px solid var(--line);
@@ -1861,7 +1857,7 @@ button.save-state {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .shortcut-note svg {
   color: var(--brand-accent-ink);
@@ -1876,35 +1872,26 @@ button.save-state {
   justify-content: flex-end;
   gap: 4px;
   min-width: 132px;
-  height: 30px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
+  padding: 0 4px;
   color: var(--muted);
-  font: inherit;
-  font-size: 12.5px;
   cursor: pointer;
 }
 .shortcut-keys:hover {
-  border-color: var(--line);
   background: var(--chrome);
 }
 .shortcut-keys[data-recording] {
-  border-color: var(--control);
   background: var(--doc);
   color: var(--control-soft-ink);
-  box-shadow: 0 0 0 3px var(--control-soft);
 }
 .shortcut-keys kbd {
   display: inline-flex;
   align-items: center;
-  height: 22px;
+  height: 20px;
   padding: 0 7px;
   border-bottom-width: 2px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 .shortcut-row[data-conflict] kbd {
@@ -1912,8 +1899,8 @@ button.save-state {
 }
 .shortcut-row .icon-btn {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: var(--height-md);
+  height: var(--height-md);
 }
 /* An unchanged action keeps the reset button's place, so the keys line up. */
 .shortcut-row .icon-btn[hidden] {
@@ -1930,11 +1917,12 @@ button.save-state {
   height: 16px;
   accent-color: var(--control);
 }
+/* Segmented control: the same shape as the edit mode switch */
 .seg {
   display: flex;
-  gap: 3px;
-  padding: 3px;
-  border-radius: 8px;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-md);
   background: var(--chrome-2);
 }
 .seg button {
@@ -1943,18 +1931,18 @@ button.save-state {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 30px;
+  height: var(--height-md);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font-size: 13px !important;
+  font-size: var(--text-md);
   cursor: pointer;
 }
 .seg button[aria-pressed="true"] {
   background: var(--doc);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-sm);
 }
 .seg button[data-value="serif"] {
   font-family: Charter, "Iowan Old Style", Georgia, serif !important;
@@ -1982,14 +1970,14 @@ button.save-state {
 }
 .home-intro h1 {
   margin: 0;
-  font-size: 26px;
+  font-size: var(--text-xxl);
   line-height: 1.25;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 .home-intro p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-lg);
   line-height: 1.6;
   color: var(--muted);
 }
@@ -2000,14 +1988,14 @@ button.save-state {
   margin-top: 6px;
 }
 .shortcut {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 kbd {
-  font: 11px var(--ui);
+  font: var(--text-xs) var(--ui);
   padding: 2px 6px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--chrome);
 }
 .drop-zone {
@@ -2017,7 +2005,7 @@ kbd {
   gap: 10px;
   height: 88px;
   border: 1.5px dashed var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   color: var(--muted);
 }
 .drop-zone[data-active="true"] {
@@ -2037,7 +2025,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 4px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .file-row:hover,
 .file-row[data-menu] {
@@ -2051,6 +2039,7 @@ kbd {
   gap: 12px;
   padding: 8px 10px;
   border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -2063,17 +2052,17 @@ kbd {
   flex-direction: column;
 }
 .file-name {
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--ink);
 }
 .file-folder {
-  font-size: 12px;
+  font-size: var(--text-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .file-when {
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 .pin {
@@ -2291,13 +2280,13 @@ kbd {
   color: var(--muted);
 }
 .code-copy {
-  height: 24px;
+  height: var(--height-sm);
   padding: 0 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted) !important;
-  font: 12px var(--ui) !important;
+  font: var(--text-sm) var(--ui) !important;
   cursor: pointer;
 }
 .code-copy:hover {
@@ -2405,9 +2394,9 @@ kbd {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--doc);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 .mermaid-editor .settings-head {
@@ -2426,7 +2415,7 @@ kbd {
   border-right: 1px solid var(--line);
   background: var(--code-bg);
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.6;
 }
 .code-gutter {
@@ -2501,7 +2490,7 @@ kbd {
   padding: 8px 14px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 .mermaid-zoom input {
   width: 200px;
@@ -2516,7 +2505,7 @@ kbd {
   margin: 0;
   color: var(--danger);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--text-md);
   white-space: pre-wrap;
 }
 .mermaid-editor-foot {
@@ -2526,7 +2515,7 @@ kbd {
   padding: 10px 12px 10px 18px;
   border-top: 1px solid var(--line);
   background: var(--chrome);
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 .mermaid-editor-foot .muted {
   flex: 1;
@@ -2557,17 +2546,17 @@ kbd {
   top: 6px;
   right: 6px;
   z-index: 2;
-  width: 28px;
-  height: 28px;
+  width: var(--height-md);
+  height: var(--height-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--doc);
   color: var(--muted);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
@@ -2605,9 +2594,9 @@ kbd {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--doc);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 /* A table's panel is only as tall as the table, centered, and scrolls once it reaches the window's height. */
@@ -2631,7 +2620,7 @@ kbd {
 .large-head strong {
   min-width: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--text-lg);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2675,7 +2664,7 @@ kbd {
   border-top: 1px solid var(--line);
   background: var(--chrome);
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 .large-controls,
 .large-zoom {
@@ -2711,13 +2700,13 @@ kbd {
 }
 .workspace-name {
   min-width: 0;
-  height: 28px;
+  height: var(--height-md);
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 0 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -2733,8 +2722,8 @@ kbd {
   color: var(--muted);
 }
 .files-head .icon-btn {
-  width: 26px;
-  height: 26px;
+  width: var(--height-md);
+  height: var(--height-md);
   flex: none;
 }
 .icon-btn[data-busy] svg {
@@ -2781,7 +2770,7 @@ kbd {
   gap: 4px;
   padding: 0 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   font: inherit;
   text-align: left;
@@ -2855,19 +2844,7 @@ kbd {
   align-items: center;
   gap: 8px;
   margin-left: 2px;
-  font-size: 12px;
-}
-.link-btn {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--link);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.link-btn:hover {
-  text-decoration: underline;
+  font-size: var(--text-sm);
 }
 .files-removed {
   display: flex;
@@ -2930,18 +2907,18 @@ kbd {
 }
 .files-offer-folder > span {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.files-offer .primary,
-.files-offer .secondary {
-  height: 32px;
+.app .files-offer .primary,
+.app .files-offer .secondary {
+  height: var(--height-lg);
   min-width: 0;
   justify-content: center;
   padding: 0 12px;
-  font-size: 13px !important;
+  font-size: var(--text-md);
 }
 .files-offer .primary span {
   overflow: hidden;
@@ -2952,16 +2929,18 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
+  height: var(--height-xl);
   padding: 0 16px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--chrome-2);
   color: var(--ink);
-  font: inherit;
-  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+/* Above .app button, which resets the font */
+.app .secondary {
+  font-size: var(--text-lg);
 }
 .status-left {
   min-width: 0;
@@ -2970,14 +2949,14 @@ kbd {
   gap: 16px;
 }
 .status-workspace {
-  height: 22px;
+  height: var(--height-sm);
   display: inline-flex;
   align-items: center;
   gap: 5px;
   margin-left: -6px;
   padding: 0 6px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -3005,9 +2984,9 @@ kbd {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--chrome);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 .quick-search {
@@ -3021,14 +3000,7 @@ kbd {
 }
 .quick-search input {
   flex: 1;
-  min-width: 0;
-  height: 28px;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 .quick-list {
   max-height: min(60vh, 400px);
@@ -3046,7 +3018,7 @@ kbd {
   gap: 10px;
   height: 34px;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   cursor: pointer;
 }
@@ -3067,7 +3039,7 @@ kbd {
   color: var(--ink);
 }
 .quick-part[data-match="true"] {
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--find-match);
   color: var(--ink);
 }
@@ -3096,7 +3068,7 @@ kbd {
   height: 30px;
   padding: 0 14px;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -3131,18 +3103,17 @@ kbd {
   position: absolute;
   inset: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   pointer-events: none;
 }
 .edge-key:focus-visible {
-  outline: 2px solid var(--link);
   outline-offset: -2px;
 }
 .dash {
   display: block;
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-pill);
   background: var(--outline-mark);
   opacity: 0.7;
 }
@@ -3162,8 +3133,8 @@ kbd {
   box-sizing: border-box;
   background: var(--chrome);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
 }
 .sidebar[data-floating="left"] {
   left: var(--panel-left, 28px);
