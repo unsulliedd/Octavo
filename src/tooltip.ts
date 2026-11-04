@@ -1,7 +1,7 @@
 // The app's tooltip. Any element with a `data-tip` attribute shows its text after a short hover, or at once when
-// it gets the keyboard focus. Escape, a click, scrolling or leaving the element hides it. Screen readers don't
-// read the tip itself: an element with no name of its own gives the text as its `aria-label` too, and one that
-// has a name gives it as `aria-description`.
+// it gets the keyboard focus; an icon button without one shows its `aria-label`. Escape, a click, scrolling or
+// leaving the element hides it. Screen readers don't read the tip itself: an element with no name of its own gives
+// the text as its `aria-label` too, and one that has a name gives it as `aria-description`.
 
 /** How long the pointer rests on an element before its tip shows, in milliseconds. */
 export const TIP_DELAY = 500;
@@ -24,7 +24,7 @@ export function placeTip(anchor: Box, tip: Size, view: Size) {
   return { left, top, side } as const;
 }
 
-const KEYS = /^(.+) \(((?:(?:Ctrl|Shift|Alt|Win)\+)+\S+|Escape|F\d{1,2})\)$/;
+const KEYS = /^(.+) \(((?:(?:Ctrl|Shift|Alt|Win)\+)+\S+|Escape|Enter|F\d{1,2})\)$/;
 
 /** A tip's text and the keys at its end, as `withKeys` writes them: "Save (Ctrl+S)" is "Save" and "Ctrl+S". */
 export function splitKeys(text: string): { label: string; keys?: string } {
@@ -34,6 +34,10 @@ export function splitKeys(text: string): { label: string; keys?: string } {
 
 /** The attributes of an element that has a name of its own and `text` as its tip. */
 export const described = (text: string | undefined) => ({ "data-tip": text, "aria-description": text });
+
+/** The elements that show a tip, and the text each shows. */
+const TIPPED = "[data-tip], .icon-btn[aria-label]";
+const tipText = (el: HTMLElement) => el.dataset.tip ?? el.getAttribute("aria-label") ?? "";
 
 /** Whether the element has the keyboard focus, rather than focus from a click. */
 function keyboardFocus(el: Element) {
@@ -63,7 +67,7 @@ export function installTooltips(doc: Document = document, delay = TIP_DELAY) {
   };
   const show = (el: HTMLElement) => {
     hide();
-    const text = el.dataset.tip;
+    const text = tipText(el);
     if (!text || !el.isConnected) return;
     const { label, keys } = splitKeys(text);
     tip.replaceChildren(label);
@@ -74,7 +78,7 @@ export function installTooltips(doc: Document = document, delay = TIP_DELAY) {
     tip.dataset.side = side;
     shown = el;
   };
-  const tipped = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>("[data-tip]") : null);
+  const tipped = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>(TIPPED) : null);
 
   const over = (e: Event) => {
     const el = tipped(e.target);

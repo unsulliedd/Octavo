@@ -28,6 +28,7 @@ test("the keys at the end of a tip are split off", () => {
   expect(splitKeys("Bold (Ctrl+Shift+B)")).toEqual({ label: "Bold", keys: "Ctrl+Shift+B" });
   expect(splitKeys("Close (Escape)")).toEqual({ label: "Close", keys: "Escape" });
   expect(splitKeys("Full screen (F11)")).toEqual({ label: "Full screen", keys: "F11" });
+  expect(splitKeys("Next match (Enter)")).toEqual({ label: "Next match", keys: "Enter" });
   expect(splitKeys("Removed (2)")).toEqual({ label: "Removed (2)" });
   expect(splitKeys("C:\\notes (old)\\a.md")).toEqual({ label: "C:\\notes (old)\\a.md" });
 });
@@ -113,4 +114,15 @@ test("an element without data-tip shows nothing, and removing the tooltips remov
   stop();
   expect(document.querySelector(".app-tip")).toBeNull();
   stop = () => {};
+});
+
+test("an icon button without data-tip shows its name; one inside a tipped element shows its own", () => {
+  document.body.insertAdjacentHTML("beforeend", '<div data-tip="a.md"><button class="icon-btn" aria-label="Close a.md (Ctrl+W)"><svg></svg></button></div><button class="icon-btn" aria-label="Home"></button>');
+  const [close, home] = document.querySelectorAll<HTMLElement>(".icon-btn");
+  hover(close.querySelector("svg")!);
+  vi.advanceTimersByTime(500);
+  expect(tip().textContent).toBe("Close a.mdCtrl+W");
+  hover(home, close);
+  vi.advanceTimersByTime(500);
+  expect(tip().textContent).toBe("Home");
 });
