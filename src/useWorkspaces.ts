@@ -209,6 +209,7 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
     const yes = await ask(`Remove the workspace "${workspace.name}" from Octavo? Its list of folders, documents and tabs goes. Nothing on disk changes.`, {
       okLabel: "Remove",
       cancelLabel: "Keep",
+      danger: true,
     });
     if (!yes || (id === current.current.open?.id && !(await closeWorkspace()))) return;
     deleted.current.push(id);
