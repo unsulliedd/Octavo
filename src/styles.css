@@ -2837,6 +2837,7 @@ kbd {
 }
 .workspace-name {
   min-width: 0;
+  margin-right: auto;
   height: var(--height-md);
   display: inline-flex;
   align-items: center;

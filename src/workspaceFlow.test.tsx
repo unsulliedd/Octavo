@@ -749,7 +749,7 @@ test("the tree's menu holds what the board shows, for a document and for a folde
   await launch();
   await openFolder(ROOT);
   await rightClick(byText(".tree-row", "guide.md"));
-  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Add folder to workspace…", "Add document to workspace…", "-", "Remove from workspace"]);
+  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Remove from workspace"]);
   expect(host.querySelector(".menu")?.getAttribute("aria-label")).toBe("guide.md");
   await act(async () => void document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })));
   expect(host.querySelector(".menu")).toBeNull();
@@ -836,32 +836,70 @@ test("with no workspace open a tab's menu has no Add to workspace, and with the 
   expect(saves).toHaveLength(before);
 });
 
-test("the tree's menu adds another folder through the picker", async () => {
+const addButton = () => host.querySelector<HTMLButtonElement>("[aria-label='Add to workspace']")!;
+const keyOn = (el: Element, key: string) => act(async () => void el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })));
+
+test("the + button opens a menu of Add document and Add folder, and Escape closes it with the focus back on the button", async () => {
+  await launch();
+  await openFolder(ROOT);
+  expect(addButton().getAttribute("aria-haspopup")).toBe("menu");
+  expect(addButton().getAttribute("aria-expanded")).toBe("false");
+  await click(addButton());
+  expect(menuItems()).toEqual(["Add document…", "Add folder…"]);
+  expect(host.querySelector(".menu")?.getAttribute("aria-label")).toBe("Add to workspace");
+  expect(addButton().getAttribute("aria-expanded")).toBe("true");
+  await keyOn(document.activeElement!, "Escape");
+  expect(host.querySelector(".menu")).toBeNull();
+  expect(addButton().getAttribute("aria-expanded")).toBe("false");
+  expect(document.activeElement).toBe(addButton());
+  // A second click on the button closes the menu too.
+  await click(addButton());
+  await click(addButton());
+  expect(host.querySelector(".menu")).toBeNull();
+});
+
+test("the + menu is one menu at a time with the workspace menu and a row's menu", async () => {
+  await launch();
+  await openFolder(ROOT);
+  await click(addButton());
+  await rightClick(byText(".tree-row", "guide.md"));
+  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Remove from workspace"]);
+  await click(addButton());
+  expect(menuItems()).toEqual(["Add document…", "Add folder…"]);
+  await click(host.querySelector(".workspace-name"));
+  expect(menuItems()).toContain("Close workspace");
+  expect(menuItems()).not.toContain("Add document…");
+  await click(addButton());
+  expect(menuItems()).toEqual(["Add document…", "Add folder…"]);
+});
+
+test("the + menu adds another folder through the picker", async () => {
   await launch();
   await openFolder(ROOT);
   picked = NOTES;
-  await rightClick(byText(".tree-row", "guide.md"));
-  await menuPick("Add folder to workspace…");
+  await click(addButton());
+  await menuPick("Add folder…");
   await until(() => rows().includes("ideas.md"), "the added folder");
   expect(rows()).toEqual(["Handbook", "specs", "spec.md", "guide.md", "Notes", "ideas.md"]);
   expect(dialogs[dialogs.length - 1]).toEqual(expect.objectContaining({ directory: true }));
   await until(() => inFile(inFileId())!.items.length === 2, "the save");
+  expect(document.activeElement).toBe(addButton());
 });
 const inFileId = () => (stored[0] as { id: string }).id;
 
-test("the tree's menu adds a document through the picker; one already covered changes nothing", async () => {
+test("the + menu adds a document through the picker; one already covered changes nothing", async () => {
   await launch();
   await openFolder(ROOT);
   const before = saves.length;
   filePicked = SPEC;
-  await rightClick(byText(".tree-row", "guide.md"));
-  await menuPick("Add document to workspace…");
+  await click(addButton());
+  await menuPick("Add document…");
   await until(() => dialogs.length === 2, "the picker");
   await settle();
   expect(saves).toHaveLength(before);
   filePicked = IDEAS;
-  await rightClick(byText(".tree-row", "guide.md"));
-  await menuPick("Add document to workspace…");
+  await click(addButton());
+  await menuPick("Add document…");
   await until(() => rows().includes("ideas.md"), "the added document");
   expect(inFile(inFileId())!.items.map((i) => i.path)).toEqual([ROOT, IDEAS]);
 });
@@ -1023,6 +1061,19 @@ test("the pin button adds to and really removes from Pinned, and Home shows it",
   await until(() => inFile("pinned")!.items.length === 0, "the unpin");
   expect(inFile("pinned")!.removed).toEqual([]);
   expect(homePins()).toEqual([]);
+});
+
+test("with Pinned open, the + menu adds a document to Pinned", async () => {
+  stored = [pinnedIn([GUIDE])];
+  await launch();
+  await clickText("Open as workspace");
+  await until(() => rows().includes("guide.md"), "the tree");
+  filePicked = IDEAS;
+  await click(addButton());
+  await menuPick("Add document…");
+  await until(() => rows().includes("ideas.md"), "the added document");
+  expect(inFile("pinned")!.items.map((i) => i.path)).toEqual([GUIDE, IDEAS]);
+  expect(stored).toHaveLength(1);
 });
 
 test("Pinned opens like any workspace, with its own tabs, and Remove from workspace unpins", async () => {
