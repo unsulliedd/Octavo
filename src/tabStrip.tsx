@@ -53,7 +53,7 @@ export function tabListItems(tabs: Tabs, shown: number | undefined, unsaved: (pa
     return {
       label: (
         <span className="menu-tab">
-          {unsaved(path) ? <span className="unsaved-dot" title="Unsaved changes" /> : <Icon name="markdown" size="row" />}
+          {unsaved(path) ? <span className="unsaved-dot" role="img" aria-label="Unsaved changes" data-tip="Unsaved changes" /> : <Icon name="markdown" size="row" />}
           <span>{basename(path)}</span>
         </span>
       ),

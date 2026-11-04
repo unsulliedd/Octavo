@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Icon } from "../icons";
 import { useTip } from "../useKeys";
 import { FORMAT_GROUPS, type FormatAction, type FormatState } from "./formatInfo";
+import { described } from "../tooltip";
 
 /** Saving the document being edited, and reverting it to how it was when editing started. */
 export type DocActions = {
@@ -19,10 +20,10 @@ export function SaveButtons({ doc }: { doc: DocActions }) {
   const tip = useTip();
   return (
     <>
-      <button className="icon-btn" aria-label={tip("Save", "save")} title={tip("Save", "save")} disabled={!doc.unsaved} onClick={doc.save}>
+      <button className="icon-btn" aria-label={tip("Save", "save")} data-tip={tip("Save", "save")} disabled={!doc.unsaved} onClick={doc.save}>
         <Icon name="save" />
       </button>
-      <button className="icon-btn" aria-label={tip("Save as…", "saveAs")} title={tip("Save as…", "saveAs")} onClick={doc.saveAs}>
+      <button className="icon-btn" aria-label={tip("Save as…", "saveAs")} data-tip={tip("Save as…", "saveAs")} onClick={doc.saveAs}>
         <Icon name="saveAs" />
       </button>
     </>
@@ -32,7 +33,7 @@ export function SaveButtons({ doc }: { doc: DocActions }) {
 export function RevertButton({ doc }: { doc: DocActions }) {
   const tip = "Revert to original: bring the file back to how it was when you started editing";
   return (
-    <button className="icon-btn" aria-label="Revert to original" title={tip} disabled={!doc.canRevert} onClick={doc.revert}>
+    <button className="icon-btn" aria-label="Revert to original" {...described(tip)} disabled={!doc.canRevert} onClick={doc.revert}>
       <Icon name="revert" />
     </button>
   );
@@ -83,7 +84,7 @@ export function FormatBar({ state, onAction, onLink, align, link, status, doc }:
                 key={b.action}
                 className="icon-btn"
                 aria-label={tip(b.label, b.action)}
-                title={tip(b.label, b.action)}
+                data-tip={tip(b.label, b.action)}
                 aria-pressed={state.active.includes(b.action)}
                 disabled={state.disabled.includes(b.action)}
                 onClick={() => (b.action === "link" ? onLink() : onAction(b.action))}

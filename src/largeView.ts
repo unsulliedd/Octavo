@@ -122,7 +122,7 @@ function openButton(doc: Document, what: string) {
   button.type = "button";
   button.className = "large-open";
   button.setAttribute("aria-label", `Open the ${what} large`);
-  button.title = "Open large";
+  button.dataset.tip = "Open large";
   const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "icon");
   svg.setAttribute("viewBox", "0 0 24 24");

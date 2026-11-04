@@ -3,6 +3,7 @@ import { Icon } from "./icons";
 import { cycleFocus } from "./largeView";
 import { moveActive, quickResults } from "./quickSearch";
 import type { Workspaces } from "./useWorkspaces";
+import { described } from "./tooltip";
 
 type Props = { ws: Workspaces; onOpen: (path: string) => void; onClose: () => void };
 
@@ -109,7 +110,7 @@ export function QuickOpen({ ws, onOpen, onClose }: Props) {
                   className="quick-row"
                   role="option"
                   aria-selected={i === active}
-                  title={doc.path}
+                  {...described(doc.path)}
                   onMouseMove={() => active !== i && setActive(i)}
                   onClick={() => pick(doc.path)}
                 >

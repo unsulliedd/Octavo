@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { fenceLanguage, languageName, matchLanguages } from "../languages";
+import { described } from "../tooltip";
 
 type Props = {
   /** As written after the opening fence; empty for plain text. */
@@ -46,7 +47,7 @@ export function CodeLanguage({ language, top, right, onPick, onCancel }: Props) 
   // The button keeps the editor's selection; only the search field takes the focus.
   return (
     <div className="code-lang-anchor" style={{ top, left: right }} onMouseDown={(e) => !(e.target instanceof HTMLInputElement) && e.preventDefault()}>
-      <button className="code-lang-button" aria-haspopup="listbox" aria-expanded={open} title="Code block language" onClick={() => (open ? close() : setOpen(true))}>
+      <button className="code-lang-button" aria-haspopup="listbox" aria-expanded={open} {...described("Code block language")} onClick={() => (open ? close() : setOpen(true))}>
         {language ? languageName(language) : "Plain text"}
         <Icon name="down" size="inline" />
       </button>

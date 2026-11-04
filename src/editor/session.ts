@@ -277,7 +277,8 @@ const propertiesView = $view(frontmatterSchema.node, () => (initial, view, getPo
   };
   const iconButton = (label: string, onClick: () => void) => {
     const button = document.createElement("button");
-    Object.assign(button, { type: "button", className: "icon-btn small", title: label, onclick: onClick });
+    Object.assign(button, { type: "button", className: "icon-btn small", onclick: onClick });
+    button.dataset.tip = label;
     button.setAttribute("aria-label", label);
     button.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
     return button;

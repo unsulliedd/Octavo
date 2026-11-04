@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { useTip } from "../useKeys";
 import { FORMAT_GROUPS, type BarAction, type FormatAction, type FormatState } from "./formatInfo";
+import { described } from "../tooltip";
 
 const INFO = new Map(FORMAT_GROUPS.flat().map((b) => [b.action, b]));
 const INLINE: BarAction[] = ["bold", "italic", "strike", "code", "link"];
@@ -44,17 +45,17 @@ export function LinkField({ initial, onDone, onClose }: { initial: string; onDon
 export function LinkChip({ href, onEdit, onOpen, onRemove }: { href: string; onEdit: () => void; onOpen: () => void; onRemove: () => void }) {
   const edit = useTip()("Edit the address", "link");
   return (
-    <span className="link-chip" title={href}>
-      <button className="link-address" onClick={onEdit} title={edit}>
+    <span className="link-chip" data-tip={href}>
+      <button className="link-address" onClick={onEdit} {...described(edit)}>
         {href}
       </button>
-      <button className="icon-btn small" aria-label={edit} title={edit} onClick={onEdit}>
+      <button className="icon-btn small" aria-label={edit} data-tip={edit} onClick={onEdit}>
         <Icon name="pencil" size="inline" />
       </button>
-      <button className="icon-btn small" aria-label="Open the link" title="Open the link" onClick={onOpen}>
+      <button className="icon-btn small" aria-label="Open the link" data-tip="Open the link" onClick={onOpen}>
         <Icon name="openLink" size="inline" />
       </button>
-      <button className="icon-btn small danger" aria-label="Remove the link" title="Remove the link" onClick={onRemove}>
+      <button className="icon-btn small danger" aria-label="Remove the link" data-tip="Remove the link" onClick={onRemove}>
         <Icon name="close" size="inline" />
       </button>
     </span>
@@ -80,7 +81,7 @@ export function FloatingBar({ state, onAction, onLink }: { state: FormatState; o
       key={action}
       className="icon-btn"
       aria-label={tip(action)}
-      title={tip(action)}
+      data-tip={tip(action)}
       aria-pressed={state.active.includes(action)}
       disabled={state.disabled.includes(action)}
       onClick={() => (action === "link" ? onLink() : onAction(action))}
@@ -104,7 +105,7 @@ export function FloatingBar({ state, onAction, onLink }: { state: FormatState; o
                 key={action}
                 role="menuitemcheckbox"
                 aria-checked={state.active.includes(action)}
-                title={tip(action)}
+                {...described(tip(action))}
                 onClick={() => {
                   setMenu(false);
                   onAction(action);
@@ -119,7 +120,7 @@ export function FloatingBar({ state, onAction, onLink }: { state: FormatState; o
               <button
                 key={action}
                 role="menuitem"
-                title={tip(action)}
+                {...described(tip(action))}
                 disabled={state.disabled.includes(action)}
                 onClick={() => {
                   setMenu(false);

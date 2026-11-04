@@ -88,8 +88,8 @@ export function LargeViewer({ content, onClose, onOpenLink, onResizeTable }: Pro
         }}
       >
         <header className="large-head">
-          <strong title={content.title}>{content.title}</strong>
-          <button ref={closeButton} className="icon-btn" aria-label="Close (Escape)" title="Close (Escape)" onClick={onClose}>
+          <strong data-tip={content.title}>{content.title}</strong>
+          <button ref={closeButton} className="icon-btn" aria-label="Close (Escape)" data-tip="Close (Escape)" onClick={onClose}>
             <Icon name="close" />
           </button>
         </header>

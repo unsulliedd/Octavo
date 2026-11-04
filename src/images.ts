@@ -22,7 +22,8 @@ export function replaceWithPlaceholder(img: HTMLImageElement) {
   box.className = "img-missing";
   box.setAttribute("role", "img");
   box.setAttribute("aria-label", `${label}: ${detail}`);
-  box.title = src;
+  box.dataset.tip = src;
+  box.setAttribute("aria-description", src);
   const strong = img.ownerDocument.createElement("strong");
   strong.textContent = label;
   const small = img.ownerDocument.createElement("span");
