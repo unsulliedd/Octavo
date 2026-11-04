@@ -17,6 +17,8 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Selected rows look the same everywhere: the highlighted Ctrl+P result, the current language in the code-language list and pressed formatting buttons use the soft primary color, like the outline, the Files tree and Settings
 - Scrollbars are a thin thumb with no track that widens under the pointer, in both themes, in every part of the window that scrolls
 - The outline's dashes beside the text are a shade darker, so they are easier to see in both themes
+- Buttons share a few set heights and the same corners, and text fields look alike everywhere: the find bar, Ctrl+P, the link, image and math fields, properties, the code-language search and the shortcut recorder have a border that is easy to see and the same border when they have the focus
+- Moving through the app with the keyboard shows one focus ring everywhere, now also on menu items and the highlighted language in the code-language list; a mouse click shows none
 
 ### Fixed
 - Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue

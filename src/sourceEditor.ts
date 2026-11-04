@@ -44,11 +44,15 @@ const theme = EditorView.theme({
   // Find matches look as they do in the reading view's find bar.
   ".cm-searchMatch": { backgroundColor: "var(--find-match)" },
   ".cm-searchMatch-selected": { backgroundColor: "var(--find-current)" },
-  ".cm-panels": { backgroundColor: "var(--chrome)", color: "var(--ink)", fontFamily: "var(--ui)", fontSize: "13px" },
+  ".cm-panels": { backgroundColor: "var(--chrome)", color: "var(--ink)", fontFamily: "var(--ui)", fontSize: "var(--text-md)" },
   ".cm-panels-top": { borderBottom: "1px solid var(--line)" },
-  ".cm-textfield, .cm-button": { border: "1px solid var(--line)", borderRadius: "5px", backgroundColor: "var(--doc)", backgroundImage: "none", color: "var(--ink)", font: "inherit" },
-  ".cm-textfield:focus": { outline: "none", borderColor: "var(--control)" },
-  ".cm-search label": { fontSize: "12.5px", color: "var(--muted)" },
+  // The search field and buttons match the app's own fields and text buttons.
+  ".cm-textfield, .cm-button": { height: "var(--height-md)", boxSizing: "border-box", padding: "0 8px", borderRadius: "var(--radius-md)", backgroundColor: "var(--doc)", backgroundImage: "none", color: "var(--ink)", font: "inherit", verticalAlign: "middle" },
+  ".cm-textfield": { border: "1px solid var(--line-strong)" },
+  ".cm-button": { border: "1px solid var(--line)", padding: "0 10px", cursor: "pointer" },
+  ".cm-button:hover": { backgroundColor: "var(--chrome-2)" },
+  ".cm-textfield:focus": { outline: "none", borderColor: "var(--control)", boxShadow: "0 0 0 1px var(--control)" },
+  ".cm-search label": { fontSize: "var(--text-md)", color: "var(--muted)" },
   ".cm-panel button[name=close]": { color: "var(--muted)" },
 });
 
