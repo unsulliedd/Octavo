@@ -19,7 +19,8 @@ test("a failing image is replaced by its placeholder, with the document's source
   expect(root.querySelector("img")).toBeNull();
   expect(box.getAttribute("role")).toBe("img");
   expect(box.getAttribute("aria-label")).toBe("Image not found: Diagram · img.png");
-  expect(box.title).toBe("../img.png");
+  expect(box.dataset.tip).toBe("../img.png");
+  expect(box.getAttribute("aria-description")).toBe("../img.png");
   expect(box.textContent).toBe("Image not foundDiagram · img.png");
   expect(root.querySelector("p")!.textContent).toBe("before Image not foundDiagram · img.png after");
   stop();

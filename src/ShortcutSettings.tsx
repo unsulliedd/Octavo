@@ -67,7 +67,7 @@ export function ShortcutSettings({ bindings, onChange }: Props) {
                   <button
                     className="icon-btn"
                     aria-label={`Reset to ${defaults}`}
-                    title={`Reset to ${defaults}`}
+                    data-tip={`Reset to ${defaults}`}
                     hidden={!bindings[id]}
                     onClick={() => onChange(setKeys(bindings, id, defaultKeys(id)))}
                   >

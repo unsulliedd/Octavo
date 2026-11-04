@@ -47,7 +47,7 @@ export function TableBar({ table, box, side, onAction }: Props) {
                 key={b.action}
                 className={b.action === "deleteTable" ? "icon-btn danger" : "icon-btn"}
                 aria-label={b.label}
-                title={b.label}
+                data-tip={b.label}
                 aria-pressed={ALIGN[b.action] ? table.align === ALIGN[b.action] : undefined}
                 disabled={!canRun(b.action, table)}
                 onClick={() => onAction(b.action)}

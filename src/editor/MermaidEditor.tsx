@@ -108,7 +108,7 @@ export function MermaidEditor({ value, dark, onDone, onCancel, onCode }: Props) 
                 <p className="mermaid-error">{preview.error}</p>
               )}
             </div>
-            <label className="mermaid-zoom" title="Ctrl+wheel over the preview zooms too; double-click it to fit">
+            <label className="mermaid-zoom" data-tip="Ctrl+wheel over the preview zooms too; double-click it to fit">
               <span>Zoom</span>
               <input
                 type="range"

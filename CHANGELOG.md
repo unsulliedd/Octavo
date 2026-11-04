@@ -21,6 +21,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Moving through the app with the keyboard shows one focus ring everywhere, now also on menu items and the highlighted language in the code-language list; a mouse click shows none
 - Documents have their own icon: the page with its folded corner in the primary color, lifted on the dark theme, in the Files tab, tabs, Home, Ctrl+P and the list of open tabs, which now shows it too. A document that is not found keeps its icon gray
 - Icons have one size for each use: buttons and the document and folder icons of rows are 16 px, icons beside text and the arrows of lists 14 px, and the icons of Home's rows 18 px
+- Checkboxes in Settings, the reading settings and task lists are drawn in the app's colors instead of the system's gray box, in both themes; ticked boxes use the primary color. Task boxes in the reading view show at full strength
+- Tooltips are the app's own, in its colors, with the keys of a shortcut set apart. They show after a short hover or when the keyboard reaches a control, stay inside the window and close with Escape. Paths in the Files tab, tabs, Home and Ctrl+P still show in full
+- Ctrl+P dims the window behind it, like Settings and the large view, which now share one shade
 
 ### Fixed
 - Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue

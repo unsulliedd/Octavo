@@ -74,7 +74,7 @@ test("the dashes are hidden from screen readers and one labelled button stands f
 
 test("there is a dash per heading, the current one marked, each with its heading as a tooltip", async () => {
   await show();
-  expect(rows().map((r) => [r.title, r.querySelector<HTMLElement>(".dash")!.style.width, r.querySelector<HTMLElement>(".dash")!.dataset.active])).toEqual([
+  expect(rows().map((r) => [r.dataset.tip, r.querySelector<HTMLElement>(".dash")!.style.width, r.querySelector<HTMLElement>(".dash")!.dataset.active])).toEqual([
     ["Guide", "13px", "true"],
     ["Setup", "10px", undefined],
   ]);

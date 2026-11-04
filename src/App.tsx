@@ -75,6 +75,7 @@ import {
   toStored,
   type Tabs,
 } from "./tabs";
+import { described } from "./tooltip";
 
 const MD = /\.(md|markdown)$/i;
 
@@ -1321,7 +1322,7 @@ export default function App() {
       <button
         className="save-state"
         data-state={saveState.state}
-        title={saveState.state !== "error" ? tip("Save now", "save") : saveState.refused ? saveState.message : `${saveState.message} Click to try again.`}
+        {...described(saveState.state !== "error" ? tip("Save now", "save") : saveState.refused ? saveState.message : `${saveState.message} Click to try again.`)}
         onClick={() => void saveDoc(path!)}
       >
         {SAVE_LABELS[saveState.state]}
@@ -1412,7 +1413,7 @@ export default function App() {
                   <div
                     key={t.id}
                     className="tab"
-                    title={tabPath}
+                    data-tip={tabPath}
                     data-tab-id={t.id}
                     data-dragging={draggedTab === t.id || undefined}
                     data-menu={tabMenu?.id === t.id || undefined}
@@ -1427,8 +1428,8 @@ export default function App() {
                     onPointerDown={(e) => e.button === 0 && !(e.target as HTMLElement).closest(".icon-btn") && startTabDrag(e, t.id)}
                     onAuxClick={(e) => e.button === 1 && closeTabById(t.id)}
                   >
-                    <button className="tab-open" onClick={() => changeTabs((s) => activate(s, t.id))}>
-                      {unsavedAt(tabPath) ? <span className="unsaved-dot" title="Unsaved changes" /> : <Icon name="markdown" size="row" />}
+                    <button className="tab-open" aria-description={tabPath} onClick={() => changeTabs((s) => activate(s, t.id))}>
+                      {unsavedAt(tabPath) ? <span className="unsaved-dot" role="img" aria-label="Unsaved changes" data-tip="Unsaved changes" /> : <Icon name="markdown" size="row" />}
                       <span>{basename(tabPath)}</span>
                     </button>
                     <button className="icon-btn small" aria-label={tip(`Close ${basename(tabPath)}`, "closeTab")} onClick={() => closeTabById(t.id)}>
@@ -1448,7 +1449,7 @@ export default function App() {
                 aria-label="All open documents"
                 aria-haspopup="menu"
                 aria-expanded={!!tabList}
-                title="All open documents"
+                data-tip="All open documents"
                 onClick={(e) => {
                   const box = e.currentTarget.getBoundingClientRect();
                   setTabList((l) => (l ? undefined : { x: box.right - 250, y: box.bottom + 4 }));
@@ -1472,24 +1473,24 @@ export default function App() {
             <button
               aria-pressed={editing}
               disabled={!!path && !!editBlocked[path]}
-              title={path && editBlocked[path] ? editBlocked[path] : "Edit the document"}
+              {...described(path && editBlocked[path] ? editBlocked[path] : "Edit the document")}
               onClick={() => void setMode("edit")}
             >
               <Icon name="pencil" size="inline" />
               Edit
             </button>
-            <button aria-pressed={source} title={tip("Source: the document's Markdown", "source")} onClick={() => void setMode("source")}>
+            <button aria-pressed={source} {...described(tip("Source: the document's Markdown", "source"))} onClick={() => void setMode("source")}>
               <Icon name="code" size="inline" />
               Source
             </button>
-            <button aria-pressed={!editing && !source} title={tip("Preview: the reading view of your edits", "preview")} onClick={() => void setMode("preview")}>
+            <button aria-pressed={!editing && !source} {...described(tip("Preview: the reading view of your edits", "preview"))} onClick={() => void setMode("preview")}>
               <Icon name="preview" size="inline" />
               Preview
             </button>
           </div>
         )}
         {tab && inSession && (
-          <button className="done-btn" title={tip("Done: save and stop editing", "toggleEdit")} onClick={() => void toggleEdit()}>
+          <button className="done-btn" {...described(tip("Done: save and stop editing", "toggleEdit"))} onClick={() => void toggleEdit()}>
             <Icon name="check" size="inline" />
             Done
           </button>
@@ -1498,7 +1499,7 @@ export default function App() {
           <button
             className="edit-btn"
             disabled={!doc}
-            title={tip(path && editBlocked[path] ? "Edit the Markdown source" : "Edit", "toggleEdit")}
+            {...described(tip(path && editBlocked[path] ? "Edit the Markdown source" : "Edit", "toggleEdit"))}
             onClick={() => void toggleEdit()}
           >
             <Icon name="pencil" size="inline" />
@@ -1566,10 +1567,10 @@ export default function App() {
                     <button className="text-btn primary" onClick={() => openCompare(path)}>
                       Compare
                     </button>
-                    <button className="text-btn" title="Drop your unsaved edits and show the file as it is on disk" onClick={() => reloadFromDisk(path)}>
+                    <button className="text-btn" {...described("Drop your unsaved edits and show the file as it is on disk")} onClick={() => reloadFromDisk(path)}>
                       Reload from disk
                     </button>
-                    <button className="text-btn" title="Write your edits over the file on disk" onClick={() => keepMine(path)}>
+                    <button className="text-btn" {...described("Write your edits over the file on disk")} onClick={() => keepMine(path)}>
                       Keep my version
                     </button>
                   </span>
@@ -1579,7 +1580,7 @@ export default function App() {
               )}
               {doc && path && (
                 <div className="doc-column">
-                  <div className="breadcrumb" title={doc.path}>
+                  <div className="breadcrumb" data-tip={doc.path}>
                     {folderTrail(doc.path)} › {basename(doc.path)}
                   </div>
                   {source && (

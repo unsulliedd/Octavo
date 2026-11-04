@@ -577,7 +577,7 @@ test("an edit the editor can't write back as the same Markdown is refused: nothi
   await until(() => saveStateButton()?.dataset.state === "error", "the refusal");
   expect(attempts).toEqual([]);
   expect(disk.get(FILE)).toBe(ORIGINAL);
-  expect(saveStateButton()?.title).toContain("Nothing was written");
+  expect(saveStateButton()?.dataset.tip).toContain("Nothing was written");
   // The edits are kept as a draft, so the tab still counts as unsaved.
   expect(host.querySelector(".unsaved-dot")).not.toBeNull();
 });
@@ -599,8 +599,8 @@ test("a refused edit offers no retry while editing", async () => {
   inexact.on = true;
   await type("Changed text.");
   await until(() => saveStateButton()?.dataset.state === "error", "the refusal");
-  expect(saveStateButton()?.title).toContain("undo or change the last edit");
-  expect(saveStateButton()?.title).not.toContain("try again");
+  expect(saveStateButton()?.dataset.tip).toContain("undo or change the last edit");
+  expect(saveStateButton()?.dataset.tip).not.toContain("try again");
 });
 
 test("after Done a refused edit points to Edit, and changing the edit there saves it", async () => {
@@ -610,8 +610,8 @@ test("after Done a refused edit points to Edit, and changing the edit there save
   inexact.on = true;
   await click(host.querySelector(".done-btn"));
   await until(() => saveStateButton()?.dataset.state === "error", "the refusal");
-  expect(saveStateButton()?.title).toContain("press Edit");
-  expect(saveStateButton()?.title).not.toContain("try again");
+  expect(saveStateButton()?.dataset.tip).toContain("press Edit");
+  expect(saveStateButton()?.dataset.tip).not.toContain("try again");
   expect(errorBanner()).toContain("press Edit");
   // Saving again without changing anything is still refused.
   await click(saveStateButton());
@@ -630,8 +630,8 @@ test("after Done a refused edit points to Edit, and changing the edit there save
 const OTHER = "C:\\docs\\other.md";
 const THIRD = "C:\\docs\\third.md";
 const EDITED_OTHER = "# Other\n\nChanged text.\n";
-const openTabs = () => [...host.querySelectorAll<HTMLElement>("[data-tab-id]")].map((t) => t.title);
-const tabOf = (file: string) => [...host.querySelectorAll<HTMLElement>("[data-tab-id]")].find((t) => t.title === file)!;
+const openTabs = () => [...host.querySelectorAll<HTMLElement>("[data-tab-id]")].map((t) => t.dataset.tip);
+const tabOf = (file: string) => [...host.querySelectorAll<HTMLElement>("[data-tab-id]")].find((t) => t.dataset.tip === file)!;
 const showTab = (file: string) => click(tabOf(file).querySelector("button"));
 /** Opens `file` in its own tab and shows it. */
 async function openFile(file: string, text = "# Other\n\nOriginal text.\n") {

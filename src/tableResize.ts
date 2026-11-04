@@ -40,7 +40,7 @@ export function addResizeHandles(root: HTMLElement, onResize: (table: HTMLTableE
       const handle = document.createElement("span");
       handle.className = "col-resize";
       handle.setAttribute("aria-hidden", "true");
-      handle.title = "Drag to resize the column, double-click for the table's automatic layout";
+      handle.dataset.tip = "Drag to resize the column, double-click for the table's automatic layout";
       cell.append(handle);
     }
   }

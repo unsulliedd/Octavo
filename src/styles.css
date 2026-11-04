@@ -40,6 +40,9 @@
   --focus: var(--link); /* the keyboard focus ring */
   --file-markdown: var(--control); /* the folded corner of a Markdown document's icon; every document type adds its own --file-<type> */
   --mark-page-2: color-mix(in srgb, var(--brand-secondary) 22%, var(--control-ink)); /* the right page of the Octavo mark */
+  --tip: var(--ink); /* tooltips: the text color as their background */
+  --tip-ink: var(--chrome);
+  --backdrop: rgb(10 12 16 / 0.38); /* dims the window behind dialogs, Ctrl+P and the large view */
   /* The app's scales. The document's own type follows the reading settings instead. */
   --text-xs: 11px; /* section labels, keys */
   --text-sm: 12px; /* hints, meta, the status bar */
@@ -227,6 +230,75 @@ body > .mermaidTooltip {
 }
 :where(.tabs button, .seg button, .mode-switch button, .menu-item, .floating-menu button, .code-lang-list button, .tree-row, .file-open, .settings-nav button, .outline a):focus-visible {
   outline-offset: -2px;
+}
+/* Checkboxes are drawn from the tokens; each stays a real checkbox for the keyboard, its label and screen readers. */
+input[type="checkbox"] {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  display: inline-grid;
+  place-content: center;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--doc);
+  cursor: pointer;
+}
+input[type="checkbox"]::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--doc);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  visibility: hidden;
+}
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+input[type="checkbox"]:checked {
+  border-color: var(--control);
+  background: var(--control);
+}
+input[type="checkbox"]:checked:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--control) 82%, var(--ink));
+  background: color-mix(in srgb, var(--control) 82%, var(--ink));
+}
+input[type="checkbox"]:checked::before {
+  visibility: visible;
+}
+input[type="checkbox"]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* The tooltip of every element with data-tip (tooltip.ts) */
+.app-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(360px, calc(100vw - 16px));
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  background: var(--tip);
+  color: var(--tip-ink);
+  box-shadow: var(--shadow-md);
+  font: var(--text-sm) / 1.35 var(--ui);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.app-tip[hidden] {
+  display: none;
+}
+.app-tip kbd {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  white-space: nowrap;
+  opacity: 0.7;
 }
 /* The code-language list keeps the focus in its search field; the option Enter picks shows the ring. */
 .app .code-lang-list button[data-active] {
@@ -941,8 +1013,6 @@ button.save-state {
 .doc.editor li[data-item-type="task"] > input {
   flex: none;
   margin: 0.4em 0 0;
-  accent-color: var(--control);
-  cursor: pointer;
 }
 .doc.editor .task-content {
   flex: 1;
@@ -1693,7 +1763,7 @@ button.save-state {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgb(10 12 16 / 0.38);
+  background: var(--backdrop);
 }
 /* Sized from the window, so it fits an HD screen and still fills a larger one. */
 .settings {
@@ -1780,12 +1850,6 @@ button.save-state {
   justify-content: space-between;
   gap: 16px;
   font-size: var(--text-md);
-}
-.setting-row input[type="checkbox"] {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  accent-color: var(--control);
 }
 /* About: the mark and version, links, then the updates below a line */
 .about-head {
@@ -1913,11 +1977,6 @@ button.save-state {
   .settings-nav {
     display: none;
   }
-}
-.setting-toggle input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--control);
 }
 /* Segmented control: the same shape as the edit mode switch */
 .seg {
@@ -2158,7 +2217,13 @@ kbd {
   list-style: none;
 }
 .doc input[type="checkbox"] {
-  accent-color: var(--control);
+  margin-right: 0.5em;
+  vertical-align: 1px;
+}
+/* The reading view's task boxes show the document; they read at full strength although they can't be ticked. */
+.doc input[type="checkbox"]:disabled {
+  opacity: 1;
+  cursor: default;
 }
 /* A table scrolls sideways in its box when it's wider than the column. */
 .doc .table-scroll {
@@ -2588,7 +2653,7 @@ kbd {
   z-index: 50;
   display: flex;
   padding: 24px;
-  background: rgb(10 12 16 / 0.62);
+  background: var(--backdrop);
 }
 .large-panel {
   flex: 1;
@@ -2981,6 +3046,7 @@ kbd {
   justify-content: center;
   align-items: flex-start;
   padding: 56px 16px 0;
+  background: var(--backdrop);
 }
 .quick {
   width: 560px;

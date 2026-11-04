@@ -129,7 +129,7 @@ test("table buttons are labelled, added once and removed again", () => {
   const button = root.querySelector<HTMLButtonElement>(".large-open")!;
   expect(root.querySelectorAll(".large-open")).toHaveLength(1);
   expect(button.getAttribute("aria-label")).toBe("Open the table large");
-  expect(button.title).toBe("Open large");
+  expect(button.dataset.tip).toBe("Open large");
   expect(button.querySelector("path")!.getAttribute("d")).toBe("M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7");
   remove();
   expect(root.querySelector(".large-open")).toBeNull();

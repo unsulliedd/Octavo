@@ -7,6 +7,7 @@ import { pathItems, TabMenu, type TabMenuItem } from "./TabMenu";
 import { useKeys } from "./useKeys";
 import type { RecentFile } from "./storage";
 import { PINNED, workspacePlace, type Workspace } from "./workspaces";
+import { described } from "./tooltip";
 
 export const basename = (path: string) => path.split(/[\\/]/).pop() ?? path;
 
@@ -88,7 +89,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
   const openKeys = keyLabel(useKeys(), "open");
   const row = (path: string, isPinned: boolean) => (
     <li key={path} className="file-row" {...menuProps({ doc: path })}>
-      <button className="file-open" onClick={() => onOpen(path)} title={path}>
+      <button className="file-open" onClick={() => onOpen(path)} {...described(path)}>
         <Icon name="markdown" size="home" />
         <span className="file-text">
           <span className="file-name">{basename(path)}</span>
@@ -150,7 +151,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
             <ul className="file-list">
               {saved.map((w) => (
                 <li key={w.id} className="file-row" {...menuProps({ workspace: w.id })}>
-                  <button className="file-open" onClick={() => onOpenWorkspace(w.id)} title={workspacePlace(w)}>
+                  <button className="file-open" onClick={() => onOpenWorkspace(w.id)} {...described(workspacePlace(w))}>
                     <Icon name="folder" size="home" />
                     <span className="file-text">
                       <span className="file-name">{w.name}</span>
@@ -158,7 +159,7 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
                     </span>
                     {w === openWorkspace && <span className="file-when">Open</span>}
                   </button>
-                  <button className="icon-btn pin" aria-label={`Remove workspace ${w.name}`} title="Remove workspace" onClick={() => onRemoveWorkspace(w.id)}>
+                  <button className="icon-btn pin" aria-label={`Remove workspace ${w.name}`} data-tip="Remove workspace" onClick={() => onRemoveWorkspace(w.id)}>
                     <Icon name="close" />
                   </button>
                 </li>

@@ -133,7 +133,7 @@ export function EdgeRail({ side, label, panelLabel, dashes, width, onJump, child
       <div className="edge-place" data-side={side} data-margin={place.margin || undefined} style={{ left: place.x }}>
         <div className="edge-rail" aria-hidden="true">
           {dashes.map((d) => (
-            <span key={d.index} className="dash-row" title={d.text} onClick={() => onJump(d.index)}>
+            <span key={d.index} className="dash-row" data-tip={d.text} onClick={() => onJump(d.index)}>
               <span className="dash" data-active={d.active || undefined} style={{ width: d.w }} />
             </span>
           ))}

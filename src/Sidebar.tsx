@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { DEFAULT_SIDEBAR, MIN_SIDEBAR, SIDEBAR_KEY_STEP, sidebarWidth } from "./sidebarWidth";
+import { described } from "./tooltip";
 
 /** The window's inner width, kept up to date. */
 export function useWindowWidth() {
@@ -80,7 +81,7 @@ export function Sidebar({ width, onWidth, floating, children }: Props) {
         aria-valuemin={MIN_SIDEBAR}
         aria-valuemax={sidebarWidth(Infinity, windowWidth)}
         tabIndex={0}
-        title="Drag to resize the sidebar, double-click for its usual width"
+        {...described("Drag to resize the sidebar, double-click for its usual width")}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
