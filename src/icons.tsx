@@ -1,7 +1,32 @@
+import type { ReactNode } from "react";
+
 // Lucide icon paths (ISC license), inlined so the app needs no icon package.
 
 /** The "expand" icon's path, also drawn by the buttons added to tables in the reading view. */
 export const EXPAND_PATH = "M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7";
+
+/** One size, in px, for each use of an icon. */
+export const ICON_SIZE = {
+  /** Alone in a button, or in front of a field. */
+  button: 16,
+  /** Beside text in a button, menu, link or the status bar; a chevron; alone in a 24 px button. */
+  inline: 14,
+  /** The file or folder at the start of a row in the tree, a tab, a menu or Ctrl+P. */
+  row: 16,
+  /** The file or folder at the start of a row on Home, and Home's drop target. */
+  home: 18,
+} as const;
+
+export type IconSize = keyof typeof ICON_SIZE;
+
+/** A document: the page, with its folded corner filled in the colour of its type (`--file-<type>` in styles.css). */
+const page = (type: string, marks: ReactNode) => (
+  <>
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4" style={{ fill: `var(--file-${type})`, stroke: `var(--file-${type})` }} />
+    {marks}
+  </>
+);
 
 const paths = {
   sidebar: (
@@ -159,12 +184,8 @@ const paths = {
       <line x1="12" x2="12" y1="4" y2="20" />
     </>
   ),
-  file: (
-    <>
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-    </>
-  ),
+  // Another document type is one more line like this and one `--file-<type>` color.
+  markdown: page("markdown", <path d="M8 13h8M8 17h5" />),
   pin: (
     <>
       <path d="M12 17v5" />
@@ -219,9 +240,9 @@ const paths = {
 
 export type IconName = keyof typeof paths;
 
-export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
+export function Icon({ name, size = "button" }: { name: IconName; size?: IconSize }) {
   return (
-    <svg className="icon" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+    <svg className="icon" viewBox="0 0 24 24" width={ICON_SIZE[size]} height={ICON_SIZE[size]} aria-hidden="true">
       {paths[name]}
     </svg>
   );
@@ -231,10 +252,10 @@ export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
 export function Logo({ size = 44 }: { size?: number }) {
   return (
     <svg className="logo" viewBox="0 0 48 48" width={size} height={size} role="img" aria-label="Octavo">
-      <rect width="48" height="48" rx="11" fill="#5A0E27" />
-      <path d="M7 13c5.5-2.2 11.5-2 16 1.2V38c-4.5-3-10.5-3.3-16-1.2z" fill="#FFFFFF" />
-      <path d="M41 13c-5.5-2.2-11.5-2-16 1.2V38c4.5-3 10.5-3.3 16-1.2z" fill="#DCEEFA" />
-      <path d="M30 11.6h5.5V26l-2.75-2.3L30 26z" fill="#D39D3F" />
+      <rect width="48" height="48" rx="11" fill="var(--brand-primary)" />
+      <path d="M7 13c5.5-2.2 11.5-2 16 1.2V38c-4.5-3-10.5-3.3-16-1.2z" fill="var(--control-ink)" />
+      <path d="M41 13c-5.5-2.2-11.5-2-16 1.2V38c4.5-3 10.5-3.3 16-1.2z" fill="var(--mark-page-2)" />
+      <path d="M30 11.6h5.5V26l-2.75-2.3L30 26z" fill="var(--brand-accent)" />
     </svg>
   );
 }

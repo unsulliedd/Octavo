@@ -184,7 +184,7 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                     className="text-btn with-icon"
                     onClick={() => invoke("open_backups").catch((e) => message(String(e), { kind: "error" }))}
                   >
-                    <Icon name="folder" size={14} />
+                    <Icon name="folder" size="inline" />
                     Open folder
                   </button>
                 </div>
@@ -210,7 +210,7 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                   {ABOUT_LINKS.map(([label, url]) => (
                     <button key={label} className="text-btn with-icon" onClick={() => void openUrl(url)}>
                       {label}
-                      <Icon name="external" size={12} />
+                      <Icon name="external" size="inline" />
                     </button>
                   ))}
                 </div>

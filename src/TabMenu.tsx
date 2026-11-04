@@ -83,7 +83,7 @@ export function TabMenu({ name, x, y, above, items, onClose }: Props) {
           >
             {item.label}
             {item.keys && <span className="menu-keys">{item.keys}</span>}
-            {item.checked && <Icon name="check" size={14} />}
+            {item.checked && <Icon name="check" size="inline" />}
           </button>
         ),
       )}
