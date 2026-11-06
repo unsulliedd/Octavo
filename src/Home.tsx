@@ -6,7 +6,7 @@ import { keyLabel } from "./shortcuts";
 import { pathItems, TabMenu, type TabMenuItem } from "./TabMenu";
 import { useKeys } from "./useKeys";
 import type { RecentFile } from "./storage";
-import { PINNED, workspacePlace, type Workspace } from "./workspaces";
+import { PINNED, workspaceKind, workspacePlace, type Item, type Workspace } from "./workspaces";
 import { described } from "./tooltip";
 
 export const basename = (path: string) => path.split(/[\\/]/).pop() ?? path;
@@ -36,6 +36,9 @@ type Props = {
   onOpen: (path: string) => void;
   onOpenWorkspace: (id: string) => void;
   onRemoveWorkspace: (id: string) => void;
+  onRenameWorkspace: (id: string) => void;
+  /** The Add to item for a document's menu. */
+  addTo: (item: Item) => TabMenuItem;
   onTogglePin: (path: string) => void;
   onError: (message: string) => void;
 };
@@ -43,7 +46,7 @@ type Props = {
 /** The row a menu is open for: a document by its path or a workspace by its id, and where the menu opens. */
 type RowMenu = { doc?: string; workspace?: string; x: number; y: number };
 
-export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onRemoveWorkspace, onTogglePin, onError }: Props) {
+export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onRemoveWorkspace, onRenameWorkspace, addTo, onTogglePin, onError }: Props) {
   const [menu, setMenu] = useState<RowMenu>();
   const opener = useRef<HTMLElement | null>(null);
   const closeMenu = useCallback(() => {
@@ -73,15 +76,17 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
         { label: "Open", run: () => onOpen(path) },
         ...pathItems(path, (e) => onError(String(e))),
         "separator",
+        addTo({ kind: "document", path }),
         { label: pinned.includes(path) ? "Unpin" : "Pin", run: () => onTogglePin(path) },
       ];
     }
     const w = workspaces.find((x) => x.id === m.workspace);
     if (!w) return [];
-    const folder = w.items[0]?.kind === "folder" ? w.items[0].path : undefined;
+    const folder = workspaceKind(w) === "folder" && w.items[0]?.kind === "folder" ? w.items[0].path : undefined;
     return [
       { label: "Open", run: () => onOpenWorkspace(w.id) },
       ...(folder ? [{ label: "Open folder in Explorer", run: () => void revealItemInDir(folder).catch((e) => onError(String(e))) }] : []),
+      ...(w.id === PINNED.id ? [] : [{ label: "Rename…", run: () => onRenameWorkspace(w.id) }]),
       ...(w.id === PINNED.id ? [] : (["separator", { label: "Remove workspace", run: () => onRemoveWorkspace(w.id) }] as TabMenuItem[])),
     ];
   };

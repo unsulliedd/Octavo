@@ -23,6 +23,11 @@ import {
   withPinned,
   workspaceForFolder,
   workspacePlace,
+  addTargets,
+  holds,
+  newWorkspace,
+  renameWorkspace,
+  workspaceKind,
 } from "./workspaces";
 
 const workspace = (items: Workspace["items"], removed: string[] = []): Workspace => ({ id: "w", name: "w", items, removed });
@@ -262,7 +267,7 @@ test("a workspace's place is its folder's last names, or how many items it holds
   expect(workspacePlace(workspace([folder("C:\\Users\\me\\Documents\\Github\\Handbook\\")]))).toBe("me › Documents › Github › Handbook");
   expect(workspacePlace(workspace([document("C:\\a.md")]))).toBe("1 document");
   expect(workspacePlace(workspace([folder("C:\\a"), folder("C:\\b"), document("C:\\c.md")]))).toBe("2 folders, 1 document");
-  expect(workspacePlace(workspace([]))).toBe("");
+  expect(workspacePlace(workspace([]))).toBe("Empty");
 });
 
 test("the problem text names the copy and the reason", () => {
@@ -372,4 +377,107 @@ test("the pin button adds a document and really removes it", () => {
 test("two spellings of a path are the same one", () => {
   expect(same("C:\\A\\a.md", "c:/a/A.MD")).toBe(true);
   expect(same("C:\\A\\a.md", "C:\\A\\b.md")).toBe(false);
+});
+
+test("a workspace's kind: Pinned, one made with New workspace, or a folder's", () => {
+  expect(workspaceKind(PINNED)).toBe("pinned");
+  expect(workspaceKind(workspaceForFolder([], "C:\\Notes").workspace)).toBe("folder");
+  const own = newWorkspace([], "Reading list").workspace;
+  expect(workspaceKind(own)).toBe("own");
+  // Holding one folder, as a folder's workspace does, doesn't make it one.
+  expect(workspaceKind(addItem(own, folder("C:\\Notes")))).toBe("own");
+  // Without the mark, a saved workspace is a folder's, whatever it holds.
+  expect(workspaceKind(workspace([]))).toBe("folder");
+});
+
+test("Open folder… never finds an own workspace or Pinned that starts with that folder", () => {
+  const own = addItem(newWorkspace([], "Mine").workspace, folder("C:\\Notes"));
+  const pins = pinned([folder("C:\\Notes")]);
+  const { workspaces, workspace: found } = workspaceForFolder([own, pins], "C:\\Notes");
+  expect([own.id, PINNED.id]).not.toContain(found.id);
+  expect(workspaceKind(found)).toBe("folder");
+  expect(workspaces).toHaveLength(3);
+});
+
+test("a new workspace is empty, trimmed, marked as the user's own and put first", () => {
+  const list = [workspace([]), PINNED];
+  const { workspaces, workspace: made } = newWorkspace(list, "  Travel ");
+  expect(made).toEqual({ id: made.id, name: "Travel", items: [], removed: [], own: true });
+  expect(workspaces).toEqual([made, ...list]);
+  expect(newWorkspace(list, "Travel").workspace.id).not.toBe(made.id);
+  expect(newWorkspace(list, "With one", [document("C:\\a.md")]).workspace.items).toEqual([document("C:\\a.md")]);
+});
+
+test("renaming trims the name, allows duplicates and leaves Pinned and empty names alone", () => {
+  const a = { ...workspace([folder("C:\\A")]), id: "a" };
+  const b = { ...workspace([]), id: "b", own: true as const };
+  const list = [a, b, PINNED];
+  expect(renameWorkspace(list, "a", "  Handbook  ")).toEqual([{ ...a, name: "Handbook" }, b, PINNED]);
+  expect(renameWorkspace(list, "b", " w ")).toBe(list);
+  expect(renameWorkspace(list, "missing", "x")).toBe(list);
+  expect(renameWorkspace(renameWorkspace(list, "a", "Same"), "b", "Same").map((w) => w.name)).toEqual(["Same", "Same", "Pinned"]);
+  expect(renameWorkspace(list, "a", "   ")).toBe(list);
+  expect(renameWorkspace(list, PINNED.id, "Favourites")).toBe(list);
+  // Only the name changes: a folder workspace keeps its items.
+  expect(renameWorkspace(list, "a", "New")[0].items).toBe(a.items);
+});
+
+test("a workspace holds a path itself or through a folder, unless it was removed", () => {
+  const w = workspace([folder("C:\\Docs"), document("D:\\b.md")], ["C:\\Docs\\old"]);
+  expect(holds(w, "C:\\Docs\\a.md")).toBe(true);
+  expect(holds(w, "c:/docs/")).toBe(true);
+  expect(holds(w, "C:\\Docs\\sub")).toBe(true);
+  expect(holds(w, "d:/B.md")).toBe(true);
+  expect(holds(w, "C:\\Docs\\old\\c.md")).toBe(false);
+  expect(holds(w, "C:\\Docs\\old")).toBe(false);
+  expect(holds(w, "C:\\Docsy\\a.md")).toBe(false);
+  expect(holds(w, "C:\\")).toBe(false);
+  // A document item doesn't hold the folder it is in.
+  expect(holds(w, "D:\\")).toBe(false);
+});
+
+test("Add to offers Pinned and own workspaces in the saved order, never a folder's, each saying whether it holds the path", () => {
+  const folderWs = workspaceForFolder([], "C:\\Docs").workspace;
+  const travel = addItem(newWorkspace([], "Travel").workspace, document("C:\\Docs\\a.md"));
+  const reading = addItem(newWorkspace([], "Reading").workspace, folder("C:\\Docs"));
+  const pins = pinned([document("C:\\b.md")]);
+  const targets = addTargets([reading, folderWs, travel, pins], "C:\\Docs\\a.md");
+  expect(targets.map((t) => [t.workspace.name, t.held])).toEqual([
+    ["Pinned", false],
+    ["Reading", true],
+    ["Travel", true],
+  ]);
+  expect(addTargets([reading, folderWs, travel, pins], "C:\\b.md").map((t) => t.held)).toEqual([true, false, false]);
+  expect(addTargets([folderWs], "C:\\Docs\\a.md")).toEqual([]);
+});
+
+test("a document inside a pinned folder that is also pinned on its own shows once, inside the folder", () => {
+  const pins = addItem(pinned([document("C:\\Docs\\sub\\a.md"), document("C:\\b.md")]), folder("C:\\Docs"));
+  expect(pins.items).toEqual([document("C:\\Docs\\sub\\a.md"), document("C:\\b.md"), folder("C:\\Docs")]);
+  const docs = visibleDocuments(pins, { "C:\\Docs": ["C:\\Docs\\sub\\a.md", "C:\\Docs\\c.md"] });
+  expect(docs.map((d) => [d.path, d.root])).toEqual([
+    ["C:\\Docs\\sub\\a.md", "C:\\Docs"],
+    ["C:\\Docs\\c.md", "C:\\Docs"],
+    ["C:\\b.md", "C:"],
+  ]);
+  // A pinned folder is a folder at the top, and documents pinned by themselves follow it.
+  expect(fileTree(docs, ["C:\\Docs"]).map((n) => [n.kind, n.name])).toEqual([
+    ["folder", "Docs"],
+    ["document", "b.md"],
+  ]);
+  // The documents pinned by themselves are still the pins Home lists.
+  expect(pinnedPaths([pins])).toEqual(["C:\\Docs\\sub\\a.md", "C:\\b.md"]);
+});
+
+test("with its folders given, the tree lists documents outside them at the top, sorted after the folders", () => {
+  const docs = [
+    { path: "C:\\Notes\\z.md", root: "C:\\Notes", relative: "z.md" },
+    { path: "C:\\Game\\levels\\a.md", root: "C:\\Game", relative: "levels/a.md" },
+    { path: "D:\\x\\gone.md", root: "D:\\x", relative: "gone.md", missing: true },
+  ];
+  expect(fileTree(docs, ["c:/game"])).toEqual([
+    { kind: "folder", name: "Game", path: "C:\\Game", children: [{ kind: "folder", name: "levels", path: "C:\\Game\\levels", children: [{ kind: "document", name: "a.md", path: "C:\\Game\\levels\\a.md", missing: undefined }] }] },
+    { kind: "document", name: "gone.md", path: "D:\\x\\gone.md", missing: true },
+    { kind: "document", name: "z.md", path: "C:\\Notes\\z.md", missing: undefined },
+  ]);
 });

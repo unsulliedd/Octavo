@@ -16,7 +16,7 @@ import { CompareView } from "./CompareView";
 import { ask, choose, message } from "./dialog";
 import { diskChange } from "./conflict";
 import { canRevert, revertText } from "./editSession";
-import { FilesPanel, WorkspaceMenu, WorkspaceStatus } from "./FilesPanel";
+import { addToItem, FilesPanel, WorkspaceMenu, WorkspaceStatus } from "./FilesPanel";
 import { FindBar } from "./FindBar";
 import { basename, folderTrail, Home } from "./Home";
 import { Icon } from "./icons";
@@ -938,7 +938,7 @@ export default function App() {
     const file = currentEntry(t).path;
     return [
       ...pathItems(file, (e) => setError(String(e))),
-      ...(workspaces.open ? [{ label: "Add to workspace", disabled: workspaces.covers(file), run: () => void workspaces.addToOpen({ kind: "document", path: file }) }] : []),
+      addToItem(workspaces, { kind: "document", path: file }),
       "separator",
       { label: "Close", keys: keyLabel(bindings, "closeTab"), run: () => void closeTabById(id) },
       { label: "Close others", disabled: !otherTabIds(tabs, id).length, run: () => void closeTabsById(otherTabIds(tabs, id)) },
@@ -1711,6 +1711,8 @@ export default function App() {
             onOpen={(p) => openPath(p)}
             onOpenWorkspace={(id) => void workspaces.openWorkspace(id)}
             onRemoveWorkspace={(id) => void workspaces.removeWorkspace(id)}
+            onRenameWorkspace={(id) => void workspaces.rename(id)}
+            addTo={(item) => addToItem(workspaces, item)}
             onTogglePin={(p) => void workspaces.togglePin(p)}
             onError={(m) => setError(m)}
           />

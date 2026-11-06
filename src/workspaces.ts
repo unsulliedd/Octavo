@@ -5,7 +5,8 @@ import { dirname, joinPath, relativePath } from "./paths";
 
 export type ItemKind = "folder" | "document";
 export type Item = { kind: ItemKind; path: string };
-export type Workspace = { id: string; name: string; items: Item[]; removed: string[] };
+/** `own`: made with New workspace, so never a folder's workspace, whatever it holds. */
+export type Workspace = { id: string; name: string; items: Item[]; removed: string[]; own?: true };
 
 /** A document a workspace shows. `root` is the folder it is listed under; `relative` is its path from there, with forward slashes. `missing`: an added document that is gone from disk. */
 export type WorkspaceDoc = { path: string; root: string; relative: string; missing?: boolean };
@@ -15,6 +16,14 @@ export type TreeNode =
   | { kind: "document"; name: string; path: string; missing?: boolean };
 
 export const PINNED: Workspace = { id: "pinned", name: "Pinned", items: [], removed: [] };
+
+/**
+ * What a workspace is: Pinned, one the user made (`own`), or the workspace of a folder from Open folder…. Only New
+ * workspace marks one as `own`, so an own workspace that holds a single folder is never taken for that folder's.
+ * Every other workspace is a folder's: New workspace is the only way to make one that isn't.
+ */
+export type WorkspaceKind = "pinned" | "own" | "folder";
+export const workspaceKind = (w: Workspace): WorkspaceKind => (w.id === PINNED.id ? "pinned" : w.own ? "own" : "folder");
 
 /** What `scan_folder` returns. */
 export type FolderScan = { files: string[]; truncated: boolean };
@@ -69,11 +78,37 @@ export const deleteWorkspace = (workspaces: Workspace[], id: string) => (id === 
  * that only had the folder added to it is a different one.
  */
 export function workspaceForFolder(workspaces: Workspace[], folder: string) {
-  const isFor = (w: Workspace) => w.items[0]?.kind === "folder" && same(w.items[0].path, folder);
+  const isFor = (w: Workspace) => workspaceKind(w) === "folder" && w.items[0]?.kind === "folder" && same(w.items[0].path, folder);
   const found = workspaces.find(isFor);
   if (found) return { workspaces, workspace: found };
   const workspace: Workspace = { id: newId(), name: lastName(folder), items: [{ kind: "folder", path: folder }], removed: [] };
   return { workspaces: [...workspaces, workspace], workspace };
+}
+
+/** `workspaces` with a new workspace of the user's own first, named `name` and holding `items`. */
+export function newWorkspace(workspaces: Workspace[], name: string, items: Item[] = []) {
+  const workspace: Workspace = { id: newId(), name: name.trim(), items, removed: [], own: true };
+  return { workspaces: [workspace, ...workspaces], workspace };
+}
+
+/** `workspaces` with the workspace `id` named `name`, trimmed. Pinned, an empty name and the same name leave the list as it is. */
+export function renameWorkspace(workspaces: Workspace[], id: string, name: string) {
+  const trimmed = name.trim();
+  if (id === PINNED.id || !workspaces.some((w) => w.id === id && trimmed && w.name !== trimmed)) return workspaces;
+  return workspaces.map((w) => (w.id === id ? { ...w, name: trimmed } : w));
+}
+
+/** Whether `workspace` shows `path`: it holds it, or a folder around it, and hasn't removed it. */
+export function holds(workspace: Workspace, path: string) {
+  const k = key(path);
+  const inside = (p: string) => k.startsWith(key(p));
+  return workspace.items.some((i) => (i.kind === "folder" ? inside(i.path) : same(i.path, path))) && !workspace.removed.some(inside);
+}
+
+/** Where Add to can put `path`: Pinned, then the user's own workspaces in the saved order, each saying whether it holds `path` already. */
+export function addTargets(workspaces: Workspace[], path: string) {
+  const kinds = (kind: WorkspaceKind) => workspaces.filter((w) => workspaceKind(w) === kind);
+  return [...kinds("pinned"), ...kinds("own")].map((workspace) => ({ workspace, held: holds(workspace, path) }));
 }
 
 /** `workspaces` with the workspace `id` first, the saved order being most recent first. */
@@ -87,6 +122,7 @@ export const workspaceFolderName = lastName;
 
 /** Where a workspace is, for a list: "Documents › Notes" for one folder, or else how many items it holds. */
 export function workspacePlace({ items }: Workspace) {
+  if (!items.length) return "Empty";
   if (items.length === 1 && items[0].kind === "folder") return items[0].path.split(/[\\/]+/).filter(Boolean).slice(-4).join(" › ");
   const count = (kind: ItemKind) => items.filter((i) => i.kind === kind).length;
   const counted = (n: number, name: string) => (n ? [`${n} ${name}${n === 1 ? "" : "s"}`] : []);
@@ -190,9 +226,13 @@ function sortTree(nodes: TreeNode[]) {
   return nodes;
 }
 
-/** The tree for the Files tab: one folder per root, in order, and only folders that lead to a document. */
-export function fileTree(docs: WorkspaceDoc[]) {
+/**
+ * The tree for the Files tab: one folder per root, in order, and only folders that lead to a document. With
+ * `folderItems`, the folder items of Pinned or an own workspace, a document outside them is listed at the top by itself.
+ */
+export function fileTree(docs: WorkspaceDoc[], folderItems?: string[]) {
   const top: TreeNode[] = [];
+  const roots = folderItems && new Set(folderItems.map(key));
   const folders = new Map<string, Extract<TreeNode, { kind: "folder" }>>();
   const folderIn = (siblings: TreeNode[], name: string, path: string) => {
     const k = key(path);
@@ -207,6 +247,10 @@ export function fileTree(docs: WorkspaceDoc[]) {
   for (const doc of docs) {
     const parts = doc.relative.split("/");
     const name = parts.pop()!;
+    if (roots && !roots.has(key(doc.root))) {
+      top.push({ kind: "document", name: lastName(doc.path), path: doc.path, missing: doc.missing });
+      continue;
+    }
     let folder = folderIn(top, lastName(doc.root), doc.root);
     for (const part of parts) folder = folderIn(folder.children, part, joinPath(folder.path, part));
     folder.children.push({ kind: "document", name, path: doc.path, missing: doc.missing });

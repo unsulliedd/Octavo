@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { ask, message } from "./dialog";
+import { ask, message, promptText } from "./dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dirname } from "./paths";
 import { forget, loadOpenWorkspace, loadPinned, loadToldCopy, save, tabsKey } from "./storage";
@@ -10,10 +10,12 @@ import {
   dropItem,
   fileTree,
   latestRun,
+  newWorkspace,
   PINNED,
   pinnedPaths,
   problemText,
   removeEntry,
+  renameWorkspace,
   restorePath,
   same,
   scanResult,
@@ -22,7 +24,9 @@ import {
   visibleDocuments,
   withPinned,
   withPins,
+  workspaceFolderName,
   workspaceForFolder,
+  workspaceKind,
   type FolderScan,
   type Item,
   type ItemKind,
@@ -35,7 +39,7 @@ import {
 export type MenuPlace = { x: number; y: number; above?: boolean };
 
 /** The right-click menu of a row in the tree. */
-export type RowMenu = { name: string; path: string; x: number; y: number };
+export type RowMenu = { name: string; kind: ItemKind; path: string; x: number; y: number };
 
 /** Where the added `documents` group, and which of them are gone from disk. */
 async function documentPlaces(documents: string[]) {
@@ -79,7 +83,8 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   const scan = scanned?.id === openId ? scanned : undefined;
   const listed = useMemo(() => (open && scan ? visibleDocuments(open, scan.scans, scan.roots, scan.missing) : undefined), [open, scan]);
   const docs = useMemo(() => listed?.filter((d) => !d.missing), [listed]);
-  const tree = useMemo(() => listed && fileTree(listed), [listed]);
+  // Pinned and own workspaces list a document added by itself at the top, a folder workspace under its folder.
+  const tree = useMemo(() => listed && open && fileTree(listed, workspaceKind(open) === "folder" ? undefined : open.items.filter((i) => i.kind === "folder").map((i) => i.path)), [listed, open]);
   const pinned = useMemo(() => pinnedPaths(workspaces), [workspaces]);
   const current = useRef({ open, showHidden, docs });
   current.current = { open, showHidden, docs };
@@ -201,6 +206,34 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   /** Pins `path`, or unpins it. */
   const togglePin = (path: string) => change((w) => pinOrUnpin(w, path), PINNED.id);
 
+  /** Adds a folder or document to the workspace `id`, open or not. */
+  const addTo = (id: string, item: Item) => change((w) => addItem(w, item), id);
+
+  /**
+   * Asks for a name and makes a workspace of the user's own. With `item`, the workspace holds it and Octavo stays where
+   * it is; without, the new empty workspace opens.
+   */
+  async function createWorkspace(item?: Item) {
+    await loaded.current;
+    const text = item ? `${workspaceFolderName(item.path)} goes in it.` : "Add folders and documents to it with + in the Files tab, or right-click any document.";
+    const name = await promptText(text, { title: "New workspace", okLabel: "Create" });
+    if (!name) return;
+    const { workspaces: next, workspace } = newWorkspace(list.current, name, item ? [item] : []);
+    if (item) commit(next);
+    else await show(next, workspace.id);
+  }
+
+  /** Asks for a new name for the workspace `id`. Pinned keeps its name. */
+  async function rename(id: string) {
+    await loaded.current;
+    const workspace = list.current.find((w) => w.id === id);
+    if (!workspace || id === PINNED.id) return;
+    const text = workspaceKind(workspace) === "folder" ? "The folder on disk keeps its name." : "";
+    const name = await promptText(text, { title: "Rename workspace", value: workspace.name, okLabel: "Rename" });
+    const next = name === undefined ? list.current : renameWorkspace(list.current, id, name);
+    if (next !== list.current) commit(next);
+  }
+
   /** Removes a saved workspace from Octavo, after asking. The open one closes first, so that unsaved edits settle. */
   async function removeWorkspace(id: string) {
     await loaded.current;
@@ -269,7 +302,7 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   /** Resolves once the saved list has loaded and the open workspace, if any, is known. */
   const whenLoaded = () => loaded.current;
 
-  return { workspaces, open, pinned, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, rowMenu, setRowMenu, whenLoaded, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh, covers, addToOpen, pickItem, removeRow, restore, dropMissing, togglePin, removeWorkspace, tellError };
+  return { workspaces, open, pinned, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, rowMenu, setRowMenu, whenLoaded, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh, addTo, createWorkspace, rename, pickItem, removeRow, restore, dropMissing, togglePin, removeWorkspace, tellError };
 }
 
 export type Workspaces = ReturnType<typeof useWorkspaces>;

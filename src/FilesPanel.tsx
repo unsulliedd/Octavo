@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { folderTrail } from "./Home";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
 import { dirname } from "./paths";
-import { pathItems, TabMenu } from "./TabMenu";
+import { pathItems, TabMenu, type TabMenuItem } from "./TabMenu";
 import { samePath } from "./tabs";
 import type { Workspaces } from "./useWorkspaces";
-import { PINNED, workspaceFolderName, workspacePlace, type TreeNode, type Workspace } from "./workspaces";
+import { addTargets, PINNED, workspaceFolderName, workspaceKind, workspacePlace, type Item, type TreeNode, type Workspace, type WorkspaceKind } from "./workspaces";
 import { described } from "./tooltip";
 
 /** With more documents than this, a folder below the top starts closed, so that a large workspace stays quick to draw. */
@@ -82,12 +82,53 @@ const toggleMenu = (ws: Workspaces, above: boolean) => (e: MouseEvent) => {
   ws.setMenu((menu) => (menu ? undefined : { x: box.left, y: above ? box.top : box.bottom, above }));
 };
 
+/** The icon of each kind of workspace. */
+const KIND_ICON: Record<WorkspaceKind, IconName> = { folder: "folder", own: "layers", pinned: "pin" };
+
+/**
+ * The Add to item of a document's or folder's menu: Pinned and the user's own workspaces, each ticked and disabled
+ * when it holds `item` already, then New workspace…, which makes one holding it.
+ */
+export function addToItem(ws: Workspaces, item: Item): TabMenuItem {
+  const targets = addTargets(ws.workspaces, item.path).map(({ workspace, held }) => ({
+    label: (
+      <span className="menu-tab">
+        <Icon name={KIND_ICON[workspaceKind(workspace)]} size="row" />
+        <span>{workspace.name}</span>
+      </span>
+    ),
+    checked: held,
+    checkbox: true,
+    disabled: held,
+    run: () => void ws.addTo(workspace.id, item),
+  }));
+  const [pinned, ...own] = targets;
+  return {
+    label: "Add to",
+    submenu: [
+      ...(pinned ? [pinned] : []),
+      ...(pinned && own.length ? ["separator" as const] : []),
+      ...own,
+      "separator",
+      {
+        label: (
+          <span className="menu-tab">
+            <Icon name="plus" size="row" />
+            <span>New workspace…</span>
+          </span>
+        ),
+        run: () => void ws.createWorkspace(item),
+      },
+    ],
+  };
+}
+
 /** The workspace's name in the status bar, opening the workspace menu. */
 export function WorkspaceStatus({ ws }: { ws: Workspaces }) {
   if (!ws.open) return null;
   return (
     <button className="status-workspace" data-menu-toggle aria-haspopup="menu" aria-expanded={!!ws.menu?.above} {...described(`Workspace: ${workspacePlace(ws.open)}`)} onClick={toggleMenu(ws, true)}>
-      <Icon name="folder" size="inline" />
+      <Icon name={KIND_ICON[workspaceKind(ws.open)]} size="inline" />
       {ws.open.name}
     </button>
   );
@@ -103,6 +144,8 @@ function RowMenu({ ws, menu }: { ws: Workspaces; menu: NonNullable<Workspaces["r
       y={menu.y}
       items={[
         ...pathItems(menu.path, failed),
+        "separator",
+        addToItem(ws, { kind: menu.kind, path: menu.path }),
         "separator",
         { label: "Remove from workspace", run: () => void ws.removeRow(menu.path) },
       ]}
@@ -131,6 +174,7 @@ export function WorkspaceMenu({ ws }: { ws: Workspaces }) {
         ...others.map(item),
         "separator",
         { label: "Open folder…", run: () => void ws.pickFolder() },
+        { label: "New workspace…", run: () => void ws.createWorkspace() },
         { label: "Close workspace", disabled: !ws.open, run: () => void ws.closeWorkspace() },
       ]}
       onClose={() => ws.setMenu(undefined)}
@@ -186,7 +230,7 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
   const [onToggle] = useState(() => (path: string, shown: boolean) => setExpanded((all) => ({ ...all, [path]: shown })));
   const [onMenu] = useState(() => (e: MouseEvent, node: TreeNode) => {
     e.preventDefault();
-    setRowMenu({ name: node.name, path: node.path, x: e.clientX, y: e.clientY });
+    setRowMenu({ name: node.name, kind: node.kind, path: node.path, x: e.clientX, y: e.clientY });
   });
   // Where the + button's menu opens, under the button.
   const [add, setAdd] = useState<{ x: number; y: number }>();
@@ -243,7 +287,14 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
           />
         )}
       </div>
-      {!scan && (
+      {!open.items.length ? (
+        <div className="files-offer">
+          <div className="files-offer-text">
+            <strong>Nothing here yet</strong>
+            <span>Add documents and folders with + above, or right-click a document anywhere in Octavo and choose Add to.</span>
+          </div>
+        </div>
+      ) : !scan && (
         <p className="files-note" role="status">
           <span className="spinner small" aria-hidden="true" />
           Scanning {open.name}…
@@ -255,7 +306,7 @@ export function FilesPanel({ ws, document, onOpen }: Props) {
         </p>
       ))}
       {scan?.truncated && <p className="files-note">This folder is too large to scan in full, so some documents may be missing.</p>}
-      {scan && !scan.errors.length && !tree?.length && <p className="files-note">No Markdown documents in this workspace.</p>}
+      {scan && open.items.length > 0 && !scan.errors.length && !tree?.length && <p className="files-note">No Markdown documents in this workspace.</p>}
       {tree && (
         <nav className="tree" aria-label="Workspace documents">
           <Tree nodes={tree} depth={0} openBelowTop={ws.documents <= OPEN_FOLDERS_UP_TO} expanded={ws.expanded} active={document} onToggle={onToggle} onOpen={onOpen} onMenu={onMenu} onDrop={onDrop} />
