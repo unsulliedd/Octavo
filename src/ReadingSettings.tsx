@@ -35,6 +35,22 @@ export function Segmented<T extends string>({ label, value, options, onPick, hin
   );
 }
 
+/** Light, Dark or System, here and at the top of Settings › Colors. */
+export function ThemeSetting({ value, onPick }: { value: Theme; onPick: (theme: Theme) => void }) {
+  return (
+    <Segmented<Theme>
+      label="Theme"
+      value={value}
+      onPick={onPick}
+      options={[
+        { value: "light", label: "Light", icon: "sun" },
+        { value: "dark", label: "Dark", icon: "moon" },
+        { value: "system", label: "System", icon: "monitor" },
+      ]}
+    />
+  );
+}
+
 /** Popover under the toolbar's "T" button, for how documents look. Closes on Escape or a click outside. */
 export function ReadingSettings({ prefs, onChange, focusMode, onFocusMode, onClose }: Props) {
   const panel = useRef<HTMLElement>(null);
@@ -56,16 +72,7 @@ export function ReadingSettings({ prefs, onChange, focusMode, onFocusMode, onClo
 
   return (
     <section className="popover" ref={panel} aria-label="Reading settings">
-      <Segmented<Theme>
-        label="Theme"
-        value={prefs.theme}
-        onPick={(theme) => set({ theme })}
-        options={[
-          { value: "light", label: "Light", icon: "sun" },
-          { value: "dark", label: "Dark", icon: "moon" },
-          { value: "system", label: "System", icon: "monitor" },
-        ]}
-      />
+      <ThemeSetting value={prefs.theme} onPick={(theme) => set({ theme })} />
       <Segmented
         label="Document font"
         value={prefs.font}

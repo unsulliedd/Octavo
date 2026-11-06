@@ -1,3 +1,4 @@
+import { DEFAULT_COLORS, sanitizeColors, type Colors } from "./colors";
 import { sanitizeBindings, type Bindings } from "./shortcuts";
 import { DEFAULT_SIDEBAR, storedSidebarWidth } from "./sidebarWidth";
 import { fromStored, type Tabs } from "./tabs";
@@ -55,10 +56,12 @@ export type Prefs = {
   showHidden: boolean;
   /** The width of the sidebar, in pixels. */
   sidebarWidth: number;
+  /** Colors changed in Settings › Colors; every other color keeps its default. */
+  colors: Colors;
 };
 export type RecentFile = { path: string; at: number };
 
-export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, showOutline: true, outlineAt: "sidebar", properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR };
+export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, showOutline: true, outlineAt: "sidebar", properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR, colors: DEFAULT_COLORS };
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -94,7 +97,7 @@ export const outlineAt = (v: unknown): OutlineAt => (OUTLINE_AT.includes(v as Ou
 
 export const loadPrefs = (): Prefs => {
   const stored = load<Partial<Prefs>>("prefs", {});
-  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), sidebarWidth: storedSidebarWidth(stored.sidebarWidth), outlineAt: outlineAt(stored.outlineAt), shortcuts: sanitizeBindings(stored.shortcuts) };
+  return { ...DEFAULT_PREFS, ...stored, width: lineWidth(stored.width), openLarge: openLarge(stored.openLarge), sidebarWidth: storedSidebarWidth(stored.sidebarWidth), outlineAt: outlineAt(stored.outlineAt), shortcuts: sanitizeBindings(stored.shortcuts), colors: sanitizeColors(stored.colors) };
 };
 /** Where the tabs of workspace `id` are kept, or those shown with no workspace open. Deleting a workspace must remove its key too. */
 export const tabsKey = (id?: string) => (id === undefined ? "tabs" : (`tabs:${id}` as const));

@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { message } from "./dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
+import { ColorSettings } from "./ColorSettings";
+import { DEFAULT_COLORS } from "./colors";
 import { Icon, Logo } from "./icons";
 import { LINKS } from "./links";
 import { Segmented } from "./ReadingSettings";
@@ -23,7 +25,7 @@ type Props = {
   onLicenses: () => void;
 };
 
-const SECTIONS = { reading: "Reading", editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
+const SECTIONS = { reading: "Reading", colors: "Colors", editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
 
 /** The About section's links that open in the browser. */
 const ABOUT_LINKS = [
@@ -33,8 +35,8 @@ const ABOUT_LINKS = [
 ] as const;
 
 /**
- * The settings beyond the quick reading ones in Reading settings: reading, where the editing tools go, saving, keyboard
- * shortcuts, and About with updates. A list of sections on the left picks the one shown. Closes on Escape or a click
+ * The settings beyond the quick reading ones in Reading settings: reading, colors, where the editing tools go, saving,
+ * keyboard shortcuts, and About with updates. A list of sections on the left picks the one shown. Closes on Escape or a click
  * beside it.
  */
 export function Settings({ prefs, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew, onLicenses }: Props) {
@@ -74,6 +76,11 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                   Reset all
                 </button>
               )}
+              {section === "colors" && (
+                <button className="text-btn" disabled={!Object.keys(prefs.colors.base).length} onClick={() => set({ colors: DEFAULT_COLORS })}>
+                  Reset all colors
+                </button>
+              )}
             </div>
             {section === "reading" && (
               <div className="settings-section">
@@ -96,6 +103,9 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                   <input type="checkbox" checked={prefs.showHidden} onChange={(e) => set({ showHidden: e.target.checked })} />
                 </label>
               </div>
+            )}
+            {section === "colors" && (
+              <ColorSettings theme={prefs.theme} onTheme={(theme) => set({ theme })} colors={prefs.colors} onChange={(colors) => set({ colors })} />
             )}
             {section === "editing" && (
               <div className="settings-section">

@@ -12,6 +12,7 @@ import { editorLayout } from "./editor/layout";
 import { sameRendering } from "./editor/sameRendering";
 import type { EditorSession, Snapshot } from "./editor/session";
 import { editedText, editorText, eolLabel, fileFormat, textToSave } from "./fileText";
+import { applyColors } from "./colors";
 import { CompareView } from "./CompareView";
 import { ask, choose, message } from "./dialog";
 import { diskChange } from "./conflict";
@@ -1098,6 +1099,9 @@ export default function App() {
     getCurrentWindow().setTitle(titlePath ? `${basename(titlePath)} — Octavo` : "Octavo");
   }, [titlePath]);
 
+  // The colors changed in Settings › Colors, as custom properties on the root that every other color derives from.
+  useLayoutEffect(() => applyColors(document.documentElement.style, prefs.colors), [prefs.colors]);
+
   // The window starts hidden (tauri.conf.json) and is shown once the UI has rendered, so it never appears
   // blank; with a file to open, it starts on the loading screen instead of the home screen. Its own
   // background follows the theme, for the moment a resize uncovers it.
@@ -1109,7 +1113,7 @@ export default function App() {
       windowShown.current = true;
       window.show().catch(() => {});
     }
-  }, [dark, started]);
+  }, [dark, started, prefs.colors]);
 
   useEffect(() => setSidebarTab(undefined), [workspaces.open?.id]);
 
