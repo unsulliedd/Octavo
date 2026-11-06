@@ -24,6 +24,7 @@ beforeEach(() => {
   on = {
     onOpen: vi.fn(),
     onOpenWorkspace: vi.fn(),
+    onNewWorkspace: vi.fn(),
     onRemoveWorkspace: vi.fn(),
     onRenameWorkspace: vi.fn(),
     onTogglePin: vi.fn(),
@@ -46,6 +47,7 @@ beforeEach(() => {
         pinned={["C:/docs/pin.md"]}
         dragging={false}
         workspaces={[FOLDER, PICKED, OWN]}
+        openWorkspace={PICKED}
         {...on}
       />,
     ),
@@ -60,6 +62,9 @@ afterEach(() => {
 
 const rows = () => [...host.querySelectorAll<HTMLElement>(".file-row")];
 const row = (text: string) => rows().find((r) => r.textContent?.includes(text))!;
+const cards = () => [...host.querySelectorAll<HTMLElement>(".card")];
+const card = (name: string) => cards().find((c) => c.querySelector(".card-name")?.textContent === name)!;
+const key = (el: Element, init: KeyboardEventInit) => act(() => void el.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init })));
 const rightClick = (el: Element) => {
   const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 30, clientY: 40 });
   act(() => void el.dispatchEvent(e));
@@ -101,26 +106,26 @@ test("a failed reveal is reported", async () => {
 });
 
 test("a workspace of a folder offers Open, Open folder in Explorer, Rename… and Remove workspace", () => {
-  rightClick(row("Notes"));
+  rightClick(card("Notes"));
   expect(menu()!.getAttribute("aria-label")).toBe("Notes");
-  expect(labels()).toEqual(["Open", "Open folder in Explorer", "Rename…", "Remove workspace"]);
+  expect(labels()).toEqual(["Open", "Rename…", "Open folder in Explorer", "Remove workspace"]);
   pick("Rename…");
   expect(on.onRenameWorkspace).toHaveBeenCalledWith("w1");
-  rightClick(row("Notes"));
+  rightClick(card("Notes"));
   pick("Open folder in Explorer");
   expect(reveal).toHaveBeenCalledWith("C:/notes");
-  rightClick(row("Notes"));
+  rightClick(card("Notes"));
   pick("Remove workspace");
   expect(on.onRemoveWorkspace).toHaveBeenCalledWith("w1");
-  rightClick(row("Notes"));
+  rightClick(card("Notes"));
   pick("Open");
   expect(on.onOpenWorkspace).toHaveBeenCalledWith("w1");
 });
 
 test("a workspace whose first item is a document, and an own workspace, have no Open folder in Explorer", () => {
-  rightClick(row("Picked"));
+  rightClick(card("Picked"));
   expect(labels()).toEqual(["Open", "Rename…", "Remove workspace"]);
-  rightClick(row("Mine"));
+  rightClick(card("Mine"));
   expect(labels()).toEqual(["Open", "Rename…", "Remove workspace"]);
   pick("Rename…");
   expect(on.onRenameWorkspace).toHaveBeenCalledWith("w3");
@@ -157,4 +162,105 @@ test("a click elsewhere closes the menu, and a plain F10 does nothing", () => {
   const open = row("recent.md").querySelector<HTMLElement>(".file-open")!;
   act(() => void open.dispatchEvent(new KeyboardEvent("keydown", { key: "F10", bubbles: true, cancelable: true })));
   expect(menu()).toBeNull();
+});
+
+test("the + card comes first, then Pinned, then the workspaces in their saved order", () => {
+  const items = [...host.querySelectorAll(".card-grid > li")];
+  expect(items[0].querySelector(".card-new")?.textContent).toBe("New workspace");
+  expect(cards().map((c) => c.querySelector(".card-name")?.textContent)).toEqual(["Pinned", "Notes", "Picked", "Mine"]);
+  expect(cards().map((c) => c.querySelector(".card-meta-text")?.textContent)).toEqual(["Empty", "C: › notes", "1 document", "C: › mine"]);
+  expect(cards().map((c) => c.querySelector(".card-meta")?.getAttribute("data-kind"))).toEqual(["pinned", "folder", "folder", "own"]);
+  expect(cards().every((c) => c.querySelector(".cover svg.cover-art rect"))).toBe(true);
+});
+
+test("the + card runs New workspace", () => {
+  act(() => host.querySelector<HTMLButtonElement>(".card-new")!.click());
+  expect(on.onNewWorkspace).toHaveBeenCalledTimes(1);
+});
+
+test("a click on a card opens its workspace, and the open one is marked", () => {
+  act(() => card("Notes").querySelector<HTMLButtonElement>(".card-open")!.click());
+  expect(on.onOpenWorkspace).toHaveBeenCalledWith("w1");
+  act(() => card("Pinned").querySelector<HTMLButtonElement>(".card-open")!.click());
+  expect(on.onOpenWorkspace).toHaveBeenLastCalledWith("pinned");
+  expect(host.querySelectorAll(".card-chip")).toHaveLength(1);
+  expect(card("Picked").querySelector(".card-chip")?.textContent).toBe("Open");
+  expect(card("Picked").querySelector(".card-open")?.getAttribute("aria-label")).toBe("Picked, 1 document, open");
+  expect(card("Notes").querySelector(".card-open")?.getAttribute("aria-label")).toBe("Notes, C: › notes");
+});
+
+test("Pinned's menu has only Open", () => {
+  rightClick(card("Pinned"));
+  expect(menu()!.getAttribute("aria-label")).toBe("Pinned");
+  expect(labels()).toEqual(["Open"]);
+  pick("Open");
+  expect(on.onOpenWorkspace).toHaveBeenCalledWith("pinned");
+});
+
+test("the ⋯ button opens the card's menu and says so; Escape gives it the focus back", () => {
+  const more = card("Mine").querySelector<HTMLButtonElement>(".card-more")!;
+  expect(more.getAttribute("aria-label")).toBe("More for Mine");
+  expect(more.getAttribute("aria-haspopup")).toBe("menu");
+  expect(more.getAttribute("aria-expanded")).toBe("false");
+  more.focus();
+  act(() => more.click());
+  expect(labels()).toEqual(["Open", "Rename…", "Remove workspace"]);
+  expect(more.getAttribute("aria-expanded")).toBe("true");
+  expect(card("Mine").hasAttribute("data-menu")).toBe(true);
+  key(document.activeElement!, { key: "Escape" });
+  expect(menu()).toBeNull();
+  expect(document.activeElement).toBe(more);
+  act(() => more.click());
+  pick("Remove workspace");
+  expect(on.onRemoveWorkspace).toHaveBeenCalledWith("w3");
+});
+
+test("every card is reached with Tab, and the context-menu key or Shift+F10 on it opens its menu", () => {
+  const stops = [...host.querySelectorAll<HTMLElement>(".card-grid button")];
+  expect(stops.every((b) => b.tabIndex === 0)).toBe(true);
+  expect(stops.map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([
+    "New workspace",
+    "Pinned, Empty",
+    "More for Pinned",
+    "Notes, C: › notes",
+    "More for Notes",
+    "Picked, 1 document, open",
+    "More for Picked",
+    "Mine, C: › mine",
+    "More for Mine",
+  ]);
+  const open = card("Notes").querySelector<HTMLElement>(".card-open")!;
+  open.focus();
+  key(open, { key: "ContextMenu" });
+  expect(menu()!.getAttribute("aria-label")).toBe("Notes");
+  expect(document.activeElement).toBe(menu()!.querySelector("button"));
+  key(document.activeElement!, { key: "Escape" });
+  expect(document.activeElement).toBe(open);
+  key(open, { key: "F10", shiftKey: true });
+  expect(labels()).toEqual(["Open", "Rename…", "Open folder in Explorer", "Remove workspace"]);
+});
+
+test("pinned documents list with the recent ones, their pin pressed, and Pinned has no rows of its own", () => {
+  expect(rows().map((r) => r.querySelector(".file-name")?.textContent)).toEqual(["recent.md", "pin.md"]);
+  expect(row("pin.md").querySelector(".pin")?.getAttribute("aria-pressed")).toBe("true");
+  expect(row("recent.md").querySelector(".pin")?.getAttribute("aria-pressed")).toBe("false");
+  act(() => row("recent.md").querySelector<HTMLButtonElement>(".pin")!.click());
+  expect(on.onTogglePin).toHaveBeenCalledWith("C:/docs/recent.md");
+  expect(host.querySelector(".drop-zone")).toBeNull();
+});
+
+test("the first launch shows the drop box and the + card alone", () => {
+  act(() => root.render(<Home recent={[]} pinned={[]} dragging={false} workspaces={[]} {...on} />));
+  expect(host.querySelector(".drop-zone")?.textContent).toBe("Or drop a file anywhere in this window");
+  expect(cards()).toHaveLength(0);
+  expect(host.querySelector(".card-new")).not.toBeNull();
+  expect(rows()).toHaveLength(0);
+  act(() => root.render(<Home recent={[]} pinned={[]} dragging workspaces={[]} {...on} />));
+  expect(host.querySelector(".drop-zone")?.textContent).toBe("Drop to open");
+});
+
+test("past the first launch, dragging a file shows the drop overlay", () => {
+  expect(document.querySelector(".drop-overlay")).toBeNull();
+  act(() => root.render(<Home recent={[]} pinned={[]} dragging workspaces={[FOLDER]} {...on} />));
+  expect(document.querySelector(".drop-overlay")?.textContent).toBe("Drop to open");
 });
