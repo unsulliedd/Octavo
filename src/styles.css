@@ -3,8 +3,11 @@
    app follows the theme too.
    So that any base color stays readable, roles keep an OKLCH lightness bound: text and marks drawn from a base color
    at most 0.58 in light and at least 0.70 in dark, pale fills behind text at least 0.88 in light and at most 0.45 in
-   dark, and text on a base-color fill turns from white to the dark ink once the fill's lightness passes 0.6. */
-:root {
+   dark, and text on a base-color fill turns from white to the dark ink once the fill's lightness passes 0.6.
+   A .color-scope element carries a whole set of its own, light or dark by its data-theme, so a sample in Settings ›
+   Colors can draw the set being edited. */
+:root,
+.color-scope {
   --brand-primary: #5a0e27;
   --brand-secondary: #75b7e5;
   --brand-accent: #d39d3f;
@@ -77,7 +80,8 @@
   --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
   color-scheme: light;
 }
-:root:has(.app[data-theme="dark"]) {
+:root:has(.app[data-theme="dark"]),
+.color-scope[data-theme="dark"] {
   --chrome: #1b1e22;
   --chrome-2: #262a30;
   --line: #30353c;
@@ -2122,13 +2126,16 @@ button.save-state {
   font-size: var(--text-sm);
   color: var(--danger);
 }
-/* The preview: the app's own sidebar rows and document, so it follows the colors by itself */
+/* The preview: the app's own sidebar rows and document, so it follows the colors by itself. It carries the set
+   being edited, so it draws its own text and page. */
 .color-preview {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  color: var(--ink);
+  background: var(--doc);
 }
 .color-preview-side {
   padding: 8px;
@@ -2166,6 +2173,131 @@ button.save-state {
 .color-preview-buttons {
   display: flex;
   gap: 8px;
+}
+.color-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.color-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.color-warning {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+.color-warning svg {
+  color: var(--brand-accent-ink);
+}
+/* Colors for and Jump to stay at the top of the settings while they scroll; the bar's line shows once it is stuck.
+   The top offset takes back the settings' own top padding. */
+.color-band {
+  position: sticky;
+  top: -22px;
+  z-index: 2;
+  margin: 0 -32px;
+  container-type: scroll-state;
+}
+.color-band-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 32px;
+  border-bottom: 1px solid transparent;
+  background: var(--doc);
+}
+@container scroll-state(stuck: top) {
+  .color-band-bar {
+    border-bottom-color: var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+}
+.color-band-bar > .setting-hint {
+  flex: 1;
+  margin: 0;
+}
+.seg.color-set {
+  flex: none;
+}
+.seg.color-set label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--height-md);
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+.seg.color-set input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.seg.color-set label:has(input:checked) {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.seg.color-set label:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.text-btn.small {
+  height: var(--height-sm);
+  padding: 0 8px;
+  font-size: var(--text-sm);
+}
+/* Jump to puts a group's heading just under the stuck bar. */
+.color-group {
+  scroll-margin-top: 64px;
+}
+.color-group-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--height-sm);
+}
+.color-code-sample {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.color-inline-sample {
+  padding: 1px 4px;
+  border: 1px solid var(--code-inline-line);
+  border-radius: var(--radius-sm);
+  background: var(--code-inline-bg);
+  color: var(--code-inline-ink);
+  font-family: var(--mono);
+  font-size: 11.5px;
 }
 @media (max-width: 640px) {
   .settings-nav {
