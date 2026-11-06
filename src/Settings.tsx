@@ -1,14 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import { message } from "./dialog";
+import { ask, message, promptText } from "./dialog";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { ColorSettings } from "./ColorSettings";
 import { anyChanged, DEFAULT_COLORS } from "./colors";
 import { Icon, Logo } from "./icons";
+import { basename } from "./Home";
 import { LINKS } from "./links";
 import { Segmented } from "./ReadingSettings";
 import { ShortcutSettings } from "./ShortcutSettings";
 import type { Prefs } from "./storage";
+import { isThemeError, parseTheme, themeCounts, themeFileName, themeText, type ThemeError } from "./themeFile";
 import { busy, statusLine, type UpdateStatus } from "./updates";
 
 type Props = {
@@ -29,6 +32,14 @@ type Props = {
 
 const SECTIONS = { reading: "Reading", colors: "Colors", editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
 
+/** The result of the last theme import, shown under the Colors heading until it is closed or the section is left. */
+type ThemeNotice = { ok: string } | (ThemeError & { saving?: true });
+
+const THEME_FILTERS = [{ name: "Octavo theme", extensions: ["json"] }];
+
+/** The message of an error a command rejected with. */
+const reason = (e: unknown) => (typeof e === "string" ? e : e instanceof Error ? e.message : String(e));
+
 /** The About section's links that open in the browser. */
 const ABOUT_LINKS = [
   ["Release notes", LINKS.releases],
@@ -44,6 +55,44 @@ const ABOUT_LINKS = [
 export function Settings({ prefs, dark, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew, onLicenses }: Props) {
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
   const [section, setSection] = useState<keyof typeof SECTIONS>("reading");
+  const [notice, setNotice] = useState<ThemeNotice>();
+
+  /** Asks for a name and a file, and saves the colors there. Cancel at either step changes nothing. */
+  async function exportTheme() {
+    const name = await promptText("The name shows when the theme is imported.", { title: "Export theme", value: "My colors", okLabel: "Export" });
+    if (name === undefined) return;
+    const path = await saveDialog({ defaultPath: themeFileName(name), filters: THEME_FILTERS });
+    if (typeof path !== "string") return;
+    try {
+      await invoke("write_theme", { path, text: themeText(name, prefs.colors) });
+    } catch (e) {
+      setNotice({ lead: "The theme couldn't be saved.", detail: reason(e), saving: true });
+    }
+  }
+
+  /** Reads a theme file and, once confirmed, replaces the colors with its own. */
+  async function importTheme() {
+    const path = await openDialog({ filters: THEME_FILTERS });
+    if (typeof path !== "string") return;
+    let text: string;
+    try {
+      text = await invoke<string>("read_theme", { path });
+    } catch (e) {
+      setNotice({ lead: "The theme couldn't be opened.", detail: reason(e) });
+      return;
+    }
+    const theme = parseTheme(text, basename(path));
+    if (isThemeError(theme)) return setNotice(theme);
+    const replace =
+      !anyChanged(prefs.colors) ||
+      (await ask("Your base colors and the Light and Dark sets become the theme's. To keep the colors you have now, export them first.", {
+        title: `Replace your colors with ${theme.name}?`,
+        okLabel: "Replace colors",
+      }));
+    if (!replace) return;
+    set({ colors: theme.colors });
+    setNotice({ ok: `Imported ${theme.name}: ${themeCounts(theme.colors)}.` });
+  }
 
   return (
     <div
@@ -64,7 +113,10 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
               <button
                 key={key}
                 aria-current={key === section ? "page" : undefined}
-                onClick={() => setSection(key as keyof typeof SECTIONS)}
+                onClick={() => {
+                  setSection(key as keyof typeof SECTIONS);
+                  setNotice(undefined);
+                }}
               >
                 {label}
               </button>
@@ -79,11 +131,36 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
                 </button>
               )}
               {section === "colors" && (
-                <button className="text-btn" disabled={!anyChanged(prefs.colors)} onClick={() => set({ colors: DEFAULT_COLORS })}>
-                  Reset all colors
-                </button>
+                <div className="settings-title-actions">
+                  <button className="text-btn" onClick={exportTheme}>
+                    Export theme…
+                  </button>
+                  <button className="text-btn" onClick={importTheme}>
+                    Import theme…
+                  </button>
+                  <button className="text-btn" disabled={!anyChanged(prefs.colors)} onClick={() => set({ colors: DEFAULT_COLORS })}>
+                    Reset all colors
+                  </button>
+                </div>
               )}
             </div>
+            {section === "colors" && notice && (
+              <div className={"ok" in notice ? "color-notice" : "color-notice bad"} role={"ok" in notice ? "status" : "alert"}>
+                <Icon name={"ok" in notice ? "check" : "warning"} size="inline" />
+                <span>
+                  {"ok" in notice ? (
+                    notice.ok
+                  ) : (
+                    <>
+                      <strong>{notice.lead}</strong> {[notice.detail, !notice.saving && "Your colors didn't change."].filter(Boolean).join(" ")}
+                    </>
+                  )}
+                </span>
+                <button className="icon-btn small" aria-label="Dismiss" onClick={() => setNotice(undefined)}>
+                  <Icon name="close" size="inline" />
+                </button>
+              </div>
+            )}
             {section === "reading" && (
               <div className="settings-section">
                 <Segmented

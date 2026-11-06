@@ -6,6 +6,7 @@ mod images;
 mod notes;
 mod save;
 mod scan;
+mod theme;
 mod watch;
 mod workspaces;
 
@@ -115,6 +116,18 @@ fn save_doc(
         }
     })
     .map_err(|e| e.to_string())
+}
+
+/// The text of a theme file picked in Settings › Colors. Gives the webview no access to its folder.
+#[tauri::command]
+fn read_theme(path: String) -> Result<String, String> {
+    theme::read(Path::new(&path))
+}
+
+/// Writes a theme file exported from Settings › Colors.
+#[tauri::command]
+fn write_theme(path: String, text: String) -> Result<(), String> {
+    theme::write(Path::new(&path), &text)
 }
 
 /// Opens the backups folder in the file manager.
@@ -317,6 +330,8 @@ pub fn run() {
             save_image,
             place_images,
             save_doc,
+            read_theme,
+            write_theme,
             open_backups,
             write_notes,
             write_licenses,
