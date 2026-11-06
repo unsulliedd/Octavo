@@ -3,7 +3,7 @@ import { message } from "./dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { ColorSettings } from "./ColorSettings";
-import { DEFAULT_COLORS } from "./colors";
+import { anyChanged, DEFAULT_COLORS } from "./colors";
 import { Icon, Logo } from "./icons";
 import { LINKS } from "./links";
 import { Segmented } from "./ReadingSettings";
@@ -13,6 +13,8 @@ import { busy, statusLine, type UpdateStatus } from "./updates";
 
 type Props = {
   prefs: Prefs;
+  /** Whether the dark theme shows now. */
+  dark: boolean;
   onChange: (prefs: Prefs) => void;
   onClose: () => void;
   version: string;
@@ -39,7 +41,7 @@ const ABOUT_LINKS = [
  * keyboard shortcuts, and About with updates. A list of sections on the left picks the one shown. Closes on Escape or a click
  * beside it.
  */
-export function Settings({ prefs, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew, onLicenses }: Props) {
+export function Settings({ prefs, dark, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew, onLicenses }: Props) {
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
   const [section, setSection] = useState<keyof typeof SECTIONS>("reading");
 
@@ -77,7 +79,7 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
                 </button>
               )}
               {section === "colors" && (
-                <button className="text-btn" disabled={!Object.keys(prefs.colors.base).length} onClick={() => set({ colors: DEFAULT_COLORS })}>
+                <button className="text-btn" disabled={!anyChanged(prefs.colors)} onClick={() => set({ colors: DEFAULT_COLORS })}>
                   Reset all colors
                 </button>
               )}
@@ -105,7 +107,7 @@ export function Settings({ prefs, onChange, onClose, version, update, onCheckUpd
               </div>
             )}
             {section === "colors" && (
-              <ColorSettings theme={prefs.theme} onTheme={(theme) => set({ theme })} colors={prefs.colors} onChange={(colors) => set({ colors })} />
+              <ColorSettings theme={prefs.theme} onTheme={(theme) => set({ theme })} dark={dark} colors={prefs.colors} onChange={(colors) => set({ colors })} />
             )}
             {section === "editing" && (
               <div className="settings-section">

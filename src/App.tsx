@@ -1099,8 +1099,9 @@ export default function App() {
     getCurrentWindow().setTitle(titlePath ? `${basename(titlePath)} — Octavo` : "Octavo");
   }, [titlePath]);
 
-  // The colors changed in Settings › Colors, as custom properties on the root that every other color derives from.
-  useLayoutEffect(() => applyColors(document.documentElement.style, prefs.colors), [prefs.colors]);
+  // The colors changed in Settings › Colors, as custom properties on the root that every other color derives from:
+  // the base colors, and the changed roles of the theme that shows.
+  useLayoutEffect(() => applyColors(document.documentElement.style, prefs.colors, dark), [prefs.colors, dark]);
 
   // The window starts hidden (tauri.conf.json) and is shown once the UI has rendered, so it never appears
   // blank; with a file to open, it starts on the loading screen instead of the home screen. Its own
@@ -1739,6 +1740,7 @@ export default function App() {
         {showAppSettings && (
           <Settings
             prefs={prefs}
+            dark={dark}
             onChange={changePrefs}
             onClose={() => setShowAppSettings(false)}
             version={version}

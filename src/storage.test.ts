@@ -54,11 +54,11 @@ test("a stored outline place is kept, and anything else is the sidebar", () => {
 
 test("stored colors keep the valid changed ones, and junk is no colors changed", () => {
   localStorage.clear();
-  expect(loadPrefs().colors).toEqual({ base: {} });
+  expect(loadPrefs().colors).toEqual({ base: {}, light: {}, dark: {} });
   save("prefs", { colors: { base: { primary: "#1F5FAD", accent: "nope", other: "#000000" } } });
-  expect(loadPrefs().colors).toEqual({ base: { primary: "#1f5fad" } });
+  expect(loadPrefs().colors).toEqual({ base: { primary: "#1f5fad" }, light: {}, dark: {} });
   save("prefs", { colors: "#000000" });
-  expect(loadPrefs().colors).toEqual({ base: {} });
+  expect(loadPrefs().colors).toEqual({ base: {}, light: {}, dark: {} });
 });
 
 test("stored pins are read as paths, undefined when there are none to move", () => {
