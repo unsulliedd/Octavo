@@ -181,6 +181,13 @@ const click = (el: Element | null | undefined) => {
   return act(async () => void (el as HTMLElement).click());
 };
 const clickText = (text: string) => click(byText("button", text));
+/** The card of workspace `name` on Home, and what its second line says. */
+const homeCard = (name: string) => all(".card").find((c) => c.querySelector(".card-name")?.textContent === name);
+const cardNames = () => all(".card .card-name").map((n) => n.textContent);
+const cardPlace = (name: string) => homeCard(name)?.querySelector(".card-meta-text")?.textContent;
+const openCard = (name: string) => click(homeCard(name)?.querySelector(".card-open"));
+/** What Home says Pinned holds. */
+const homePins = () => cardPlace("Pinned");
 const rows = () => all(".tree-row").map((r) => r.textContent);
 const tree = () => host.querySelector(".tree");
 const focusWindow = () => act(async () => void window.dispatchEvent(new Event("focus")));
@@ -222,7 +229,9 @@ test("with no workspace open and no document, Home has no sidebar and no sidebar
   expect(host.querySelector(".home")).not.toBeNull();
   expect(host.querySelector(".sidebar")).toBeNull();
   expect(host.querySelector('[aria-label="Show sidebar"]')).toBeNull();
-  expect(host.querySelector("#workspaces-h")).toBeNull();
+  expect(host.querySelector(".drop-zone")).not.toBeNull();
+  expect(all(".card")).toHaveLength(0);
+  expect(byText(".card-new", "New workspace")).toBeDefined();
   expect(byText("button", "Open folder…")).toBeDefined();
 });
 
@@ -271,21 +280,21 @@ test("opening the same folder again finds the same workspace", async () => {
   await until(() => rows().includes("guide.md"), "the tree");
   expect(saves).toEqual([]);
   expect(host.querySelector(".workspace-name")?.textContent).toBe("Handbook");
-  expect(all("#workspaces-h + ul .file-name")).toHaveLength(1);
+  expect(cardNames()).toEqual(["Pinned", "Handbook"]);
 });
 
 test("Home lists workspaces most recent first, opens one with a click and marks the open one", async () => {
   stored = [saved("n", NOTES), saved("h", ROOT)];
   await launch();
-  const names = () => all("[aria-labelledby=workspaces-h] .file-name").map((n) => n.textContent);
-  expect(names()).toEqual(["Notes", "Handbook"]);
-  expect(host.querySelector("[aria-labelledby=workspaces-h] .file-when")).toBeNull();
-  expect(host.querySelector("[aria-labelledby=workspaces-h] .file-folder")?.textContent).toBe("C: › docs › Notes");
-  await click(byText("[aria-labelledby=workspaces-h] .file-open .file-name", "Handbook"));
+  expect(cardNames()).toEqual(["Pinned", "Notes", "Handbook"]);
+  expect(host.querySelector(".card-chip")).toBeNull();
+  expect(cardPlace("Notes")).toBe("C: › docs › Notes");
+  await openCard("Handbook");
   await until(() => rows().includes("guide.md"), "the tree");
-  expect(names()).toEqual(["Handbook", "Notes"]);
+  expect(cardNames()).toEqual(["Pinned", "Handbook", "Notes"]);
   expect(saves.map((s) => s.map((w) => w.id))).toEqual([["h", "n", "pinned"]]);
-  expect(host.querySelector("[aria-labelledby=workspaces-h] .file-when")?.textContent).toBe("Open");
+  expect(all(".card-chip").map((c) => c.closest(".card")?.querySelector(".card-name")?.textContent)).toEqual(["Handbook"]);
+  expect(homeCard("Handbook")?.querySelector(".card-open")?.getAttribute("aria-label")).toBe("Handbook, C: › docs › Handbook, open");
 });
 
 test("a workspace with no document shows the sidebar beside Home, with Outline turned off", async () => {
@@ -371,9 +380,9 @@ test("a scan of the workspace left behind doesn't show in the next one", async (
   stored = [saved("n", NOTES), saved("h", ROOT)];
   await launch();
   hold();
-  await click(byText("[aria-labelledby=workspaces-h] .file-name", "Handbook"));
+  await openCard("Handbook");
   await until(() => held!.length, "the first scan");
-  await click(byText("[aria-labelledby=workspaces-h] .file-name", "Notes"));
+  await openCard("Notes");
   await until(() => held!.length === 2, "the second scan");
   await release(1);
   await release(0);
@@ -551,7 +560,7 @@ test("closing the workspace brings back the tabs of no workspace and the outline
   expect(host.querySelector(".outline")).not.toBeNull();
   await restart();
   expect(host.querySelector(".status-workspace")).toBeNull();
-  expect(all("[aria-labelledby=workspaces-h] .file-name")).toHaveLength(0);
+  expect(all(".card")).toHaveLength(0);
 });
 
 test("the workspace stays saved after it is closed", async () => {
@@ -560,7 +569,7 @@ test("the workspace stays saved after it is closed", async () => {
   await click(host.querySelector(".workspace-name"));
   await click(byText(".menu button", "Close workspace"));
   await until(() => !host.querySelector(".sidebar"), "the sidebar to close");
-  expect(all("[aria-labelledby=workspaces-h] .file-name").map((n) => n.textContent)).toEqual(["Handbook"]);
+  expect(cardNames()).toEqual(["Pinned", "Handbook"]);
 });
 
 test("a scan that ends after the workspace closed shows nothing and Refresh isn't left busy", async () => {
@@ -679,7 +688,7 @@ test("opening the workspace that is already open scans it again", async () => {
   await launch();
   await openFolder(ROOT);
   const before = scans();
-  await click(byText("[aria-labelledby=workspaces-h] .file-name", "Handbook"));
+  await openCard("Handbook");
   await until(() => scans() === before + 1, "the rescan");
 });
 
@@ -749,7 +758,6 @@ const menuItems = () => all(".menu button, .menu [role=separator]").map((i) => (
 const menuPick = (text: string) => click(byText(".menu button", text));
 const inFile = (id: string) => (stored as { id: string; items: { path: string }[]; removed: string[] }[]).find((w) => w.id === id);
 const removedList = () => all(".files-removed-row .tree-name").map((n) => n.textContent);
-const homePins = () => all("[aria-labelledby=pinned-h] .file-name").map((n) => n.textContent);
 const pins = (paths: string[]) => localStorage.setItem("pinned", JSON.stringify(paths));
 const storedPins = () => localStorage.getItem("pinned");
 const pinnedIn = (paths: string[]) => ({ id: "pinned", name: "Pinned", items: paths.map((path) => ({ kind: "document", path })), removed: [] });
@@ -925,7 +933,7 @@ test("New workspace… in the workspace menu opens it empty; Add to from Home fi
   expect(named("Travel")!.items).toEqual([{ kind: "document", path: GUIDE }]);
   // Rename… from Home's row of the workspace.
   typed = "Trips";
-  await rightClick(homeRow("Travel"));
+  await rightClick(homeCard("Travel"));
   expect(menuItems()).toEqual(["Open", "Rename…", "-", "Remove workspace"]);
   await menuPick("Rename…");
   await until(() => byText(".status-workspace", "Trips"), "the new name in the status bar");
@@ -940,13 +948,13 @@ test("renaming a folder's workspace changes its label only", async () => {
   stored = [saved("h", ROOT)];
   await launch();
   typed = "Docs";
-  await rightClick(homeRow("Handbook"));
-  expect(menuItems()).toEqual(["Open", "Open folder in Explorer", "Rename…", "-", "Remove workspace"]);
+  await rightClick(homeCard("Handbook"));
+  expect(menuItems()).toEqual(["Open", "Rename…", "-", "Open folder in Explorer", "-", "Remove workspace"]);
   await menuPick("Rename…");
   await until(() => named("Docs"), "the save");
   expect(prompts).toEqual([{ title: "Rename workspace", text: "The folder on disk keeps its name." }]);
   expect(inFile("h")).toEqual({ ...saved("h", ROOT), name: "Docs" });
-  expect(homeRow("Docs")).toBeTruthy();
+  expect(homeCard("Docs")).toBeTruthy();
 });
 
 test("a folder in the tree goes into Pinned through Add to, shows there as a folder tree, and holds what is inside it", async () => {
@@ -1107,12 +1115,12 @@ test("first launch moves the pins into Pinned, removes them from local storage, 
   await until(() => storedPins() === null, "the move");
   expect(inFile("pinned")!.items).toEqual([{ kind: "document", path: GUIDE }, { kind: "document", path: IDEAS }]);
   expect(saves).toHaveLength(1);
-  expect(homePins()).toEqual(["guide.md", "ideas.md"]);
+  expect(homePins()).toBe("2 documents");
   await restart();
   await settle();
   expect(saves).toHaveLength(1);
   expect(calls).not.toContain("save_workspaces");
-  expect(homePins()).toEqual(["guide.md", "ideas.md"]);
+  expect(homePins()).toBe("2 documents");
 });
 
 test("the pins stay in local storage until the save has reported success", async () => {
@@ -1131,18 +1139,19 @@ test("with no stored pins nothing is written at launch", async () => {
   await launch();
   await settle();
   expect(calls).not.toContain("save_workspaces");
-  expect(homePins()).toEqual([]);
+  expect(all(".card")).toHaveLength(0);
 });
 
 test("a failed save keeps the pins where they are, working, and the next launch moves them", async () => {
   pins([GUIDE, IDEAS]);
+  localStorage.setItem("recent", JSON.stringify([{ path: GUIDE, at: 1 }, { path: IDEAS, at: 1 }]));
   saveRefusal = "Disk full";
   await launch();
   await until(() => told.length, "the error");
   expect(storedPins()).toBe(JSON.stringify([GUIDE, IDEAS]));
-  expect(homePins()).toEqual(["guide.md", "ideas.md"]);
+  expect(homePins()).toBe("2 documents");
   await click(host.querySelector("[aria-label='Unpin ideas.md']"));
-  await until(() => homePins().length === 1, "the unpin");
+  await until(() => homePins() === "1 document", "the unpin");
   expect(storedPins()).toBe(JSON.stringify([GUIDE]));
   saveRefusal = undefined;
   await restart();
@@ -1152,14 +1161,15 @@ test("a failed save keeps the pins where they are, working, and the next launch 
 
 test("a saved file that couldn't be read means no move, nothing written, and pins that keep working", async () => {
   pins([GUIDE]);
+  localStorage.setItem("recent", JSON.stringify([{ path: GUIDE, at: 1 }]));
   loadRefusal = "Access is denied";
   await launch();
   await until(() => told.length, "the error");
   expect(calls).not.toContain("save_workspaces");
   expect(storedPins()).toBe(JSON.stringify([GUIDE]));
-  expect(homePins()).toEqual(["guide.md"]);
+  expect(homePins()).toBe("1 document");
   await click(host.querySelector("[aria-label='Unpin guide.md']"));
-  await until(() => !homePins().length, "the unpin");
+  await until(() => homePins() === "Empty", "the unpin");
   expect(storedPins()).toBe(JSON.stringify([]));
   await restart();
   await settle();
@@ -1176,13 +1186,13 @@ test("a pin made while the saved file can't be read is kept for the next launch"
   loadRefusal = "Access is denied";
   await launch();
   await click(host.querySelector("[aria-label='Pin guide.md']"));
-  await until(() => homePins().length, "the pin");
+  await until(() => homePins() === "1 document", "the pin");
   expect(storedPins()).toBe(JSON.stringify([GUIDE]));
   expect(calls).not.toContain("save_workspaces");
   loadRefusal = undefined;
   await restart();
   await until(() => storedPins() === null, "the move");
-  expect(homePins()).toEqual(["guide.md"]);
+  expect(homePins()).toBe("1 document");
 });
 
 test("the move merges with what Pinned holds, without duplicates", async () => {
@@ -1222,17 +1232,17 @@ test("the pin button adds to and really removes from Pinned, and Home shows it",
   await launch();
   await click(host.querySelector("[aria-label='Pin guide.md']"));
   await until(() => inFile("pinned")?.items.length === 1, "the pin");
-  expect(homePins()).toEqual(["guide.md"]);
+  expect(homePins()).toBe("1 document");
   await click(host.querySelector("[aria-label='Unpin guide.md']"));
   await until(() => inFile("pinned")!.items.length === 0, "the unpin");
   expect(inFile("pinned")!.removed).toEqual([]);
-  expect(homePins()).toEqual([]);
+  expect(homePins()).toBe("Empty");
 });
 
 test("with Pinned open, the + menu adds a document to Pinned", async () => {
   stored = [pinnedIn([GUIDE])];
   await launch();
-  await clickText("Open as workspace");
+  await openCard("Pinned");
   await until(() => rows().includes("guide.md"), "the tree");
   filePicked = IDEAS;
   await click(addButton());
@@ -1245,7 +1255,7 @@ test("with Pinned open, the + menu adds a document to Pinned", async () => {
 test("Pinned opens like any workspace, with its own tabs, and Remove from workspace unpins", async () => {
   stored = [pinnedIn([GUIDE, IDEAS])];
   await launch();
-  await clickText("Open as workspace");
+  await openCard("Pinned");
   await until(() => rows().includes("guide.md"), "the tree");
   expect(host.querySelector(".status-workspace")?.textContent).toBe("Pinned");
   // Documents pinned by themselves are listed at the top, not under their folders.
@@ -1259,30 +1269,35 @@ test("Pinned opens like any workspace, with its own tabs, and Remove from worksp
   expect(removedList()).toEqual([]);
 });
 
-test("Pinned can't be removed and isn't listed as a recent workspace", async () => {
+test("Pinned comes first and its menu has no Rename… or Remove workspace", async () => {
   stored = [saved("h", ROOT), pinnedIn([GUIDE])];
   await launch();
-  expect(all("[aria-labelledby=workspaces-h] .file-name").map((n) => n.textContent)).toEqual(["Handbook"]);
-  expect(host.querySelector("[aria-label='Remove workspace Pinned']")).toBeNull();
-  expect(host.querySelector("[aria-label='Remove workspace Handbook']")).not.toBeNull();
+  expect(cardNames()).toEqual(["Pinned", "Handbook"]);
+  await click(host.querySelector("[aria-label='More for Pinned']"));
+  expect(menuItems()).toEqual(["Open"]);
+  await menuPick("Open");
+  await until(() => rows().includes("guide.md"), "the tree");
+  expect(host.querySelector(".status-workspace")?.textContent).toBe("Pinned");
 });
 
 test("removing a saved workspace asks first, says nothing on disk changes, and takes its tabs with it", async () => {
   stored = [saved("h", ROOT), saved("n", NOTES)];
   localStorage.setItem("tabs:n", JSON.stringify({ tabs: [], active: null }));
   await launch();
-  await click(host.querySelector("[aria-label='Remove workspace Notes']"));
+  await click(host.querySelector("[aria-label='More for Notes']"));
+  await menuPick("Remove workspace");
   await until(() => asked.length, "the question");
   await settle();
   expect(asked[0]).toContain("Nothing on disk changes");
   expect(stored).toHaveLength(2);
   expect(localStorage.getItem("tabs:n")).not.toBeNull();
   agree = true;
-  await click(host.querySelector("[aria-label='Remove workspace Notes']"));
+  await click(host.querySelector("[aria-label='More for Notes']"));
+  await menuPick("Remove workspace");
   await until(() => localStorage.getItem("tabs:n") === null, "its tabs to go");
   await until(() => !inFile("n"), "the save");
   expect(inFile("h")).toBeDefined();
-  expect(all("[aria-labelledby=workspaces-h] .file-name").map((n) => n.textContent)).toEqual(["Handbook"]);
+  expect(cardNames()).toEqual(["Pinned", "Handbook"]);
   expect(calls).not.toContain("delete");
 });
 
@@ -1294,7 +1309,8 @@ test("removing the open workspace closes it first, and its stored tabs don't com
   await click(byText(".tree-row", "guide.md"));
   await until(() => localStorage.getItem("tabs:h")?.includes("guide.md"), "its tabs");
   await click(host.querySelector("[aria-label=Home]"));
-  await click(host.querySelector("[aria-label='Remove workspace Handbook']"));
+  await click(host.querySelector("[aria-label='More for Handbook']"));
+  await menuPick("Remove workspace");
   await until(() => !inFile("h"), "the save");
   await settle(50);
   expect(localStorage.getItem("tabs:h")).toBeNull();

@@ -176,6 +176,8 @@ async function restart() {
 
 const all = <T extends Element = HTMLElement>(selector: string) => [...host.querySelectorAll<T>(selector)];
 const byText = (selector: string, label: string) => all(selector).find((el) => el.textContent?.trim() === label);
+/** The button that opens the card of workspace `name` on Home. */
+const homeCard = (name: string) => all(".card").find((c) => c.querySelector(".card-name")?.textContent === name)?.querySelector<HTMLElement>(".card-open");
 const click = (el: Element | null | undefined) => {
   if (!el) throw new Error("Nothing to click");
   return act(async () => void (el as HTMLElement).click());
@@ -190,7 +192,7 @@ const key = (k: string, mods: KeyboardEventInit) =>
 
 /** Opens workspace `name` from Home, or from the workspace menu once one is open. */
 async function pickWorkspace(name: string) {
-  const row = byText("[aria-labelledby=workspaces-h] .file-name", name);
+  const row = homeCard(name);
   if (row) return click(row);
   await click(host.querySelector(".status-workspace"));
   await click(byText(".menu [role=menuitemradio]", name));
@@ -288,7 +290,7 @@ test("the tabs of no workspace come back unchanged when a workspace closes", asy
   await click(byText(".seg button", "Files"));
   await until(() => byText("button", "Choose folder…"), "the offer");
   await click(host.querySelector('[aria-label="Home"]'));
-  await click(byText("[aria-labelledby=workspaces-h] .file-name", "Handbook"));
+  await click(homeCard("Handbook"));
   await until(() => open() === "Handbook", "the workspace");
   expect(openTabs()).toEqual([]);
   await closeWorkspace();
@@ -930,7 +932,8 @@ test("removing the open workspace goes through the close path: Cancel keeps it, 
   agree = true;
   await editGuide(AUTOSAVE_OFF);
   await click(host.querySelector("[aria-label=Home]"));
-  await click(host.querySelector("[aria-label='Remove workspace Handbook']"));
+  await click(host.querySelector("[aria-label='More for Handbook']"));
+  await click(byText(".menu button", "Remove workspace"));
   await until(() => questions.length, "the question");
   await settle();
   expect(open()).toBe("Handbook");
@@ -942,7 +945,8 @@ test("removing the open workspace saves its edits first", async () => {
   agree = true;
   await editGuide();
   await click(host.querySelector("[aria-label=Home]"));
-  await click(host.querySelector("[aria-label='Remove workspace Handbook']"));
+  await click(host.querySelector("[aria-label='More for Handbook']"));
+  await click(byText(".menu button", "Remove workspace"));
   await until(() => open() === undefined, "the workspace to close");
   expect(disk.get(GUIDE)).toBe(EDITED);
   await until(() => (stored as { id: string }[]).every((w) => w.id !== "h"), "the save");

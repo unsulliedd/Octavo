@@ -15,6 +15,8 @@ export const ICON_SIZE = {
   row: 16,
   /** The file or folder at the start of a row on Home, and Home's drop target. */
   home: 18,
+  /** The + of the New workspace card on Home. */
+  card: 24,
 } as const;
 
 export type IconSize = keyof typeof ICON_SIZE;
@@ -216,6 +218,7 @@ const paths = {
   down: <path d="m6 9 6 6 6-6" />,
   close: <path d="M18 6 6 18M6 6l12 12" />,
   plus: <path d="M5 12h14M12 5v14" />,
+  more: <path d="M5 12h.01M12 12h.01M19 12h.01" />,
   /** A workspace of the user's own. */
   layers: (
     <>

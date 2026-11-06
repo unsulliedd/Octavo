@@ -1710,6 +1710,7 @@ export default function App() {
             onPickFolder={() => void workspaces.pickFolder()}
             onOpen={(p) => openPath(p)}
             onOpenWorkspace={(id) => void workspaces.openWorkspace(id)}
+            onNewWorkspace={() => void workspaces.createWorkspace()}
             onRemoveWorkspace={(id) => void workspaces.removeWorkspace(id)}
             onRenameWorkspace={(id) => void workspaces.rename(id)}
             addTo={(item) => addToItem(workspaces, item)}
