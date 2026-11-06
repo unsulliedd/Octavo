@@ -46,6 +46,9 @@ let gone: string[];
 let asked: string[];
 let agree: boolean;
 let filePicked: string | null;
+/** What a name prompt is answered with; undefined cancels it. */
+let typed: string | undefined;
+let prompts: { title: string; text: string }[];
 
 const settle = (ms = 0) => act(() => new Promise<void>((done) => setTimeout(done, ms)));
 async function until(check: () => unknown, what: string) {
@@ -80,7 +83,13 @@ beforeEach(() => {
   gone = [];
   asked = [];
   agree = false;
-  stopAnswering = answerDialogs((text, labels) => {
+  typed = undefined;
+  prompts = [];
+  stopAnswering = answerDialogs((text, labels, title) => {
+    if (title === "New workspace" || title === "Rename workspace") {
+      prompts.push({ title, text });
+      return typed === undefined ? labels[1] : { label: labels[0], text: typed };
+    }
     if (labels.length === 1) {
       told.push({ message: text });
       return labels[0];
@@ -494,6 +503,7 @@ test("the workspace menu switches workspaces, and each has its own tabs", async 
     "Notes",
     "|",
     "Open folder…",
+    "New workspace…",
     "Close workspace",
   ]);
   await click(byText(".menu [role=menuitemradio]", "Notes"));
@@ -749,7 +759,7 @@ test("the tree's menu holds what the board shows, for a document and for a folde
   await launch();
   await openFolder(ROOT);
   await rightClick(byText(".tree-row", "guide.md"));
-  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Remove from workspace"]);
+  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Add to", "-", "Remove from workspace"]);
   expect(host.querySelector(".menu")?.getAttribute("aria-label")).toBe("guide.md");
   await act(async () => void document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })));
   expect(host.querySelector(".menu")).toBeNull();
@@ -802,38 +812,194 @@ test("removing the workspace's folder itself leaves a way back", async () => {
   await until(() => rows().includes("guide.md"), "the tree");
 });
 
-test("a tab's menu adds its document, grouped under its project folder, with Add to workspace third", async () => {
+const DRAFT = "C:\\repo\\docs\\deep\\draft.md";
+const SPECS = `${ROOT}\\specs`;
+const openAddTo = () => click(byText(".menu button", "Add to"));
+const subItems = () =>
+  all(".menu .menu > button, .menu .menu > [role=separator]").map((i) => (i.getAttribute("role") === "separator" ? "-" : i.textContent));
+const subItem = (text: string) => byText(".menu .menu button", text) as HTMLButtonElement;
+const ticked = (text: string) => [subItem(text).getAttribute("role"), subItem(text).getAttribute("aria-checked"), subItem(text).disabled];
+type Stored = { id: string; name: string; items: { kind: string; path: string }[]; removed: string[]; own?: boolean };
+const named = (name: string) => (stored as Stored[]).find((w) => w.name === name);
+const homeRow = (name: string) => all(".file-row").find((r) => r.querySelector(".file-name")?.textContent === name);
+
+test("a tab's menu has Add to third, with Pinned and never the open folder's workspace; what Pinned holds is ticked and disabled", async () => {
   stored = [saved("h", ROOT)];
   localStorage.setItem("workspace", JSON.stringify("h"));
-  initialFile = "C:\\repo\\docs\\deep\\draft.md";
-  gitRoot = "C:\\repo";
+  initialFile = DRAFT;
   await launch();
   await until(() => openTabs().length, "the tab");
   await until(() => rows().includes("guide.md"), "the tree");
   await rightClick(host.querySelector(".tab"));
-  expect(menuItems().slice(0, 4)).toEqual(["Open containing folder", "Copy path", "Add to workspace", "-"]);
-  await menuPick("Add to workspace");
-  await until(() => rows().includes("draft.md"), "the document in the tree");
-  expect(rows()).toEqual(["Handbook", "specs", "spec.md", "guide.md", "repo", "docs", "deep", "draft.md"]);
+  expect(menuItems().slice(0, 4)).toEqual(["Open containing folder", "Copy path", "Add to", "-"]);
+  expect(byText(".menu button", "Add to")!.getAttribute("aria-haspopup")).toBe("menu");
+  await openAddTo();
+  expect(subItems()).toEqual(["Pinned", "-", "New workspace…"]);
+  expect(ticked("Pinned")).toEqual(["menuitemcheckbox", "false", false]);
+  await click(subItem("Pinned"));
+  expect(host.querySelector(".menu")).toBeNull();
+  await until(() => inFile("pinned")?.items.length === 1, "the pin");
+  expect((inFile("pinned") as Stored).items).toEqual([{ kind: "document", path: DRAFT }]);
+  // The folder's workspace didn't change.
+  expect(inFile("h")).toEqual(saved("h", ROOT));
   await rightClick(host.querySelector(".tab"));
-  expect((byText(".menu button", "Add to workspace") as HTMLButtonElement).disabled).toBe(true);
+  await openAddTo();
+  expect(ticked("Pinned")).toEqual(["menuitemcheckbox", "true", true]);
 });
 
-test("with no workspace open a tab's menu has no Add to workspace, and with the document covered it is disabled", async () => {
+test("New workspace… in Add to asks for a name, makes the workspace with the document and stays where you are", async () => {
+  stored = [saved("h", ROOT)];
+  localStorage.setItem("workspace", JSON.stringify("h"));
   initialFile = GUIDE;
   await launch();
   await until(() => openTabs().length, "the tab");
+  await until(() => rows().includes("guide.md"), "the tree");
+  typed = "  Reading list ";
   await rightClick(host.querySelector(".tab"));
-  expect(menuItems()).not.toContain("Add to workspace");
-  await act(async () => void document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })));
-  await clickText("Files");
-  await until(() => byText("button", "Open Handbook folder"), "the offer");
-  await clickText("Open Handbook folder");
+  await openAddTo();
+  await click(subItem("New workspace…"));
+  await until(() => named("Reading list"), "the new workspace");
+  expect(prompts).toEqual([{ title: "New workspace", text: "guide.md goes in it." }]);
+  const made = named("Reading list")!;
+  expect(made).toEqual({ id: made.id, name: "Reading list", items: [{ kind: "document", path: GUIDE }], removed: [], own: true });
+  expect(inFile("h")).toEqual(saved("h", ROOT));
+  expect(host.querySelector(".status-workspace")?.textContent).toBe("Handbook");
+  expect(openTabs()).toEqual(["guide.md"]);
+  // It is a target from now on, after Pinned, and already holds the document.
+  await rightClick(host.querySelector(".tab"));
+  await openAddTo();
+  expect(subItems()).toEqual(["Pinned", "-", "Reading list", "-", "New workspace…"]);
+  expect(ticked("Reading list")).toEqual(["menuitemcheckbox", "true", true]);
+});
+
+test("cancelling the name of a new workspace saves nothing", async () => {
+  stored = [saved("h", ROOT)];
+  localStorage.setItem("workspace", JSON.stringify("h"));
+  initialFile = GUIDE;
+  await launch();
+  await until(() => openTabs().length, "the tab");
   await until(() => rows().includes("guide.md"), "the tree");
   const before = saves.length;
   await rightClick(host.querySelector(".tab"));
-  expect((byText(".menu button", "Add to workspace") as HTMLButtonElement).disabled).toBe(true);
+  await openAddTo();
+  await click(subItem("New workspace…"));
+  await until(() => prompts.length, "the prompt");
+  await settle(50);
   expect(saves).toHaveLength(before);
+  await click(host.querySelector(".workspace-name"));
+  await menuPick("New workspace…");
+  await until(() => prompts.length === 2, "the second prompt");
+  await settle(50);
+  expect(saves).toHaveLength(before);
+  expect(host.querySelector(".status-workspace")?.textContent).toBe("Handbook");
+});
+
+test("New workspace… in the workspace menu opens it empty; Add to from Home fills it, and Rename… on Home renames it everywhere", async () => {
+  stored = [saved("h", ROOT)];
+  localStorage.setItem("workspace", JSON.stringify("h"));
+  initialFile = GUIDE;
+  await launch();
+  await until(() => openTabs().length, "the tab");
+  await until(() => rows().includes("guide.md"), "the tree");
+  typed = "Travel";
+  await click(host.querySelector(".workspace-name"));
+  await menuPick("New workspace…");
+  await until(() => byText(".status-workspace", "Travel"), "the new workspace to open");
+  expect(prompts[0]).toEqual({ title: "New workspace", text: "Add folders and documents to it with + in the Files tab, or right-click any document." });
+  await until(() => named("Travel"), "the save");
+  expect(named("Travel")).toMatchObject({ items: [], removed: [], own: true });
+  expect(host.querySelector(".workspace-name")?.textContent).toBe("Travel");
+  expect(host.querySelector(".files-offer")?.textContent).toContain("Nothing here yet");
+  expect(host.querySelector(".files-note")).toBeNull();
+  expect(rows()).toEqual([]);
+  expect(openTabs()).toEqual([]);
+  // Home shows beside the empty workspace: its recent document goes in through Add to.
+  await rightClick(homeRow("guide.md"));
+  expect(menuItems()).toContain("Add to");
+  await openAddTo();
+  expect(subItems()).toEqual(["Pinned", "-", "Travel", "-", "New workspace…"]);
+  await click(subItem("Travel"));
+  await until(() => rows().includes("guide.md"), "the document in the tree");
+  expect(rows()).toEqual(["guide.md"]);
+  expect(host.querySelector(".files-offer")).toBeNull();
+  expect(named("Travel")!.items).toEqual([{ kind: "document", path: GUIDE }]);
+  // Rename… from Home's row of the workspace.
+  typed = "Trips";
+  await rightClick(homeRow("Travel"));
+  expect(menuItems()).toEqual(["Open", "Rename…", "-", "Remove workspace"]);
+  await menuPick("Rename…");
+  await until(() => byText(".status-workspace", "Trips"), "the new name in the status bar");
+  expect(prompts[1]).toEqual({ title: "Rename workspace", text: "" });
+  expect(host.querySelector(".workspace-name")?.textContent).toBe("Trips");
+  await until(() => named("Trips"), "the save");
+  expect(named("Trips")!.items).toEqual([{ kind: "document", path: GUIDE }]);
+  expect(inFile("h")).toEqual(saved("h", ROOT));
+});
+
+test("renaming a folder's workspace changes its label only", async () => {
+  stored = [saved("h", ROOT)];
+  await launch();
+  typed = "Docs";
+  await rightClick(homeRow("Handbook"));
+  expect(menuItems()).toEqual(["Open", "Open folder in Explorer", "Rename…", "-", "Remove workspace"]);
+  await menuPick("Rename…");
+  await until(() => named("Docs"), "the save");
+  expect(prompts).toEqual([{ title: "Rename workspace", text: "The folder on disk keeps its name." }]);
+  expect(inFile("h")).toEqual({ ...saved("h", ROOT), name: "Docs" });
+  expect(homeRow("Docs")).toBeTruthy();
+});
+
+test("a folder in the tree goes into Pinned through Add to, shows there as a folder tree, and holds what is inside it", async () => {
+  folders.set(SPECS, { files: [SPEC], truncated: false });
+  // spec.md is pinned by itself too.
+  stored = [saved("h", ROOT), pinnedIn([IDEAS, SPEC])];
+  localStorage.setItem("workspace", JSON.stringify("h"));
+  await launch();
+  await until(() => rows().includes("guide.md"), "the tree");
+  await rightClick(byText(".tree-row", "specs"));
+  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Add to", "-", "Remove from workspace"]);
+  await openAddTo();
+  await click(subItem("Pinned"));
+  await until(() => inFile("pinned")?.items.length === 3, "the pin");
+  expect((inFile("pinned") as Stored).items).toEqual([
+    { kind: "document", path: IDEAS },
+    { kind: "document", path: SPEC },
+    { kind: "folder", path: SPECS },
+  ]);
+  expect(inFile("h")).toEqual(saved("h", ROOT));
+  await click(host.querySelector(".workspace-name"));
+  await click(byText(".menu [role=menuitemradio]", "Pinned"));
+  await until(() => rows().includes("spec.md"), "Pinned's tree");
+  // spec.md, pinned by itself and through its folder, shows once, in the folder.
+  expect(rows()).toEqual(["specs", "spec.md", "ideas.md"]);
+  await rightClick(byText(".tree-row", "spec.md"));
+  await openAddTo();
+  expect(ticked("Pinned")).toEqual(["menuitemcheckbox", "true", true]);
+});
+
+test("the submenu is driven by the keyboard from a tree row's menu", async () => {
+  stored = [saved("h", ROOT), pinnedIn([]), { id: "own", name: "Mine", items: [], removed: [], own: true }];
+  localStorage.setItem("workspace", JSON.stringify("h"));
+  await launch();
+  await until(() => rows().includes("guide.md"), "the tree");
+  await rightClick(byText(".tree-row", "guide.md"));
+  const keyOn = (key: string) => act(async () => void document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })));
+  await keyOn("ArrowDown");
+  await keyOn("ArrowDown");
+  expect(document.activeElement?.textContent).toBe("Add to");
+  await keyOn("ArrowRight");
+  expect(subItems()).toEqual(["Pinned", "-", "Mine", "-", "New workspace…"]);
+  expect(document.activeElement?.textContent).toBe("Pinned");
+  await keyOn("ArrowDown");
+  expect(document.activeElement?.textContent).toBe("Mine");
+  await keyOn("ArrowLeft");
+  expect(host.querySelector(".menu .menu")).toBeNull();
+  expect(document.activeElement?.textContent).toBe("Add to");
+  await keyOn("Enter");
+  await keyOn("ArrowDown");
+  await act(async () => void (document.activeElement as HTMLElement).click());
+  await until(() => named("Mine")?.items.length === 1, "the save");
+  expect(named("Mine")!.items).toEqual([{ kind: "document", path: GUIDE }]);
 });
 
 const addButton = () => host.querySelector<HTMLButtonElement>("[aria-label='Add to workspace']")!;
@@ -863,7 +1029,7 @@ test("the + menu is one menu at a time with the workspace menu and a row's menu"
   await openFolder(ROOT);
   await click(addButton());
   await rightClick(byText(".tree-row", "guide.md"));
-  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Remove from workspace"]);
+  expect(menuItems()).toEqual(["Open containing folder", "Copy path", "-", "Add to", "-", "Remove from workspace"]);
   await click(addButton());
   expect(menuItems()).toEqual(["Add document…", "Add folder…"]);
   await click(host.querySelector(".workspace-name"));
@@ -1082,7 +1248,8 @@ test("Pinned opens like any workspace, with its own tabs, and Remove from worksp
   await clickText("Open as workspace");
   await until(() => rows().includes("guide.md"), "the tree");
   expect(host.querySelector(".status-workspace")?.textContent).toBe("Pinned");
-  expect(rows()).toEqual(["Handbook", "guide.md", "Notes", "ideas.md"]);
+  // Documents pinned by themselves are listed at the top, not under their folders.
+  expect(rows()).toEqual(["guide.md", "ideas.md"]);
   await click(byText(".tree-row", "guide.md"));
   await until(() => localStorage.getItem("tabs:pinned")?.includes("guide.md"), "its tabs");
   await rightClick(byText(".tree-row", "ideas.md"));

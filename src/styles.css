@@ -341,6 +341,7 @@ input[type="checkbox"]:disabled {
 .image-editor input,
 .find input,
 .quick-search input,
+.app-dialog-field input,
 .shortcut-keys {
   min-width: 0;
   height: var(--height-md);
@@ -362,6 +363,7 @@ input[type="checkbox"]:disabled {
 .image-editor input:focus,
 .find input:focus,
 .quick-search input:focus,
+.app-dialog-field input:focus,
 .shortcut-keys[data-recording] {
   border-color: var(--control);
   box-shadow: 0 0 0 1px var(--control);
@@ -475,6 +477,17 @@ input[type="checkbox"]:disabled {
 .menu-item:disabled {
   opacity: 0.45;
   cursor: default;
+}
+/* An item that opens a submenu: the arrow at its end, and the item marked while its submenu is open */
+.menu-sub {
+  display: flex;
+  flex-direction: column;
+}
+.menu-item[aria-expanded="true"] {
+  background: var(--chrome-2);
+}
+.menu-item[aria-haspopup] > .icon {
+  color: var(--muted);
 }
 .menu-keys {
   color: var(--muted);
@@ -1810,6 +1823,19 @@ button.save-state {
   overflow: auto;
   overflow-wrap: anywhere;
   white-space: pre-line;
+}
+.app-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.app-dialog-field label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+.app-dialog-field + p {
+  color: var(--muted);
 }
 .app-dialog-buttons {
   display: flex;

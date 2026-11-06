@@ -30,6 +30,13 @@ pub struct Workspace {
     pub name: String,
     pub items: Vec<Item>,
     pub removed: Vec<String>,
+    /// Made with New workspace rather than from a folder. Left out of the file when false.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub own: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize)]
@@ -197,6 +204,7 @@ mod tests {
                 },
             ],
             removed: vec![r"C:\Docs\notlar ğü\old".into()],
+            own: false,
         }]
     }
 
@@ -236,6 +244,20 @@ mod tests {
             file["workspaces"][0]["removed"][0],
             r"C:\Docs\notlar ğü\old"
         );
+        assert!(file["workspaces"][0].get("own").is_none());
+    }
+
+    #[test]
+    fn an_own_workspace_keeps_its_mark_and_one_without_it_loads_as_not_own() {
+        let dir = TempDir::new("own");
+        let mut workspaces = sample();
+        workspaces[0].own = true;
+        save(&dir.file(), &workspaces).unwrap();
+        let file: Value = serde_json::from_slice(&fs::read(dir.file()).unwrap()).unwrap();
+        assert_eq!(file["workspaces"][0]["own"], true);
+        assert_eq!(load(&dir.file()).unwrap().workspaces, workspaces);
+        let old = r#"{"version": 1, "workspaces": [{"id": "a", "name": "A", "items": [], "removed": []}]}"#;
+        assert!(!parse(old.as_bytes()).unwrap()[0].own);
     }
 
     #[test]
