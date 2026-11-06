@@ -1,6 +1,9 @@
-/* Brand colors: primary #5A0E27, secondary #75B7E5, accent #D39D3F. Every role derives from these three,
-   so a future color setting only swaps them. Text uses adjusted shades where a brand color is too light or dark.
-   They sit on the root, so the page behind the app follows the theme too. */
+/* Base colors: primary #5A0E27, secondary #75B7E5, accent #D39D3F. Every role derives from these three, and
+   Settings › Colors changes them with inline properties on the root. They sit on the root, so the page behind the
+   app follows the theme too.
+   So that any base color stays readable, roles keep an OKLCH lightness bound: text and marks drawn from a base color
+   at most 0.58 in light and at least 0.70 in dark, pale fills behind text at least 0.88 in light and at most 0.45 in
+   dark, and text on a base-color fill turns from white to the dark ink once the fill's lightness passes 0.6. */
 :root {
   --brand-primary: #5a0e27;
   --brand-secondary: #75b7e5;
@@ -21,20 +24,22 @@
   --code-type: #7a4e0c;
   --code-attr: #0e6e78;
   /* Inline code: accent text on a pale accent chip, apart from the body text and from code blocks */
-  --code-inline-ink: color-mix(in srgb, var(--brand-accent) 55%, black);
-  --code-inline-bg: color-mix(in srgb, var(--brand-accent) 20%, var(--doc));
+  --code-inline-ink: oklch(from color-mix(in srgb, var(--brand-accent) 55%, black) min(l, 0.58) c h);
+  --code-inline-bg: oklch(from color-mix(in srgb, var(--brand-accent) 20%, var(--doc)) max(l, 0.88) c h);
   --code-inline-line: color-mix(in srgb, var(--brand-accent) 30%, var(--doc));
-  --control: var(--brand-primary); /* checkboxes, sliders, focus borders, spinner */
+  --control: oklch(from var(--brand-primary) min(l, 0.58) c h); /* checkboxes, sliders, focus borders, spinner */
   --control-fill: var(--brand-primary); /* primary buttons */
-  --control-ink: #ffffff;
-  --control-soft: color-mix(in srgb, var(--brand-primary) 9%, var(--doc)); /* selected rows, pressed buttons */
-  --control-soft-ink: var(--brand-primary);
-  --link: color-mix(in srgb, var(--brand-secondary) 40%, #003a70); /* the secondary color is too light for text on white */
-  --brand-accent-ink: color-mix(in srgb, var(--brand-accent) 72%, black);
-  --select: color-mix(in srgb, var(--brand-secondary) 35%, white);
-  --find-match: color-mix(in srgb, var(--brand-accent) 38%, white);
+  /* White on a dark fill, the dark ink (#1b1f24, as OKLCH) on a light one; the same for the current find match. */
+  --control-ink: oklch(from var(--control-fill) clamp(0.237347, (0.6 - l) * 1000, 1) calc(0.011318 * clamp(0, (l - 0.6) * 1000, 1)) 254.056);
+  --control-soft: oklch(from color-mix(in srgb, var(--brand-primary) 9%, var(--doc)) max(l, 0.88) c h); /* selected rows, pressed buttons */
+  --control-soft-ink: var(--control);
+  --link: oklch(from color-mix(in srgb, var(--brand-secondary) 40%, #003a70) min(l, 0.58) c h); /* the secondary color is too light for text on white */
+  --brand-accent-ink: oklch(from color-mix(in srgb, var(--brand-accent) 72%, black) min(l, 0.58) c h);
+  --select: oklch(from color-mix(in srgb, var(--brand-secondary) 35%, white) max(l, 0.88) c h);
+  --find-match: oklch(from color-mix(in srgb, var(--brand-accent) 38%, white) max(l, 0.88) c h);
   --find-current: var(--brand-accent);
-  --drop-soft: color-mix(in srgb, var(--brand-secondary) 18%, var(--doc));
+  --find-current-ink: oklch(from var(--find-current) clamp(0.237347, (0.6 - l) * 1000, 1) calc(0.011318 * clamp(0, (l - 0.6) * 1000, 1)) 254.056);
+  --drop-soft: oklch(from color-mix(in srgb, var(--brand-secondary) 18%, var(--doc)) max(l, 0.88) c h);
   --scroll-thumb: color-mix(in srgb, var(--muted) 70%, transparent);
   --scroll-thumb-hover: var(--muted);
   --outline-mark: var(--muted); /* the outline's dashes */
@@ -87,17 +92,17 @@
   --code-fn: #8ec8f0;
   --code-type: #e6c079;
   --code-attr: #7fd6d0;
-  --code-inline-ink: color-mix(in srgb, var(--brand-accent) 80%, white);
-  --code-inline-bg: color-mix(in srgb, var(--brand-accent) 15%, var(--doc));
+  --code-inline-ink: oklch(from color-mix(in srgb, var(--brand-accent) 80%, white) max(l, 0.7) c h);
+  --code-inline-bg: oklch(from color-mix(in srgb, var(--brand-accent) 15%, var(--doc)) min(l, 0.45) c h);
   --control: oklch(from var(--brand-primary) 0.74 c calc(h - 6)); /* primary lifted so controls read on dark */
   --control-fill: color-mix(in srgb, var(--brand-primary) 78%, white); /* primary lifted so buttons read on dark */
-  --control-soft: color-mix(in srgb, var(--brand-primary) 55%, var(--doc));
+  --control-soft: oklch(from color-mix(in srgb, var(--brand-primary) 55%, var(--doc)) min(l, 0.45) c h);
   --control-soft-ink: color-mix(in srgb, var(--control) 30%, white);
-  --link: var(--brand-secondary);
-  --brand-accent-ink: var(--brand-accent);
-  --select: color-mix(in srgb, var(--brand-secondary) 35%, var(--doc));
-  --find-match: color-mix(in srgb, var(--brand-accent) 40%, var(--doc));
-  --drop-soft: color-mix(in srgb, var(--brand-secondary) 16%, var(--doc));
+  --link: oklch(from var(--brand-secondary) max(l, 0.7) c h);
+  --brand-accent-ink: oklch(from var(--brand-accent) max(l, 0.7) c h);
+  --select: oklch(from color-mix(in srgb, var(--brand-secondary) 35%, var(--doc)) min(l, 0.45) c h);
+  --find-match: oklch(from color-mix(in srgb, var(--brand-accent) 40%, var(--doc)) min(l, 0.45) c h);
+  --drop-soft: oklch(from color-mix(in srgb, var(--brand-secondary) 16%, var(--doc)) min(l, 0.45) c h);
   --danger: #ff7b72;
   color-scheme: dark;
 }
@@ -162,7 +167,7 @@ body > .mermaidTooltip {
 }
 .app ::highlight(find-current) {
   background-color: var(--find-current);
-  color: #1b1f24;
+  color: var(--find-current-ink);
 }
 .visually-hidden {
   position: absolute;
@@ -336,6 +341,7 @@ input[type="checkbox"]:disabled {
 .find input,
 .quick-search input,
 .app-dialog-field input,
+.color-hex,
 .shortcut-keys {
   min-width: 0;
   height: var(--height-md);
@@ -358,6 +364,7 @@ input[type="checkbox"]:disabled {
 .find input:focus,
 .quick-search input:focus,
 .app-dialog-field input:focus,
+.color-hex:focus,
 .shortcut-keys[data-recording] {
   border-color: var(--control);
   box-shadow: 0 0 0 1px var(--control);
@@ -2056,6 +2063,109 @@ button.save-state {
 .shortcut-row .icon-btn[hidden] {
   display: inline-flex;
   visibility: hidden;
+}
+/* Colors: a base color's row in the same list, with a swatch, its hex value and Reset, and a message below */
+.shortcut-row.color-row {
+  flex-wrap: wrap;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.color-pick {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+.color-swatch {
+  width: var(--height-md);
+  height: var(--height-md);
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--doc);
+  cursor: pointer;
+}
+.color-swatch span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+/* The system picker opens at its input, which sits unseen under the swatch. */
+.color-pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.color-hex {
+  flex: none;
+  width: 92px;
+  font-family: var(--mono);
+}
+.color-hex[aria-invalid],
+.color-hex[aria-invalid]:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+.color-error {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+/* The preview: the app's own sidebar rows and document, so it follows the colors by itself */
+.color-preview {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.color-preview-side {
+  padding: 8px;
+  background: var(--chrome);
+  border-right: 1px solid var(--line);
+}
+.color-preview-pin {
+  margin-left: auto;
+  display: inline-flex;
+  color: var(--brand-accent-ink);
+}
+.color-preview-doc {
+  padding: 12px 16px;
+  font-family: var(--ui);
+  font-size: var(--text-md);
+}
+.color-preview-doc p {
+  margin: 0 0 10px;
+}
+.color-preview-doc ul {
+  margin: 0 0 10px;
+  padding-left: 0;
+}
+.color-preview-select {
+  background: var(--select);
+}
+.color-preview-match {
+  border-radius: 2px;
+  background: var(--find-match);
+}
+.color-preview-match.current {
+  background: var(--find-current);
+  color: var(--find-current-ink);
+}
+.color-preview-buttons {
+  display: flex;
+  gap: 8px;
 }
 @media (max-width: 640px) {
   .settings-nav {
