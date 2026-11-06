@@ -20,7 +20,7 @@ import { addToItem, FilesPanel, WorkspaceMenu, WorkspaceStatus } from "./FilesPa
 import { FindBar } from "./FindBar";
 import { basename, folderTrail, Home } from "./Home";
 import { Icon } from "./icons";
-import { pastedName, watchBrokenImages } from "./images";
+import { IMAGE_TYPES, pastedName, watchBrokenImages } from "./images";
 import { linkTarget } from "./svgLinks";
 import { addOpenButtons, largeContent, type LargeContent } from "./largeView";
 import { LargeViewer } from "./LargeViewer";
@@ -92,7 +92,6 @@ const placeImages = (doc: string, files: string[]) =>
 
 /** An image file as the document links it: its path relative to the document, and its name as alt text. */
 const imageRef = (doc: string, file: string) => ({ src: relativePath(dirname(doc), file), alt: basename(file).replace(/\.[^.]+$/, "") });
-const IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"];
 const IMAGE_FILE = new RegExp(`\\.(${IMAGE_TYPES.join("|")})$`, "i");
 const WIDTHS: Record<LineWidth, string> = { narrow: "600px", medium: "720px", default: "920px", wide: "1120px", wider: "1320px" };
 /** How far the pointer moves on a pressed tab before the tab is dragged instead of clicked, in pixels. */
@@ -1713,6 +1712,9 @@ export default function App() {
             onNewWorkspace={() => void workspaces.createWorkspace()}
             onRemoveWorkspace={(id) => void workspaces.removeWorkspace(id)}
             onRenameWorkspace={(id) => void workspaces.rename(id)}
+            coverUrl={workspaces.coverUrl}
+            onChooseCover={workspaces.chooseCover}
+            onRemoveCover={workspaces.removeCover}
             addTo={(item) => addToItem(workspaces, item)}
             onTogglePin={(p) => void workspaces.togglePin(p)}
             onError={(m) => setError(m)}

@@ -27,6 +27,9 @@ beforeEach(() => {
     onNewWorkspace: vi.fn(),
     onRemoveWorkspace: vi.fn(),
     onRenameWorkspace: vi.fn(),
+    coverUrl: (w: Workspace) => (w.cover ? `asset://covers/${w.cover}?v=1` : undefined),
+    onChooseCover: vi.fn(async () => {}),
+    onRemoveCover: vi.fn(async () => {}),
     onTogglePin: vi.fn(),
     onError: vi.fn(),
     onPick: vi.fn(),
@@ -108,7 +111,7 @@ test("a failed reveal is reported", async () => {
 test("a workspace of a folder offers Open, Open folder in Explorer, Rename… and Remove workspace", () => {
   rightClick(card("Notes"));
   expect(menu()!.getAttribute("aria-label")).toBe("Notes");
-  expect(labels()).toEqual(["Open", "Rename…", "Open folder in Explorer", "Remove workspace"]);
+  expect(labels()).toEqual(["Open", "Rename…", "Choose image…", "Open folder in Explorer", "Remove workspace"]);
   pick("Rename…");
   expect(on.onRenameWorkspace).toHaveBeenCalledWith("w1");
   rightClick(card("Notes"));
@@ -124,9 +127,9 @@ test("a workspace of a folder offers Open, Open folder in Explorer, Rename… an
 
 test("a workspace whose first item is a document, and an own workspace, have no Open folder in Explorer", () => {
   rightClick(card("Picked"));
-  expect(labels()).toEqual(["Open", "Rename…", "Remove workspace"]);
+  expect(labels()).toEqual(["Open", "Rename…", "Choose image…", "Remove workspace"]);
   rightClick(card("Mine"));
-  expect(labels()).toEqual(["Open", "Rename…", "Remove workspace"]);
+  expect(labels()).toEqual(["Open", "Rename…", "Choose image…", "Remove workspace"]);
   pick("Rename…");
   expect(on.onRenameWorkspace).toHaveBeenCalledWith("w3");
 });
@@ -204,7 +207,7 @@ test("the ⋯ button opens the card's menu and says so; Escape gives it the focu
   expect(more.getAttribute("aria-expanded")).toBe("false");
   more.focus();
   act(() => more.click());
-  expect(labels()).toEqual(["Open", "Rename…", "Remove workspace"]);
+  expect(labels()).toEqual(["Open", "Rename…", "Choose image…", "Remove workspace"]);
   expect(more.getAttribute("aria-expanded")).toBe("true");
   expect(card("Mine").hasAttribute("data-menu")).toBe(true);
   key(document.activeElement!, { key: "Escape" });
@@ -237,7 +240,7 @@ test("every card is reached with Tab, and the context-menu key or Shift+F10 on i
   key(document.activeElement!, { key: "Escape" });
   expect(document.activeElement).toBe(open);
   key(open, { key: "F10", shiftKey: true });
-  expect(labels()).toEqual(["Open", "Rename…", "Open folder in Explorer", "Remove workspace"]);
+  expect(labels()).toEqual(["Open", "Rename…", "Choose image…", "Open folder in Explorer", "Remove workspace"]);
 });
 
 test("pinned documents list with the recent ones, their pin pressed, and Pinned has no rows of its own", () => {
@@ -263,4 +266,49 @@ test("past the first launch, dragging a file shows the drop overlay", () => {
   expect(document.querySelector(".drop-overlay")).toBeNull();
   act(() => root.render(<Home recent={[]} pinned={[]} dragging workspaces={[FOLDER]} {...on} />));
   expect(document.querySelector(".drop-overlay")?.textContent).toBe("Drop to open");
+});
+
+const COVERED: Workspace = { ...OWN, cover: "w3.png" };
+const renderCovered = () => act(() => root.render(<Home recent={[]} pinned={[]} dragging={false} workspaces={[COVERED, FOLDER]} {...on} />));
+
+test("Choose image… is on every card but Pinned, and Remove image only on a card with a cover", () => {
+  renderCovered();
+  rightClick(card("Mine"));
+  expect(labels()).toEqual(["Open", "Rename…", "Choose image…", "Remove image", "Remove workspace"]);
+  pick("Choose image…");
+  expect(on.onChooseCover).toHaveBeenCalledWith("w3");
+  rightClick(card("Mine"));
+  pick("Remove image");
+  expect(on.onRemoveCover).toHaveBeenCalledWith("w3");
+  rightClick(card("Notes"));
+  expect(labels()).not.toContain("Remove image");
+  rightClick(card("Pinned"));
+  expect(labels()).toEqual(["Open"]);
+});
+
+test("a cover that can't be chosen or removed is reported", async () => {
+  renderCovered();
+  on.onChooseCover.mockRejectedValueOnce("not an image file");
+  rightClick(card("Mine"));
+  await act(async () => void pick("Choose image…"));
+  expect(on.onError).toHaveBeenLastCalledWith("not an image file");
+  on.onRemoveCover.mockRejectedValueOnce("in use");
+  rightClick(card("Mine"));
+  await act(async () => void pick("Remove image"));
+  expect(on.onError).toHaveBeenLastCalledWith("in use");
+});
+
+test("a card with a cover shows its image, under the Open chip, and the default cover when the image fails to load", () => {
+  act(() => root.render(<Home recent={[]} pinned={[]} dragging={false} workspaces={[COVERED, FOLDER]} openWorkspace={COVERED} {...on} />));
+  const img = card("Mine").querySelector<HTMLImageElement>(".cover img.cover-art")!;
+  expect(img.getAttribute("src")).toBe("asset://covers/w3.png?v=1");
+  expect(card("Mine").querySelector(".cover svg")).toBeNull();
+  expect(card("Mine").querySelector(".cover .card-chip")?.textContent).toBe("Open");
+  expect(card("Notes").querySelector(".cover img")).toBeNull();
+  act(() => void img.dispatchEvent(new Event("error")));
+  expect(card("Mine").querySelector(".cover img")).toBeNull();
+  expect(card("Mine").querySelector(".cover svg.cover-art rect")).not.toBeNull();
+  // A new image, such as a replaced cover, is tried again.
+  act(() => root.render(<Home recent={[]} pinned={[]} dragging={false} workspaces={[COVERED]} {...on} coverUrl={() => "asset://covers/w3.png?v=2"} />));
+  expect(card("Mine").querySelector(".cover img")?.getAttribute("src")).toBe("asset://covers/w3.png?v=2");
 });

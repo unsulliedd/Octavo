@@ -20,6 +20,7 @@ import {
   scanResult,
   toFront,
   visibleDocuments,
+  withCover,
   withPinned,
   workspaceForFolder,
   workspacePlace,
@@ -480,4 +481,16 @@ test("with its folders given, the tree lists documents outside them at the top, 
     { kind: "document", name: "gone.md", path: "D:\\x\\gone.md", missing: true },
     { kind: "document", name: "z.md", path: "C:\\Notes\\z.md", missing: undefined },
   ]);
+});
+
+test("withCover sets or clears the cover of one workspace only", () => {
+  const a: Workspace = { id: "a", name: "A", items: [], removed: [] };
+  const b: Workspace = { id: "b", name: "B", items: [], removed: [], cover: "b.png" };
+  const set = withCover([a, b], "a", "a.jpg");
+  expect(set).toEqual([{ ...a, cover: "a.jpg" }, b]);
+  expect(set[1]).toBe(b);
+  const cleared = withCover(set, "b");
+  expect(cleared[1].cover).toBeUndefined();
+  expect(JSON.parse(JSON.stringify(cleared[1]))).toEqual({ id: "b", name: "B", items: [], removed: [] });
+  expect(withCover([a], "missing", "x.png")).toEqual([a]);
 });

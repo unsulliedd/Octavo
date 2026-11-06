@@ -1,8 +1,10 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { appLocalDataDir } from "@tauri-apps/api/path";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { ask, message, promptText } from "./dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { dirname } from "./paths";
+import { IMAGE_TYPES } from "./images";
+import { dirname, joinPath } from "./paths";
 import { forget, loadOpenWorkspace, loadPinned, loadToldCopy, save, tabsKey } from "./storage";
 import {
   addItem,
@@ -22,6 +24,7 @@ import {
   toFront,
   togglePin as pinOrUnpin,
   visibleDocuments,
+  withCover,
   withPinned,
   withPins,
   workspaceFolderName,
@@ -78,6 +81,8 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   const deleted = useRef<string[]>([]);
   const toldErrors = useRef(new Set<string>());
   const startRun = useRef(latestRun()).current;
+  // The covers folder, and when a cover last changed: the image URLs carry it, so that a replaced cover shows at once.
+  const [coverFolder, setCoverFolder] = useState<{ dir: string; stamp: number }>();
 
   const open = workspaces.find((w) => w.id === openId);
   const scan = scanned?.id === openId ? scanned : undefined;
@@ -247,7 +252,28 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
     if (!yes || (id === current.current.open?.id && !(await closeWorkspace()))) return;
     deleted.current.push(id);
     commit(deleteWorkspace(list.current, id));
+    invoke("remove_cover", { id }).catch((e) => tellError(`The cover image of "${workspace.name}" couldn't be deleted: ${e}`));
   }
+
+  /** Asks for an image and makes a copy of it the cover of the workspace `id`. Cancel changes nothing. */
+  async function chooseCover(id: string) {
+    await loaded.current;
+    const source = await openDialog({ filters: [{ name: "Images", extensions: IMAGE_TYPES }] });
+    if (typeof source !== "string") return;
+    const cover = await invoke<string>("set_cover", { id, source });
+    commit(withCover(list.current, id, cover));
+    setCoverFolder((c) => c && { ...c, stamp: Date.now() });
+  }
+
+  /** Deletes the cover of the workspace `id`, which goes back to its default cover. */
+  async function removeCover(id: string) {
+    await loaded.current;
+    await invoke("remove_cover", { id });
+    commit(withCover(list.current, id));
+  }
+
+  /** The URL of the cover image of `w`, or none when it has none. */
+  const coverUrl = (w: Workspace) => (coverFolder && w.cover ? `${convertFileSrc(joinPath(coverFolder.dir, w.cover))}?v=${coverFolder.stamp}` : undefined);
 
   function refresh() {
     setRefreshing(true);
@@ -283,6 +309,13 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   }, []);
 
   useEffect(() => {
+    appLocalDataDir()
+      .then((dir) => setCoverFolder({ dir: joinPath(dir, "covers"), stamp: Date.now() }))
+      // Without the data folder, every card keeps its default cover.
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     deleted.current.splice(0).forEach((id) => forget(tabsKey(id)));
   }, [workspaces]);
 
@@ -302,7 +335,7 @@ export function useWorkspaces(showHidden: boolean, confirmLeave: () => Promise<b
   /** Resolves once the saved list has loaded and the open workspace, if any, is known. */
   const whenLoaded = () => loaded.current;
 
-  return { workspaces, open, pinned, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, rowMenu, setRowMenu, whenLoaded, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh, addTo, createWorkspace, rename, pickItem, removeRow, restore, dropMissing, togglePin, removeWorkspace, tellError };
+  return { workspaces, open, pinned, scan, docs, tree, documents: docs?.length ?? 0, refreshing, expanded, setExpanded, menu, setMenu, rowMenu, setRowMenu, whenLoaded, openWorkspace, openFolderAt, pickFolder, closeWorkspace, refresh, addTo, createWorkspace, rename, pickItem, removeRow, restore, dropMissing, togglePin, removeWorkspace, chooseCover, removeCover, coverUrl, tellError };
 }
 
 export type Workspaces = ReturnType<typeof useWorkspaces>;

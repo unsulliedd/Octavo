@@ -40,6 +40,10 @@ type Props = {
   onNewWorkspace: () => void;
   onRemoveWorkspace: (id: string) => void;
   onRenameWorkspace: (id: string) => void;
+  /** The URL of a workspace's cover image, or none for the default cover. */
+  coverUrl: (w: Workspace) => string | undefined;
+  onChooseCover: (id: string) => Promise<void>;
+  onRemoveCover: (id: string) => Promise<void>;
   /** The Add to item for a document's menu. */
   addTo: (item: Item) => TabMenuItem;
   onTogglePin: (path: string) => void;
@@ -61,8 +65,10 @@ const Cover = ({ id }: { id: string }) => (
   </svg>
 );
 
-export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onNewWorkspace, onRemoveWorkspace, onRenameWorkspace, addTo, onTogglePin, onError }: Props) {
+export function Home({ recent, pinned, dragging, error, workspaces, openWorkspace, onPick, onPickFolder, onOpen, onOpenWorkspace, onNewWorkspace, onRemoveWorkspace, onRenameWorkspace, coverUrl, onChooseCover, onRemoveCover, addTo, onTogglePin, onError }: Props) {
   const [menu, setMenu] = useState<RowMenu>();
+  // Cover images that failed to load, such as one deleted outside Octavo; their cards show the default cover.
+  const [failed, setFailed] = useState<string[]>([]);
   const opener = useRef<HTMLElement | null>(null);
   const closeMenu = useCallback(() => {
     setMenu(undefined);
@@ -107,6 +113,8 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
     return [
       open,
       { label: "Rename…", run: () => onRenameWorkspace(w.id) },
+      { label: "Choose image…", run: () => void onChooseCover(w.id).catch((e) => onError(String(e))) },
+      ...(w.cover ? [{ label: "Remove image", run: () => void onRemoveCover(w.id).catch((e) => onError(String(e))) }] : []),
       "separator",
       ...(folder ? ([{ label: "Open folder in Explorer", run: () => void revealItemInDir(folder).catch((e) => onError(String(e))) }, "separator"] as TabMenuItem[]) : []),
       { label: "Remove workspace", run: () => onRemoveWorkspace(w.id) },
@@ -142,12 +150,13 @@ export function Home({ recent, pinned, dragging, error, workspaces, openWorkspac
     const kind = workspaceKind(w);
     const open = w.id === openWorkspace?.id;
     const which = { workspace: w.id };
+    const src = coverUrl(w);
     return (
       <li key={w.id} className="card-cell">
         {/* From the keyboard the menu opens where the ⋯ button is. */}
         <div className="card" {...menuProps(which, (box) => ({ x: box.right - 34, y: box.top + 36 }))}>
           <div className="cover" aria-hidden="true">
-            <Cover id={w.id} />
+            {src && !failed.includes(src) ? <img className="cover-art" src={src} alt="" onError={() => setFailed((f) => [...f, src])} /> : <Cover id={w.id} />}
             {open && <span className="card-chip">Open</span>}
           </div>
           <div className="card-text">

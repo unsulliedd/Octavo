@@ -2,6 +2,7 @@
 //! copied aside before anything can replace it, and the caller is told where the copy is.
 
 use crate::backup::new_file;
+use crate::covers;
 use crate::save::write_atomic;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -33,6 +34,9 @@ pub struct Workspace {
     /// Made with New workspace rather than from a folder. Left out of the file when false.
     #[serde(default, skip_serializing_if = "is_false")]
     pub own: bool,
+    /// The file name of its cover image in the covers folder. Left out of the file when there is none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cover: Option<String>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -64,12 +68,18 @@ struct Stored {
     workspaces: Vec<Workspace>,
 }
 
-/// The workspaces in a saved file's contents.
+/// The workspaces in a saved file's contents. A cover that isn't a plain file name is dropped.
 fn parse(bytes: &[u8]) -> Result<Vec<Workspace>, Reason> {
     let value: Value = serde_json::from_slice(bytes).map_err(|_| Reason::Corrupt)?;
     match value.get("version").and_then(Value::as_u64) {
         Some(VERSION) => serde_json::from_value::<Stored>(value)
-            .map(|stored| stored.workspaces)
+            .map(|stored| {
+                let mut workspaces = stored.workspaces;
+                for w in &mut workspaces {
+                    w.cover = w.cover.take().filter(|name| covers::plain_name(name));
+                }
+                workspaces
+            })
             .map_err(|_| Reason::Corrupt),
         Some(version) if version > VERSION => Err(Reason::Newer),
         _ => Err(Reason::Corrupt),
@@ -205,6 +215,7 @@ mod tests {
             ],
             removed: vec![r"C:\Docs\notlar ğü\old".into()],
             own: false,
+            cover: None,
         }]
     }
 
@@ -245,6 +256,31 @@ mod tests {
             r"C:\Docs\notlar ğü\old"
         );
         assert!(file["workspaces"][0].get("own").is_none());
+        assert!(file["workspaces"][0].get("cover").is_none());
+    }
+
+    #[test]
+    fn a_cover_name_loads_back_and_one_that_leads_elsewhere_is_dropped() {
+        let dir = TempDir::new("cover");
+        let mut workspaces = sample();
+        workspaces[0].cover = Some("w1.png".into());
+        save(&dir.file(), &workspaces).unwrap();
+        assert_eq!(load(&dir.file()).unwrap().workspaces, workspaces);
+        for bad in [
+            "../w1.png",
+            r"..\w1.png",
+            "a/b.png",
+            r"C:\x.png",
+            "/etc/x.png",
+            "..",
+            "",
+        ] {
+            let text = format!(
+                r#"{{"version": 1, "workspaces": [{{"id": "a", "name": "A", "items": [], "removed": [], "cover": {}}}]}}"#,
+                serde_json::to_string(bad).unwrap()
+            );
+            assert_eq!(parse(text.as_bytes()).unwrap()[0].cover, None, "{bad}");
+        }
     }
 
     #[test]

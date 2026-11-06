@@ -2,6 +2,9 @@
 
 import { safeDecode } from "./paths";
 
+/** The image types the open dialogs offer. */
+export const IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"];
+
 /** The placeholder's text for an image whose source was `src` in the document. */
 export function missingImage(src: string, alt: string) {
   const remote = /^(https?:)?\/\//i.test(src);

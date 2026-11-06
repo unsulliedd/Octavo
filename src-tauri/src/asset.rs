@@ -82,7 +82,7 @@ pub(crate) mod tests {
         allowed
     }
 
-    fn uri(path: &Path) -> String {
+    pub(crate) fn uri(path: &Path) -> String {
         format!(
             "/{}",
             utf8_percent_encode(&path.to_string_lossy(), NON_ALPHANUMERIC)
