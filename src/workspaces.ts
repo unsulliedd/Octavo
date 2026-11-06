@@ -5,8 +5,8 @@ import { dirname, joinPath, relativePath } from "./paths";
 
 export type ItemKind = "folder" | "document";
 export type Item = { kind: ItemKind; path: string };
-/** `own`: made with New workspace, so never a folder's workspace, whatever it holds. */
-export type Workspace = { id: string; name: string; items: Item[]; removed: string[]; own?: true };
+/** `own`: made with New workspace, so never a folder's workspace, whatever it holds. `cover`: the file name of its cover image in the covers folder. */
+export type Workspace = { id: string; name: string; items: Item[]; removed: string[]; own?: true; cover?: string };
 
 /** A document a workspace shows. `root` is the folder it is listed under; `relative` is its path from there, with forward slashes. `missing`: an added document that is gone from disk. */
 export type WorkspaceDoc = { path: string; root: string; relative: string; missing?: boolean };
@@ -97,6 +97,9 @@ export function renameWorkspace(workspaces: Workspace[], id: string, name: strin
   if (id === PINNED.id || !workspaces.some((w) => w.id === id && trimmed && w.name !== trimmed)) return workspaces;
   return workspaces.map((w) => (w.id === id ? { ...w, name: trimmed } : w));
 }
+
+/** `workspaces` with the cover of the workspace `id` set to the file `cover`, or cleared without one. */
+export const withCover = (workspaces: Workspace[], id: string, cover?: string) => workspaces.map((w) => (w.id === id ? { ...w, cover } : w));
 
 /** Whether `workspace` shows `path`: it holds it, or a folder around it, and hasn't removed it. */
 export function holds(workspace: Workspace, path: string) {

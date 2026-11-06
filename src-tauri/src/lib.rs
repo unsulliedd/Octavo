@@ -1,5 +1,6 @@
 mod asset;
 mod backup;
+mod covers;
 mod gate;
 mod images;
 mod notes;
@@ -207,6 +208,25 @@ fn save_workspaces(
     workspaces::save(&workspaces_file(&app)?, &workspaces).map_err(|e| e.to_string())
 }
 
+fn covers_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    Ok(dir.join("covers"))
+}
+
+/// Copies the image at `source` into the covers folder as the cover of the workspace `id`, in place of any earlier
+/// one; returns the copy's file name.
+#[tauri::command]
+fn set_cover(app: tauri::AppHandle, id: String, source: String) -> Result<String, String> {
+    let source = std::path::absolute(&source).map_err(|e| e.to_string())?;
+    covers::set(&covers_dir(&app)?, &id, &source).map_err(|e| e.to_string())
+}
+
+/// Deletes the cover of the workspace `id`, if it has one.
+#[tauri::command]
+fn remove_cover(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    covers::remove(&covers_dir(&app)?, &id).map_err(|e| e.to_string())
+}
+
 /// File passed on the command line, e.g. by a double-click in Explorer.
 // Limitation: macOS delivers opened files as RunEvent::Opened, not argv; handle when testing on macOS
 fn file_arg(args: &[String], cwd: &Path) -> Option<String> {
@@ -277,6 +297,9 @@ pub fn run() {
             app.manage(backup::Backups::new(
                 app.path().app_local_data_dir()?.join("backups"),
             ));
+            // The webview may show workspace covers, and nothing else in the app's data folder.
+            app.state::<asset::Allowed>()
+                .add(&covers_dir(app.handle())?);
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_secs(3));
@@ -302,6 +325,8 @@ pub fn run() {
             missing_documents,
             load_workspaces,
             save_workspaces,
+            set_cover,
+            remove_cover,
             initial_file,
             watch_docs
         ])

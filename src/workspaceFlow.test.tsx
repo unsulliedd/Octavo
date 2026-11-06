@@ -49,6 +49,9 @@ let filePicked: string | null;
 /** What a name prompt is answered with; undefined cancels it. */
 let typed: string | undefined;
 let prompts: { title: string; text: string }[];
+/** The arguments of each set_cover and remove_cover call, and the error set_cover gives. */
+let coverCalls: { cmd: string; id: string; source?: string }[];
+let coverRefusal: string | undefined;
 
 const settle = (ms = 0) => act(() => new Promise<void>((done) => setTimeout(done, ms)));
 async function until(check: () => unknown, what: string) {
@@ -85,6 +88,8 @@ beforeEach(() => {
   agree = false;
   typed = undefined;
   prompts = [];
+  coverCalls = [];
+  coverRefusal = undefined;
   stopAnswering = answerDialogs((text, labels, title) => {
     if (title === "New workspace" || title === "Rename workspace") {
       prompts.push({ title, text });
@@ -137,6 +142,15 @@ beforeEach(() => {
           if (typeof final === "string") throw final;
           return final;
         }
+        case "plugin:path|resolve_directory":
+          return "C:\\Data";
+        case "set_cover":
+          coverCalls.push({ cmd, id: a.id, source: a.source });
+          if (coverRefusal) throw coverRefusal;
+          return `${a.id}.png`;
+        case "remove_cover":
+          coverCalls.push({ cmd, id: a.id });
+          return null;
         case "plugin:dialog|open":
           dialogs.push(a.options);
           return a.options.directory ? picked : filePicked;
@@ -934,7 +948,7 @@ test("New workspace… in the workspace menu opens it empty; Add to from Home fi
   // Rename… from Home's row of the workspace.
   typed = "Trips";
   await rightClick(homeCard("Travel"));
-  expect(menuItems()).toEqual(["Open", "Rename…", "-", "Remove workspace"]);
+  expect(menuItems()).toEqual(["Open", "Rename…", "Choose image…", "-", "Remove workspace"]);
   await menuPick("Rename…");
   await until(() => byText(".status-workspace", "Trips"), "the new name in the status bar");
   expect(prompts[1]).toEqual({ title: "Rename workspace", text: "" });
@@ -949,7 +963,7 @@ test("renaming a folder's workspace changes its label only", async () => {
   await launch();
   typed = "Docs";
   await rightClick(homeCard("Handbook"));
-  expect(menuItems()).toEqual(["Open", "Rename…", "-", "Open folder in Explorer", "-", "Remove workspace"]);
+  expect(menuItems()).toEqual(["Open", "Rename…", "Choose image…", "-", "Open folder in Explorer", "-", "Remove workspace"]);
   await menuPick("Rename…");
   await until(() => named("Docs"), "the save");
   expect(prompts).toEqual([{ title: "Rename workspace", text: "The folder on disk keeps its name." }]);
@@ -1319,4 +1333,48 @@ test("removing the open workspace closes it first, and its stored tabs don't com
   await restart();
   expect(host.querySelector(".status-workspace")).toBeNull();
   expect(localStorage.getItem("tabs:h")).toBeNull();
+});
+
+test("Choose image… copies a cover that the card shows, Remove image clears it, and removing the workspace deletes it", async () => {
+  stored = [saved("h", ROOT)];
+  agree = true;
+  await launch();
+  const cover = () => homeCard("Handbook")?.querySelector<HTMLImageElement>(".cover img");
+  // Cancelled: nothing changes.
+  await rightClick(homeCard("Handbook"));
+  await menuPick("Choose image…");
+  await until(() => dialogs.length, "the dialog");
+  expect(dialogs[0]).toMatchObject({ filters: [{ name: "Images", extensions: expect.arrayContaining(["png", "jpg", "webp"]) }] });
+  await settle();
+  expect(coverCalls).toEqual([]);
+  expect(cover()).toBeFalsy();
+  // A failed copy is reported and changes nothing.
+  filePicked = "C:\\pics\\sea.png";
+  coverRefusal = "The file is read-only.";
+  await rightClick(homeCard("Handbook"));
+  await menuPick("Choose image…");
+  await until(() => host.querySelector(".home .error")?.textContent?.includes("read-only"), "the error");
+  expect(inFile("h")).toEqual(saved("h", ROOT));
+  coverRefusal = undefined;
+  await rightClick(homeCard("Handbook"));
+  await menuPick("Choose image…");
+  await until(() => cover(), "the cover on the card");
+  const set = { cmd: "set_cover", id: "h", source: "C:\\pics\\sea.png" };
+  const removed = { cmd: "remove_cover", id: "h" };
+  expect(coverCalls).toEqual([set, set]);
+  expect(cover()!.getAttribute("src")).toMatch(/^asset:\/\/C:\\Data\\covers\\h\.png\?v=\d+$/);
+  await until(() => (inFile("h") as { cover?: string })?.cover, "the save");
+  expect(inFile("h")).toEqual({ ...saved("h", ROOT), cover: "h.png" });
+  await rightClick(homeCard("Handbook"));
+  expect(menuItems()).toContain("Remove image");
+  await menuPick("Remove image");
+  await until(() => !cover(), "the default cover");
+  expect(coverCalls).toEqual([set, set, removed]);
+  await until(() => !(inFile("h") as { cover?: string }).cover, "the save");
+  expect(inFile("h")).toEqual(saved("h", ROOT));
+  await click(host.querySelector("[aria-label='More for Handbook']"));
+  await menuPick("Remove workspace");
+  await until(() => !inFile("h"), "the save");
+  await until(() => coverCalls.length === 4, "the cover to be deleted");
+  expect(coverCalls).toEqual([set, set, removed, removed]);
 });
