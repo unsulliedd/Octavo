@@ -79,6 +79,7 @@ function start(colors: Colors) {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("matchMedia", (media: string) => ({ matches: false, media, addEventListener() {}, removeEventListener() {} }));
   vi.resetAllMocks();
   host = document.createElement("div");
   document.body.append(host);

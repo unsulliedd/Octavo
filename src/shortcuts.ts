@@ -110,20 +110,30 @@ const APP_ACTIONS: AppAction[] = ["open", "quickOpen", "toggleFiles", "closeTab"
 const isAppAction = (id: ShortcutId): id is AppAction => (APP_ACTIONS as string[]).includes(id);
 const EDITOR_ACTIONS = ITEMS.map((i) => i.id).filter((id): id is FormatAction => !isAppAction(id));
 
-/** Keys that keep their meaning and can't be given to an action; a shortcut on them is reported as a conflict. */
-const FIXED: Record<string, string> = {
-  "Ctrl+A": "Select all",
-  "Ctrl+C": "Copy",
-  "Ctrl+X": "Cut",
-  "Ctrl+V": "Paste",
-  "Ctrl+Shift+V": "Paste as plain text",
-  "Ctrl+]": "Indent (lists and tables)",
-  "Ctrl+[": "Outdent (lists and tables)",
-  "Ctrl+Enter": "Leave the table",
-  F3: "Next match",
-  "Shift+F3": "Previous match",
-  "Alt+F4": "Close the window",
-};
+/**
+ * Keys that keep their meaning and can't be given to an action, with what they do as a row's name and in a sentence.
+ * Recording one is refused; a stored shortcut on one is reported as a conflict.
+ */
+export const FIXED: { keys: string; label: string; does: string }[] = [
+  { keys: "Ctrl+A", label: "Select all", does: "selects all" },
+  { keys: "Ctrl+C", label: "Copy", does: "copies" },
+  { keys: "Ctrl+X", label: "Cut", does: "cuts" },
+  { keys: "Ctrl+V", label: "Paste", does: "pastes" },
+  { keys: "Ctrl+Shift+V", label: "Paste as plain text", does: "pastes as plain text" },
+  { keys: "Ctrl+]", label: "Indent (lists and tables)", does: "indents lists and tables" },
+  { keys: "Ctrl+[", label: "Outdent (lists and tables)", does: "outdents lists and tables" },
+  { keys: "Ctrl+Enter", label: "Leave the table", does: "leaves the table" },
+  { keys: "F3", label: "Next match", does: "goes to the next match" },
+  { keys: "Shift+F3", label: "Previous match", does: "goes to the previous match" },
+  { keys: "Alt+F4", label: "Close the window", does: "closes the window" },
+];
+const FIXED_BY_KEYS = new Map(FIXED.map((f) => [f.keys, f]));
+
+/** Why keys can't be recorded because they keep their meaning: "Ctrl+C copies and can't be changed.", or undefined. */
+export function fixedReason(combo: string) {
+  const fixed = FIXED_BY_KEYS.get(combo);
+  return fixed && `${combo} ${fixed.does} and can't be changed.`;
+}
 
 export const defaultKeys = (id: ShortcutId) => ITEM.get(id)!.keys;
 export const shortcutLabel = (id: ShortcutId) => ITEM.get(id)!.label;
@@ -190,19 +200,94 @@ export function setKeys(bindings: Bindings, id: ShortcutId, keys: string[]): Bin
   return same ? rest : { ...rest, [id]: keys };
 }
 
-/** For each action whose keys something else also uses, what else uses them. */
-export function conflicts(bindings: Bindings): Partial<Record<ShortcutId, string[]>> {
+/** Keys an action shares: with another action, or with a key that keeps its meaning when `other` is undefined. */
+export type Clash = { keys: string; other?: ShortcutId };
+
+/** For each action whose keys something else also uses, which keys and what else uses them. */
+export function conflicts(bindings: Bindings): Partial<Record<ShortcutId, Clash[]>> {
   const users = new Map<string, ShortcutId[]>();
   for (const { id } of ITEMS) for (const combo of keysOf(bindings, id)) users.set(combo, [...(users.get(combo) ?? []), id]);
-  const result: Partial<Record<ShortcutId, string[]>> = {};
+  const result: Partial<Record<ShortcutId, Clash[]>> = {};
   for (const { id } of ITEMS) {
-    const others = keysOf(bindings, id).flatMap((combo) => [
-      ...(users.get(combo) ?? []).filter((other) => other !== id).map(shortcutLabel),
-      ...(FIXED[combo] ? [FIXED[combo]] : []),
+    const clashes = keysOf(bindings, id).flatMap((keys): Clash[] => [
+      ...(users.get(keys) ?? []).filter((other) => other !== id).map((other) => ({ keys, other })),
+      ...(FIXED_BY_KEYS.has(keys) ? [{ keys }] : []),
     ]);
-    if (others.length) result[id] = [...new Set(others)];
+    if (clashes.length) result[id] = clashes;
   }
   return result;
+}
+
+/** What a clash says under its row: "Link also uses Ctrl+K." or "Ctrl+C copies and can't be changed." */
+export const clashText = ({ keys, other }: Clash) => (other ? `${shortcutLabel(other)} also uses ${keys}.` : fixedReason(keys)!);
+
+/** `bindings` with `keys` taken off action `from`, as Remove from … does when two actions share them. */
+export const removeKeys = (bindings: Bindings, from: ShortcutId, keys: string) =>
+  setKeys(bindings, from, keysOf(bindings, from).filter((k) => k !== keys));
+
+/** `bindings` with the actions of a group back on their default keys. */
+export function resetGroup(bindings: Bindings, ids: ShortcutId[]): Bindings {
+  const result = { ...bindings };
+  for (const id of ids) delete result[id];
+  return result;
+}
+
+/** What a key press does while an action's shortcut is recorded: new bindings, the end of recording, or why it was refused. */
+export type Recorded = { bindings: Bindings } | { cancel: true } | { refused: string };
+
+/** The key press `combo` while action `id` records: Escape cancels, Backspace or Delete removes the shortcut. */
+export function recordKey(bindings: Bindings, id: ShortcutId, combo: string): Recorded {
+  if (combo === "Escape") return { cancel: true };
+  if (combo === "Backspace" || combo === "Delete") return { bindings: setKeys(bindings, id, []) };
+  const fixed = fixedReason(combo);
+  if (fixed) return { refused: fixed };
+  if (!isAssignable(combo)) return { refused: "Use Ctrl or Alt with a key, or a function key." };
+  return { bindings: setKeys(bindings, id, [combo]) };
+}
+
+/** A row Find a shortcut shows: an action, or a key that keeps its meaning when `id` is undefined. */
+export type FoundRow = {
+  id?: ShortcutId;
+  label: string;
+  keys: string[];
+  /** Where the typed text starts in the label, or -1. */
+  at: number;
+  /** The key caps the typed text names, lowercased, such as "ctrl" and "k". */
+  caps: string[];
+};
+
+/** The typed text's place in an action's label and the key caps it names, or undefined when the action doesn't match. */
+export function matchShortcut(query: string, label: string, keys: string[]): Pick<FoundRow, "at" | "caps"> | undefined {
+  const q = query.trim().toLowerCase();
+  if (!q) return { at: -1, caps: [] };
+  const at = label.toLowerCase().indexOf(q);
+  // "ctrl+k" matches keys with both a Ctrl and a K cap; "tab" any key with a Tab cap.
+  const parts = q.split("+").filter(Boolean);
+  const byKeys = parts.length > 0 && keys.some((k) => parts.every((p) => k.toLowerCase().split("+").includes(p)));
+  return at >= 0 || byKeys ? { at, caps: byKeys ? parts : [] } : undefined;
+}
+
+/** The groups Find a shortcut shows, the keys that keep their meaning last, without the rows that don't match, and how many rows match. */
+export function findShortcuts(query: string, bindings: Bindings) {
+  const all = [
+    ...SHORTCUT_GROUPS.map((g) => ({
+      title: g.title,
+      fixed: false,
+      ids: g.items.map((i) => i.id),
+      rows: g.items.map(({ id, label }) => ({ id, label, keys: keysOf(bindings, id) })),
+    })),
+    { title: "Keys that don't change", fixed: true, ids: [] as ShortcutId[], rows: FIXED.map(({ keys, label }) => ({ id: undefined, label, keys: [keys] })) },
+  ];
+  const groups = all
+    .map((g) => ({
+      ...g,
+      rows: g.rows.flatMap((row): FoundRow[] => {
+        const match = matchShortcut(query, row.label, row.keys);
+        return match ? [{ ...row, ...match }] : [];
+      }),
+    }))
+    .filter((g) => g.rows.length);
+  return { groups, count: groups.reduce((n, g) => n + g.rows.length, 0) };
 }
 
 /** Bindings read from storage: unknown actions and keys that can't be shortcuts are dropped. */

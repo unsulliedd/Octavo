@@ -2,10 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { ask, message, promptText } from "./dialog";
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ColorSettings } from "./ColorSettings";
 import { anyChanged, DEFAULT_COLORS } from "./colors";
-import { Icon, Logo } from "./icons";
+import { Icon, Logo, type IconName } from "./icons";
 import { basename } from "./Home";
 import { LINKS } from "./links";
 import { Segmented } from "./ReadingSettings";
@@ -31,6 +31,46 @@ type Props = {
 };
 
 const SECTIONS = { reading: "Reading", colors: "Colors", editing: "Editing", saving: "Saving", shortcuts: "Shortcuts", about: "About" } as const;
+type Section = keyof typeof SECTIONS;
+const SECTION_KEYS = Object.keys(SECTIONS) as Section[];
+const SECTION_ICONS: Record<Section, IconName> = { reading: "bookOpen", colors: "palette", editing: "pencil", saving: "save", shortcuts: "keyboard", about: "info" };
+
+/** The window width up to which the dialog is 800 px or narrower and the section list is a rail of icons; as in styles.css. */
+const RAIL = "(max-width: 1142px)";
+
+/** Whether the media query matches now, following it as the window changes. */
+function useMedia(query: string) {
+  const [matches, setMatches] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const change = () => setMatches(list.matches);
+    list.addEventListener("change", change);
+    return () => list.removeEventListener("change", change);
+  }, [query]);
+  return matches;
+}
+
+/** The section an arrow, Home or End key moves to from `index` in the section list, or undefined for other keys. */
+function sectionAfterKey(key: string, index: number, count = SECTION_KEYS.length) {
+  if (key === "ArrowDown") return (index + 1) % count;
+  if (key === "ArrowUp") return (index - 1 + count) % count;
+  if (key === "Home") return 0;
+  if (key === "End") return count - 1;
+}
+
+/** Check for updates, or Restart now once an update is ready. */
+function UpdateButton({ update, label, small, onCheckUpdate, onRestart }: Pick<Props, "update" | "onCheckUpdate" | "onRestart"> & { label: string; small?: boolean }) {
+  const size = small ? " small" : "";
+  return update.state === "ready" || update.state === "installing" ? (
+    <button className={`text-btn primary${size}`} disabled={update.state === "installing"} onClick={onRestart}>
+      Restart now
+    </button>
+  ) : (
+    <button className={`text-btn${size}`} disabled={busy(update)} onClick={onCheckUpdate}>
+      {label}
+    </button>
+  );
+}
 
 /** The result of the last theme import, shown under the Colors heading until it is closed or the section is left. */
 type ThemeNotice = { ok: string } | (ThemeError & { saving?: true });
@@ -49,13 +89,20 @@ const ABOUT_LINKS = [
 
 /**
  * The settings beyond the quick reading ones in Reading settings: reading, colors, where the editing tools go, saving,
- * keyboard shortcuts, and About with updates. A list of sections on the left picks the one shown. Closes on Escape or a click
- * beside it.
+ * keyboard shortcuts, and About with updates. A list of sections on the left picks the one shown, with Up, Down, Home and
+ * End too, and shows the version and updates at its foot; in a narrow window it is a rail of icons. Closes on Escape or a
+ * click beside it.
  */
 export function Settings({ prefs, dark, onChange, onClose, version, update, onCheckUpdate, onRestart, onWhatsNew, onLicenses }: Props) {
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
-  const [section, setSection] = useState<keyof typeof SECTIONS>("reading");
+  const [section, setSection] = useState<Section>("reading");
   const [notice, setNotice] = useState<ThemeNotice>();
+  const rail = useMedia(RAIL);
+  const tabs = useRef<HTMLDivElement>(null);
+  const pick = (next: Section) => {
+    setSection(next);
+    if (next !== section) setNotice(undefined);
+  };
 
   /** Asks for a name and a file, and saves the colors there. Cancel at either step changes nothing. */
   async function exportTheme() {
@@ -108,21 +155,48 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
           </button>
         </header>
         <div className="settings-main">
-          <nav className="settings-nav" aria-label="Settings sections">
-            {Object.entries(SECTIONS).map(([key, label]) => (
-              <button
-                key={key}
-                aria-current={key === section ? "page" : undefined}
-                onClick={() => {
-                  setSection(key as keyof typeof SECTIONS);
-                  setNotice(undefined);
-                }}
-              >
-                {label}
-              </button>
-            ))}
+          <nav className="settings-nav">
+            <div
+              ref={tabs}
+              role="tablist"
+              aria-orientation="vertical"
+              aria-label="Settings sections"
+              onKeyDown={(e) => {
+                const next = sectionAfterKey(e.key, SECTION_KEYS.indexOf(section));
+                if (next === undefined) return;
+                e.preventDefault();
+                pick(SECTION_KEYS[next]);
+                tabs.current?.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
+              }}
+            >
+              {SECTION_KEYS.map((key) => (
+                <button
+                  key={key}
+                  role="tab"
+                  id={`settings-tab-${key}`}
+                  aria-selected={key === section}
+                  aria-controls="settings-panel"
+                  tabIndex={key === section ? 0 : -1}
+                  data-tip={rail ? SECTIONS[key] : undefined}
+                  onClick={() => pick(key)}
+                >
+                  <Icon name={SECTION_ICONS[key]} />
+                  <span className="settings-nav-label">{SECTIONS[key]}</span>
+                </button>
+              ))}
+            </div>
+            <div className="settings-nav-foot">
+              <span>
+                <strong>Octavo</strong> {version}
+              </span>
+              {/* About reads the same status out itself. */}
+              <span className="setting-hint" aria-live={section === "about" ? undefined : "polite"}>
+                {statusLine(update)}
+              </span>
+              <UpdateButton update={update} label="Check for updates" small onCheckUpdate={onCheckUpdate} onRestart={onRestart} />
+            </div>
           </nav>
-          <div className="settings-body">
+          <div className="settings-body" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${section}`}>
             <div className="settings-title-row">
               <h2 className="settings-title">{SECTIONS[section]}</h2>
               {section === "shortcuts" && (
@@ -320,15 +394,7 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
                   </label>
                   <div className="setting-row">
                     <span aria-live="polite">{statusLine(update) || "Look for a newer release now."}</span>
-                    {update.state === "ready" || update.state === "installing" ? (
-                      <button className="text-btn primary" disabled={update.state === "installing"} onClick={onRestart}>
-                        Restart now
-                      </button>
-                    ) : (
-                      <button className="text-btn" disabled={busy(update)} onClick={onCheckUpdate}>
-                        Check now
-                      </button>
-                    )}
+                    <UpdateButton update={update} label="Check now" onCheckUpdate={onCheckUpdate} onRestart={onRestart} />
                   </div>
                 </div>
               </div>

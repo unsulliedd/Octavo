@@ -346,6 +346,7 @@ input[type="checkbox"]:disabled {
 .quick-search input,
 .app-dialog-field input,
 .color-hex,
+.shortcut-find-box input,
 .shortcut-keys {
   min-width: 0;
   height: var(--height-md);
@@ -369,6 +370,7 @@ input[type="checkbox"]:disabled {
 .quick-search input:focus,
 .app-dialog-field input:focus,
 .color-hex:focus,
+.shortcut-find-box input:focus,
 .shortcut-keys[data-recording] {
   border-color: var(--control);
   box-shadow: 0 0 0 1px var(--control);
@@ -1885,18 +1887,27 @@ button.save-state {
   min-height: 0;
   display: flex;
 }
+/* The section list: a tab per section with its icon, and the version and updates at its foot. */
 .settings-nav {
   flex: none;
   width: 200px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   padding: 12px 8px;
   border-right: 1px solid var(--line);
 }
-.settings-nav button {
+.settings-nav [role="tablist"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-nav [role="tab"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   height: 32px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
@@ -1904,14 +1915,55 @@ button.save-state {
   text-align: left;
   cursor: pointer;
 }
-.settings-nav button:hover {
+.settings-nav [role="tab"]:hover {
   background: var(--chrome-2);
   color: var(--ink);
 }
-.settings-nav button[aria-current="page"] {
+.settings-nav [role="tab"][aria-selected="true"] {
   background: var(--control-soft);
   color: var(--control-soft-ink);
   font-weight: 600;
+}
+.settings-nav-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 4px 2px;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-md);
+}
+.settings-nav-foot strong {
+  font-weight: 600;
+}
+.settings-nav-foot .setting-hint {
+  margin: 0;
+}
+.settings-nav-foot .setting-hint:empty {
+  display: none;
+}
+/* With the dialog 800 px wide or less, the list is a rail of icons; each names its section in a tooltip. As RAIL in Settings.tsx. */
+@media (max-width: 1142px) {
+  .settings-nav {
+    width: 52px;
+  }
+  .settings-nav [role="tab"] {
+    justify-content: center;
+    width: 36px;
+    padding: 0;
+  }
+  .settings-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .settings-nav-foot {
+    display: none;
+  }
 }
 .settings-body {
   flex: 1;
@@ -2038,9 +2090,6 @@ button.save-state {
 .shortcut-row + .shortcut-row {
   border-top: 1px solid var(--line);
 }
-.shortcut-row[data-conflict] {
-  background: color-mix(in srgb, var(--brand-accent) 14%, var(--doc));
-}
 .shortcut-label {
   flex: 1;
   min-width: 0;
@@ -2060,37 +2109,165 @@ button.save-state {
 .shortcut-note.muted {
   color: var(--muted);
 }
-.shortcut-keys {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
+/* A shortcut's row: its name, its keys in one column, Reset, and any message below. */
+.shortcut-row.key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 272px var(--height-md);
+  column-gap: 8px;
+  box-sizing: border-box;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.key-row .shortcut-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.key-row mark {
+  border-radius: 2px;
+  background: var(--find-match);
+  color: var(--ink);
+}
+.key-row > .shortcut-note,
+.shortcut-notes {
+  grid-column: 1 / -1;
+  margin: 6px 0 2px;
+}
+.shortcut-notes {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  min-width: 132px;
-  padding: 0 4px;
+}
+.key-row .shortcut-note {
+  gap: 6px;
+  color: var(--ink);
+}
+.key-row .shortcut-note.muted {
   color: var(--muted);
+}
+.shortcut-note .text-btn {
+  margin-left: 4px;
+}
+/* The keys: no border until the pointer is over them, a pencil on hover and keyboard focus. */
+.shortcut-keys {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
 }
 .shortcut-keys:hover {
-  background: var(--chrome);
+  border-color: var(--line-strong);
+  background: var(--doc);
+}
+.shortcut-keys > svg {
+  margin-left: auto;
+  color: var(--muted);
+  visibility: hidden;
+}
+.shortcut-keys:hover > svg,
+.shortcut-keys:focus-visible > svg {
+  visibility: visible;
+}
+.shortcut-keys:not([data-recording]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .shortcut-keys[data-recording] {
   background: var(--doc);
   color: var(--control-soft-ink);
+  font-weight: 600;
+}
+.shortcut-keys.fixed {
+  cursor: default;
+}
+.shortcut-keys.fixed:hover {
+  border-color: transparent;
+}
+.shortcut-rec {
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--control);
+}
+.shortcut-none {
+  color: var(--muted);
+}
+.shortcut-or {
+  margin: 0 3px;
+  color: var(--muted);
+  font-size: var(--text-sm);
 }
 .shortcut-keys kbd {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 7px;
+  justify-content: center;
+  min-width: 22px;
+  height: 21px;
+  box-sizing: border-box;
+  padding: 0 6px;
   border-bottom-width: 2px;
-  border-radius: var(--radius-sm);
   color: var(--ink);
   font-size: var(--text-sm);
+  line-height: 1;
   white-space: nowrap;
 }
-.shortcut-row[data-conflict] kbd {
-  border-color: color-mix(in srgb, var(--brand-accent) 55%, var(--doc));
+/* Changed keys in the selected-row colors, keys shared with something else edged in the accent color. */
+.key-row[data-changed] kbd {
+  border-color: color-mix(in srgb, var(--control) 40%, var(--doc));
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+}
+.key-row[data-conflict] kbd {
+  border-color: var(--brand-accent-ink);
+}
+.shortcut-keys kbd[data-hit] {
+  background: var(--find-match);
+  color: var(--ink);
+}
+/* Find a shortcut, at the top of the list while it scrolls. */
+.color-band-bar.shortcut-find {
+  align-items: flex-end;
+}
+.shortcut-find-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcut-find-box {
+  position: relative;
+  width: 300px;
+}
+.shortcut-find-box > svg {
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.shortcut-find-box input {
+  display: block;
+  width: 100%;
+  padding: 0 30px;
+}
+.shortcut-find-box input::placeholder {
+  color: var(--muted);
+}
+.shortcut-find-box .icon-btn {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+}
+.shortcut-find > .setting-hint {
+  margin: 0 0 6px;
 }
 .shortcut-row .icon-btn {
   flex: none;
@@ -2332,11 +2509,6 @@ button.save-state {
   color: var(--code-inline-ink);
   font-family: var(--mono);
   font-size: 11.5px;
-}
-@media (max-width: 640px) {
-  .settings-nav {
-    display: none;
-  }
 }
 /* Segmented control: the same shape as the edit mode switch */
 .seg {

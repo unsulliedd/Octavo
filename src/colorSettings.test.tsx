@@ -54,6 +54,7 @@ function render() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("matchMedia", (media: string) => ({ matches: false, media, addEventListener() {}, removeEventListener() {} }));
   prefs = DEFAULT_PREFS;
   changes = [];
   dark = false;
