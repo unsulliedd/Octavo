@@ -502,8 +502,10 @@ export function editActions(c: Context) {
     for (const id of ids) if (!(await closeTabById(id))) return;
   }
 
-  /** Before the first edit of a loaded file: the editor's Markdown for it must render like the file. */
-  /** `remember`: the check is of the file's own text, so it isn't repeated until the file changes. */
+  /**
+   * Before the first edit of a loaded file: the editor's Markdown for it must render like the file. With `remember`,
+   * the check is of the file's own text, so it isn't repeated until the file changes.
+   */
   const verifyEditable =
     (file: string, original: Doc, remember = true) =>
     async (markdown: string) => {
