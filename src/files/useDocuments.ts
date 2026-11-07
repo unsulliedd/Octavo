@@ -61,8 +61,7 @@ export function useDocuments({ tabs, setTabs, changeTabs, path, scroller, onRelo
       return next;
     });
 
-  /** Switches to the tab showing `path`, or opens it in a new tab; `from` is the tab whose link was clicked. */
-  /** Opens `path` in a tab, or switches to the tab that shows it. With `recent`, it joins the recent files. */
+  /** Opens `path` in a tab, or switches to the tab that shows it; `from` is the tab whose link was clicked. With `recent`, it joins the recent files. */
   async function openPath(path: string, from?: number, recent = true) {
     const shown = tabFor(tabs, path);
     const cached = shown && docs[currentEntry(shown).path];

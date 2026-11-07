@@ -71,7 +71,7 @@ Every user-visible change adds a line under `## [Unreleased]` in [CHANGELOG.md](
    git push --follow-tags
    ```
 3. The **Release** workflow builds the Windows installers (`.exe` and `.msi`), signs their update files and opens a draft GitHub release with the changelog section as its notes and the updater's `latest.json`.
-4. Install the build from the draft, check it in the desktop app, then publish the release. Publishing it offers the update to every installed Octavo from 0.5.0 on, the next time it starts.
+4. Install the build from the draft, check it in the desktop app, then publish the release. Publishing it offers the update to every installed Octavo the next time it starts.
 
 Builds are unsigned for now, so Windows SmartScreen warns on install.
 
