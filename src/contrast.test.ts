@@ -49,7 +49,7 @@ const LIGHT: Record<string, string> = {
   "--control-soft": "#f0e9ec",
   "--control-soft-ink": "#5a0e27",
   "--file-markdown": "#5a0e27",
-  "--brand-accent-ink": "#98712d",
+  "--brand-accent-ink": "#956e2a",
   "--code-inline-ink": "#745623",
   "--code-inline-bg": "#f6ebd9",
   "--tip": "#1b1f24",
@@ -99,4 +99,8 @@ test("a role that follows a changed role counts as changed: the background isn't
 
 test("a role without a value yet warns about nothing", () => {
   expect(contrastWarnings({ "--link": "#ffffff" }, { "--link": "#ffffff" })).toEqual({});
+});
+
+test("the pins and notices color reads as text on the page", () => {
+  expect(contrast(LIGHT["--brand-accent-ink"], LIGHT["--doc"])).toBeGreaterThanOrEqual(4.5);
 });

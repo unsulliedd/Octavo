@@ -37,7 +37,7 @@
   --control-soft: oklch(from color-mix(in srgb, var(--brand-primary) 9%, var(--doc)) max(l, 0.88) c h); /* selected rows, pressed buttons */
   --control-soft-ink: var(--control);
   --link: oklch(from color-mix(in srgb, var(--brand-secondary) 40%, #003a70) min(l, 0.58) c h); /* the secondary color is too light for text on white */
-  --brand-accent-ink: oklch(from color-mix(in srgb, var(--brand-accent) 72%, black) min(l, 0.58) c h);
+  --brand-accent-ink: oklch(from color-mix(in srgb, var(--brand-accent) 72%, black) min(l, 0.565) c h); /* a little darker than the other text colors: pins and notices read as text at 4.5:1 on the page */
   --select: oklch(from color-mix(in srgb, var(--brand-secondary) 35%, white) max(l, 0.88) c h);
   --find-match: oklch(from color-mix(in srgb, var(--brand-accent) 38%, white) max(l, 0.88) c h);
   --find-current: var(--brand-accent);
@@ -3961,4 +3961,52 @@ kbd {
 .tree-slot {
   flex: none;
   width: 14px;
+}
+
+/* Windows high contrast: the system palette replaces every color, so a state shown only by a background or a shadow
+   needs a system color of its own. */
+@media (forced-colors: active) {
+  :where(button, a, input, select, textarea, summary, [tabindex="0"]):focus-visible,
+  .sidebar-handle:focus-visible,
+  .edge-key:focus-visible {
+    outline: 2px solid Highlight;
+  }
+  input[type="checkbox"]:checked {
+    border-color: Highlight;
+    background: Highlight;
+  }
+  input[type="checkbox"]::before {
+    background: HighlightText;
+  }
+  .tab[aria-current="page"],
+  .tree-row[aria-current],
+  .settings-nav [role="tab"][aria-selected="true"],
+  .quick-row[aria-selected="true"],
+  .seg button[aria-pressed="true"],
+  .mode-switch button[aria-pressed="true"],
+  .icon-btn[aria-pressed="true"],
+  .floating-menu button[aria-checked="true"],
+  .code-lang-list button[data-active],
+  .code-lang-list button[aria-selected="true"],
+  .outline a[aria-current],
+  .seg.color-set label:has(input:checked) {
+    background: Highlight;
+    color: HighlightText;
+  }
+  .tab[aria-current="page"]:focus-visible,
+  .tree-row[aria-current]:focus-visible,
+  .settings-nav [role="tab"][aria-selected="true"]:focus-visible,
+  .seg button[aria-pressed="true"]:focus-visible {
+    outline-color: HighlightText;
+  }
+  .dash {
+    background: CanvasText;
+  }
+  .dash[data-active] {
+    background: Highlight;
+  }
+  .color-swatch,
+  .color-swatch span {
+    forced-color-adjust: none;
+  }
 }
