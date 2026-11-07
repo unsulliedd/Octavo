@@ -40,6 +40,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Settings: each section in the list has an icon, and the foot of the list shows the version, the update status and Check for updates. In a narrower window the list is a column of icons that name their section in a tooltip. Up and Down move between the sections, and Home and End go to the first and the last
 - Settings › Shortcuts shows each key as a key cap, lined up in one column, with a second shortcut after "or"; changed shortcuts use the selected-row colors and an action without keys says None. The keys that can't be changed are listed as the last group, and recording one of them is refused with the reason under the row instead of being marked as a conflict
 ### Fixed
+- Settings and the Compare view keep the keyboard focus inside them, and the focus goes back to where it was when they close; Escape on the Reading settings and Update popovers returns it to their buttons
+- The pins and notices color in the light theme is a shade darker, so pins and notices read as text on the page
+- In Windows high-contrast mode, checked checkboxes, the selected tab, row, section and option, the focus ring and the outline dashes are drawn in the system colors
 - Compare, Done in the image, math and Mermaid editors, and Restart for an update are readable in the dark theme: they had white text on a light blue
 - Small primary buttons, such as Compare, Done and Restart, keep their color under the pointer instead of turning gray
 - Links in the light theme are a shade darker, so they are readable on the sidebar and toolbar

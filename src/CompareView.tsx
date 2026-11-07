@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Icon } from "./icons";
+import { useModalFocus } from "./modalFocus";
 import { diffLines, foldUnchanged, splitLines } from "./lineDiff";
 
 type Props = {
@@ -16,9 +17,10 @@ type Props = {
 /** The file on disk next to the unsaved edits, as a line diff, with the choices for the conflict. */
 export function CompareView({ name, disk, mine, onReload, onKeep, onClose }: Props) {
   const view = useMemo(() => foldUnchanged(diffLines(splitLines(disk), splitLines(mine))), [disk, mine]);
+  const trap = useModalFocus();
   const changed = view.some((l) => l.kind === "add" || l.kind === "del");
   return (
-    <div className="compare-backdrop" onKeyDown={(e) => e.key === "Escape" && onClose()}>
+    <div className="compare-backdrop" onKeyDown={(e) => (e.key === "Escape" ? onClose() : trap(e))}>
       <section className="compare" role="dialog" aria-modal="true" aria-label={`Compare ${name}`}>
         <header className="compare-head">
           <span className="compare-title">

@@ -17,7 +17,11 @@ export function UpdatePopover({ version, installing, notesInApp, onRestart, onLa
   const panel = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      document.querySelector<HTMLElement>("[data-update-toggle]")?.focus();
+      onClose();
+    };
     const onDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!panel.current?.contains(target) && !target.closest("[data-update-toggle]")) onClose();

@@ -13,6 +13,7 @@ import { ShortcutSettings } from "./ShortcutSettings";
 import type { Prefs } from "./storage";
 import { isThemeError, parseTheme, themeCounts, themeFileName, themeText, type ThemeError } from "./themeFile";
 import { busy, statusLine, type UpdateStatus } from "./updates";
+import { useModalFocus } from "./modalFocus";
 
 type Props = {
   prefs: Prefs;
@@ -99,6 +100,7 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
   const [notice, setNotice] = useState<ThemeNotice>();
   const rail = useMedia(RAIL);
   const tabs = useRef<HTMLDivElement>(null);
+  const trap = useModalFocus();
   const pick = (next: Section) => {
     setSection(next);
     if (next !== section) setNotice(undefined);
@@ -145,7 +147,7 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
     <div
       className="dialog-backdrop"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      onKeyDown={(e) => (e.key === "Escape" ? onClose() : trap(e))}
     >
       <section className="settings" role="dialog" aria-modal="true" aria-label="Settings">
         <header className="settings-head">

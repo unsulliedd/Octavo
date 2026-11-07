@@ -57,7 +57,11 @@ export function ReadingSettings({ prefs, onChange, focusMode, onFocusMode, onClo
   const set = (patch: Partial<Prefs>) => onChange({ ...prefs, ...patch });
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      document.querySelector<HTMLElement>("[data-settings-toggle]")?.focus();
+      onClose();
+    };
     const onDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!panel.current?.contains(target) && !target.closest("[data-settings-toggle]")) onClose();
