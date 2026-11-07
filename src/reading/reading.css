@@ -1,0 +1,400 @@
+.outline {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 8px 16px;
+}
+.outline p {
+  margin: 4px 10px;
+}
+.outline a {
+  display: block;
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.outline a:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.outline a[data-level="1"] {
+  font-weight: 600;
+  color: var(--ink);
+}
+.outline a[data-level="3"] {
+  padding-left: 24px;
+}
+.outline a[data-level="4"] {
+  padding-left: 38px;
+}
+.outline a[aria-current] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+  font-weight: 600;
+}
+.reader {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--doc);
+}
+.doc-column {
+  max-width: var(--doc-width);
+  margin: 0 auto;
+  padding: 28px 40px 96px;
+}
+.breadcrumb {
+  margin-bottom: 14px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .sidebar,
+  .sidebar-handle,
+  .edge-place,
+  .status-right > :not(.save-state) {
+    display: none !important;
+  }
+  .doc-column {
+    padding: 20px 20px 64px;
+  }
+}
+/* The frontmatter above the document while reading */
+.doc-properties {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 22px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.doc-properties dt {
+  color: var(--muted);
+}
+.doc-properties dd {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.property-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--chrome-2);
+  font-size: 12px;
+}
+.doc pre.doc-properties-yaml {
+  margin-bottom: 22px;
+}
+[data-hide-properties] :is(.doc-properties, .doc-properties-yaml) {
+  display: none;
+}
+
+/* Document */
+.doc {
+  font-family: var(--doc-font);
+  font-size: var(--doc-size);
+  line-height: 1.7;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+.doc h1 {
+  font-size: 1.85em;
+  line-height: 1.25;
+  margin: 0 0 18px;
+  letter-spacing: -0.01em;
+}
+.doc h2 {
+  font-size: 1.3em;
+  line-height: 1.3;
+  margin: 40px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.doc h3 {
+  font-size: 1.07em;
+  margin: 28px 0 8px;
+}
+.doc p {
+  margin: 0 0 14px;
+}
+.doc a {
+  color: var(--link);
+}
+.doc [id] {
+  scroll-margin-top: 16px;
+}
+.doc img {
+  max-width: 100%;
+}
+.doc .img-missing {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.4;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.doc .img-missing strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.doc blockquote {
+  margin: 0 0 16px;
+  padding: 2px 18px;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+}
+.doc ul,
+.doc ol {
+  margin: 0 0 14px;
+  padding-left: 24px;
+}
+.doc li {
+  margin: 4px 0;
+}
+.doc li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+.doc input[type="checkbox"] {
+  margin-right: 0.5em;
+  vertical-align: 1px;
+}
+/* The reading view's task boxes show the document; they read at full strength although they can't be ticked. */
+.doc input[type="checkbox"]:disabled {
+  opacity: 1;
+  cursor: default;
+}
+/* A table scrolls sideways in its box when it's wider than the column. */
+.doc .table-scroll {
+  position: relative;
+  margin: 0 0 18px;
+  overflow-x: auto;
+}
+.doc table {
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+/* The editor's tables have no box of their own. */
+.doc.editor table {
+  display: block;
+  overflow-x: auto;
+  margin: 0 0 18px;
+}
+/* Columns resized by hand: the table is as wide as its columns, and every column keeps its width. */
+.doc table.sized {
+  table-layout: fixed;
+}
+.doc table.sized :is(th, td) {
+  box-sizing: border-box;
+  white-space: normal;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.doc th,
+.doc td {
+  border: 1px solid var(--line);
+  padding: 7px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.doc th {
+  background: var(--code-bg);
+  font-weight: 600;
+}
+/* A handle on the right edge of each header cell resizes its column in the reading view. */
+.doc th {
+  position: relative;
+}
+.doc .col-resize {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 1;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+/* Inside the last column, so the handle never makes the table scroll. */
+.doc th:last-child > .col-resize {
+  right: 0;
+}
+.doc .col-resize:hover,
+.doc table.resizing .col-resize {
+  background: linear-gradient(to right, transparent 3px, var(--link) 3px, var(--link) 5px, transparent 5px);
+}
+.doc table.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Short cells never wrap and long ones keep a readable width (cell classes are set in render.ts), so a
+   wide table scrolls sideways instead of squeezing its columns. */
+.doc .cell-short {
+  white-space: nowrap;
+}
+.doc .cell-long {
+  min-width: 14em;
+}
+.doc code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  color: var(--code-inline-ink);
+  background: var(--code-inline-bg);
+  border: 1px solid var(--code-inline-line);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+/* Code inside a link keeps the link's color, so the link still shows. */
+.doc a code {
+  color: var(--link);
+}
+.doc pre {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+.doc code {
+  font-variant-ligatures: none; /* show => and != as typed, not as joined symbols */
+}
+.doc pre code {
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 1em;
+}
+.code-block {
+  margin: 0 0 18px;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.code-block pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 0 6px 0 14px;
+  border-bottom: 1px solid var(--line);
+  font: 12px var(--ui);
+  color: var(--muted);
+}
+.code-copy {
+  height: var(--height-sm);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted) !important;
+  font: var(--text-sm) var(--ui) !important;
+  cursor: pointer;
+}
+.code-copy:hover {
+  background: var(--chrome-2);
+  color: var(--ink) !important;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-deletion {
+  color: var(--code-kw);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-meta .hljs-string {
+  color: var(--code-str);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--code-num);
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-com);
+  font-style: italic;
+}
+.hljs-meta {
+  color: var(--code-com);
+}
+.hljs-title,
+.hljs-section {
+  color: var(--code-fn);
+}
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_ {
+  color: var(--code-type);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-name,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--code-attr);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
+}
+.doc hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 28px 0;
+}
+.doc .mermaid {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: center;
+}
+.doc .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}

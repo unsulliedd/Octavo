@@ -1,0 +1,17 @@
+.save-state[data-state="unsaved"],
+.save-state[data-state="saving"] {
+  color: var(--ink);
+}
+.save-state[data-state="error"] {
+  color: var(--danger);
+  font-weight: 600;
+}
+button.save-state {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}

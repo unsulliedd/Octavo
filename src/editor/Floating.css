@@ -1,0 +1,123 @@
+.link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 340px;
+  padding: 0 2px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--doc);
+}
+.link-address {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: var(--text-md);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+.link-field input {
+  width: 280px;
+}
+
+/* The formatting bar over selected text, and the link popover */
+.floating {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--doc);
+  box-shadow: var(--shadow-md);
+  font-family: var(--ui);
+  font-size: var(--text-md);
+  line-height: 1.4;
+}
+.floating .icon-btn {
+  width: var(--height-md);
+  height: var(--height-md);
+}
+.floating .icon-btn[aria-pressed="true"] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+}
+.floating .link-chip {
+  border: 0;
+}
+.floating-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--line);
+}
+.floating-menu-anchor {
+  position: relative;
+}
+.floating .floating-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--height-md);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+.floating .floating-text:hover,
+.floating .floating-text[aria-expanded="true"] {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.floating-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--doc);
+  box-shadow: var(--shadow-md);
+}
+.floating-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.floating-menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+.floating-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.floating-menu button:hover:not(:disabled) {
+  background: var(--chrome-2);
+}
+.floating-menu button[aria-checked="true"] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+  font-weight: 600;
+}

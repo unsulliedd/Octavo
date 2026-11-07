@@ -1,0 +1,327 @@
+/* Home */
+.home {
+  flex: 1;
+  overflow: auto;
+  background: var(--doc);
+}
+/* Home uses the window's width up to 1600px; the card grid and the columns of documents reflow to it. */
+.home-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 36px clamp(24px, 4vw, 40px) 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.home[data-first] .home-inner {
+  padding-top: 56px;
+  gap: 32px;
+}
+.home-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 640px;
+}
+/* The title, then Open file… and Open folder… at the right */
+.home-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.home-intro h1,
+.home-head h1 {
+  margin: 0;
+  font-size: var(--text-xxl);
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.home-head h1 {
+  margin-right: auto;
+}
+.home-intro p {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  color: var(--muted);
+}
+.home-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 88px;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-xl);
+  color: var(--muted);
+}
+.drop-zone[data-active="true"] {
+  border-color: var(--brand-secondary);
+  background: var(--drop-soft);
+  color: var(--link);
+}
+.home-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.home-sec-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--ink);
+}
+.home-first-cards {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.home-first-cards .card-grid {
+  flex: none;
+  grid-template-columns: 186px;
+}
+.home-aside {
+  margin: 0;
+  max-width: 360px;
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  color: var(--muted);
+}
+/* Workspace cards: square, as many to a row as fit */
+.card-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 16px;
+}
+.card-cell {
+  min-width: 0;
+}
+.card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--doc);
+}
+.card:hover,
+.card[data-menu] {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-md);
+}
+.cover {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0;
+  overflow: hidden;
+  background: var(--chrome-2);
+}
+.cover-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px);
+}
+.card:hover .card-text,
+.card[data-menu] .card-text {
+  background: var(--chrome-2);
+}
+.card-name,
+.card-meta-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--ink);
+}
+.card-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.card-meta[data-kind="pinned"] .icon {
+  color: var(--brand-accent-ink);
+}
+/* The whole card opens the workspace; the ⋯ button sits above it. */
+.card-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: transparent;
+  cursor: pointer;
+}
+.app .card-more {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  background: var(--chrome);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+}
+.card:hover .card-more,
+.card:focus-within .card-more,
+.card[data-menu] .card-more {
+  opacity: 1;
+}
+/* Marks the workspace open in the Files tab */
+.card-chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--chrome);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.card-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.card-new {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: transparent;
+  cursor: pointer;
+}
+.card-new-plus {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.card-new-label {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--ink);
+}
+.card-new:hover {
+  border-color: var(--brand-secondary);
+  background: var(--drop-soft);
+}
+.card-new:hover .card-new-plus {
+  background: var(--doc);
+  color: var(--link);
+}
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* Recent documents in as many columns as fit */
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+  gap: 2px 16px;
+}
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-md);
+}
+.file-row:hover,
+.file-row[data-menu] {
+  background: var(--chrome-2);
+}
+.file-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--muted) !important;
+}
+.file-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.file-name {
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+.file-folder {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-when {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.pin {
+  margin-right: 4px;
+  opacity: 0;
+}
+.file-row:hover .pin,
+.pin:focus-visible,
+.pin[aria-pressed="true"] {
+  opacity: 1;
+}
+.pin[aria-pressed="true"] {
+  color: var(--brand-accent-ink) !important;
+}

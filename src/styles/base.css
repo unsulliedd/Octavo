@@ -1,0 +1,417 @@
+/* Limitation: system serif stack; bundle a reading serif (e.g. Literata) if this looks off on some machines */
+.app[data-font="serif"] {
+  --doc-font: Charter, "Iowan Old Style", Georgia, serif;
+}
+
+/* Only the reading area, outline and panels scroll; the window itself never does. */
+html,
+body {
+  overflow: hidden;
+}
+body {
+  margin: 0;
+  background: var(--chrome);
+}
+/* Scrollbars: a thin thumb with no track. The gutter is 10px; a transparent border keeps the thumb at 6px
+   until the pointer is on it. */
+.app ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.app ::-webkit-scrollbar-track,
+.app ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.app ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--scroll-thumb) padding-box;
+}
+.app ::-webkit-scrollbar-thumb:hover,
+.app ::-webkit-scrollbar-thumb:active {
+  border-width: 0;
+  background-color: var(--scroll-thumb-hover);
+}
+/* Mermaid adds its tooltip element to the end of the page with an inline position; fixed to the window,
+   it can't make the page taller. Mermaid sets its top and left when it shows the tooltip. */
+body > .mermaidTooltip {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+}
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  color: var(--ink);
+  font: var(--text-md) / 1.4 var(--ui);
+}
+.app button {
+  font: inherit;
+  color: inherit;
+}
+.app ::selection {
+  background: var(--select);
+}
+.app ::highlight(find) {
+  background-color: var(--find-match);
+}
+.app ::highlight(find-current) {
+  background-color: var(--find-current);
+  color: var(--find-current-ink);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: var(--danger);
+}
+.section-label {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Buttons: 24, 28, 32 and 36px tall, all with the same corners. */
+.icon-btn {
+  width: var(--height-lg);
+  height: var(--height-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+/* Above .app button, which resets the color */
+.app .icon-btn {
+  color: var(--muted);
+}
+.icon-btn:hover:not(:disabled),
+.icon-btn[aria-expanded="true"] {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.icon-btn.small {
+  width: var(--height-sm);
+  height: var(--height-sm);
+}
+/* One keyboard focus ring. A click with the mouse shows none; rows and controls packed side by side draw it inside. */
+:where(button, a, input, select, textarea, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+:where(.tabs button, .seg button, .mode-switch button, .menu-item, .floating-menu button, .code-lang-list button, .tree-row, .file-open, .settings-nav button, .outline a):focus-visible {
+  outline-offset: -2px;
+}
+/* Checkboxes are drawn from the tokens; each stays a real checkbox for the keyboard, its label and screen readers. */
+input[type="checkbox"] {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  display: inline-grid;
+  place-content: center;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--doc);
+  cursor: pointer;
+}
+input[type="checkbox"]::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--doc);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  visibility: hidden;
+}
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+input[type="checkbox"]:checked {
+  border-color: var(--control);
+  background: var(--control);
+}
+input[type="checkbox"]:checked:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--control) 82%, var(--ink));
+  background: color-mix(in srgb, var(--control) 82%, var(--ink));
+}
+input[type="checkbox"]:checked::before {
+  visibility: visible;
+}
+input[type="checkbox"]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* The tooltip of every element with data-tip (tooltip.ts) */
+.app-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(360px, calc(100vw - 16px));
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  background: var(--tip);
+  color: var(--tip-ink);
+  box-shadow: var(--shadow-md);
+  font: var(--text-sm) / 1.35 var(--ui);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.app-tip[hidden] {
+  display: none;
+}
+.app-tip kbd {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--height-xl);
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--control-fill);
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Above .app button, which resets the font */
+.app .primary {
+  color: var(--control-ink);
+  font-size: var(--text-lg);
+}
+.primary:hover {
+  background: color-mix(in srgb, var(--control-fill) 85%, black);
+}
+/* Fields: text boxes, text areas and the shortcut recorder share one look. */
+.properties input,
+.properties textarea,
+.link-field input,
+.code-lang-menu input,
+.math-editor textarea,
+.image-editor input,
+.find input,
+.quick-search input,
+.app-dialog-field input,
+.color-hex,
+.shortcut-find-box input,
+.shortcut-keys {
+  min-width: 0;
+  height: var(--height-md);
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  outline: none;
+  background: var(--doc);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-md);
+}
+.properties input:focus,
+.properties textarea:focus,
+.link-field input:focus,
+.code-lang-menu input:focus,
+.math-editor textarea:focus,
+.image-editor input:focus,
+.find input:focus,
+.quick-search input:focus,
+.app-dialog-field input:focus,
+.color-hex:focus,
+.shortcut-find-box input:focus,
+.shortcut-keys[data-recording] {
+  border-color: var(--control);
+  box-shadow: 0 0 0 1px var(--control);
+}
+.text-btn {
+  height: var(--height-md);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--doc);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.text-btn:hover:not(:disabled) {
+  background: var(--chrome-2);
+}
+.text-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.text-btn.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.text-btn.quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+/* The small primary button: .primary's colors at the text button's size */
+.text-btn.primary {
+  border-color: var(--control-fill);
+  background: var(--control-fill);
+  color: var(--control-ink);
+  font-size: var(--text-md);
+}
+.text-btn.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--control-fill) 85%, black);
+}
+/* An answer that loses something: Don't save, Discard, Revert */
+.text-btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.text-btn.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+/* A button that reads as a link, in the text size around it */
+.link-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  cursor: pointer;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Confirmations and messages (dialog.ts): on the body, above everything else */
+.app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--backdrop);
+  color: var(--ink);
+  font: var(--text-md) / 1.5 var(--ui);
+}
+.app-dialog {
+  width: 420px;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--doc);
+  box-shadow: var(--shadow-lg);
+}
+.app-dialog h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+.app-dialog p {
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.app-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.app-dialog-field label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+.app-dialog-field + p {
+  color: var(--muted);
+}
+.app-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+/* Segmented control: the same shape as the edit mode switch */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-2);
+}
+.seg button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--height-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.seg button[data-value="serif"] {
+  font-family: Charter, "Iowan Old Style", Georgia, serif;
+}
+kbd {
+  font: var(--text-xs) var(--ui);
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--chrome);
+}

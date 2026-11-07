@@ -1,0 +1,226 @@
+/* Colors: a base color's row in the same list, with a swatch, its hex value and Reset, and a message below */
+.shortcut-row.color-row {
+  flex-wrap: wrap;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.color-pick {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+.color-swatch {
+  width: var(--height-md);
+  height: var(--height-md);
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--doc);
+  cursor: pointer;
+}
+.color-swatch span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+/* The system picker opens at its input, which sits unseen under the swatch. */
+.color-pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.color-hex {
+  flex: none;
+  width: 92px;
+  font-family: var(--mono);
+}
+.color-hex[aria-invalid],
+.color-hex[aria-invalid]:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+.color-error {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+/* The preview: the app's own sidebar rows and document, so it follows the colors by itself. It carries the set
+   being edited, so it draws its own text and page. */
+.color-preview {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--doc);
+}
+.color-preview-side {
+  padding: 8px;
+  background: var(--chrome);
+  border-right: 1px solid var(--line);
+}
+.color-preview-pin {
+  margin-left: auto;
+  display: inline-flex;
+  color: var(--brand-accent-ink);
+}
+.color-preview-doc {
+  padding: 12px 16px;
+  font-family: var(--ui);
+  font-size: var(--text-md);
+}
+.color-preview-doc p {
+  margin: 0 0 10px;
+}
+.color-preview-doc ul {
+  margin: 0 0 10px;
+  padding-left: 0;
+}
+.color-preview-select {
+  background: var(--select);
+}
+.color-preview-match {
+  border-radius: 2px;
+  background: var(--find-match);
+}
+.color-preview-match.current {
+  background: var(--find-current);
+  color: var(--find-current-ink);
+}
+.color-preview-buttons {
+  display: flex;
+  gap: 8px;
+}
+.color-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.color-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.color-warning {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+.color-warning svg {
+  color: var(--brand-accent-ink);
+}
+/* Colors for and Jump to stay at the top of the settings while they scroll; the bar's line shows once it is stuck.
+   The top offset takes back the settings' own top padding. */
+.color-band {
+  position: sticky;
+  top: -22px;
+  z-index: 2;
+  margin: 0 -32px;
+  container-type: scroll-state;
+}
+.color-band-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 32px;
+  border-bottom: 1px solid transparent;
+  background: var(--doc);
+}
+@container scroll-state(stuck: top) {
+  .color-band-bar {
+    border-bottom-color: var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+}
+.color-band-bar > .setting-hint {
+  flex: 1;
+  margin: 0;
+}
+.seg.color-set {
+  flex: none;
+}
+.seg.color-set label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--height-md);
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+.seg.color-set input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.seg.color-set label:has(input:checked) {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.seg.color-set label:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* Jump to puts a group's heading just under the stuck bar. */
+.color-group {
+  scroll-margin-top: 64px;
+}
+.color-group-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--height-sm);
+}
+.color-code-sample {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.color-inline-sample {
+  padding: 1px 4px;
+  border: 1px solid var(--code-inline-line);
+  border-radius: var(--radius-sm);
+  background: var(--code-inline-bg);
+  color: var(--code-inline-ink);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}

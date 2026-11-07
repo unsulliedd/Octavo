@@ -1,0 +1,243 @@
+.files-head {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0 8px;
+}
+.workspace-name {
+  min-width: 0;
+  margin-right: auto;
+  height: var(--height-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.workspace-name:hover,
+.workspace-name[aria-expanded="true"] {
+  background: var(--chrome-2);
+}
+.workspace-name svg {
+  flex: none;
+  color: var(--muted);
+}
+.files-head .icon-btn {
+  width: var(--height-md);
+  height: var(--height-md);
+  flex: none;
+}
+.icon-btn[data-busy] svg {
+  animation: spin 0.8s linear infinite;
+}
+.files-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 16px;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.files-note.error {
+  color: var(--danger);
+}
+.spinner.small {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-width: 2px;
+}
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 8px 16px;
+  color: var(--muted);
+}
+.tree-folder {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tree-row {
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28px;
+}
+.tree-row svg {
+  flex: none;
+}
+.tree-row:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.tree-row[data-folder] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.tree-row[data-folder] .icon + .icon {
+  color: var(--brand-accent-ink);
+  fill: color-mix(in srgb, currentColor 30%, transparent);
+}
+.tree-children {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tree-children::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--guide);
+  width: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+.tree-row[aria-current] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+  font-weight: 600;
+}
+.tree-name {
+  min-width: 0;
+  margin-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A document that is gone keeps its icon muted, corner included */
+.tree-missing {
+  --file-markdown: currentColor;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  gap: 4px;
+  padding: 5px 8px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.tree-missing svg {
+  flex: none;
+  margin-top: 2px;
+}
+.tree-missing-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tree-missing-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 2px;
+  font-size: var(--text-sm);
+}
+.files-removed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 16px 16px;
+  color: var(--muted);
+}
+.files-removed > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+}
+.files-removed > summary::-webkit-details-marker {
+  display: none;
+}
+.files-removed[open] > summary svg {
+  transform: rotate(90deg);
+}
+.files-removed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+.files-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+}
+.files-offer-text,
+.files-offer-folder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.files-offer-text span {
+  line-height: 1.45;
+  color: var(--muted);
+}
+.files-offer-folder > span {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app .files-offer .primary,
+.app .files-offer .secondary {
+  height: var(--height-lg);
+  min-width: 0;
+  justify-content: center;
+  padding: 0 12px;
+  font-size: var(--text-md);
+}
+.files-offer .primary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-workspace {
+  height: var(--height-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.status-workspace:hover,
+.status-workspace[aria-expanded="true"] {
+  background: var(--chrome-2);
+  color: var(--ink);
+}

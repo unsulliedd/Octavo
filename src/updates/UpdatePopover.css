@@ -1,0 +1,46 @@
+/* Update ready: a quiet toolbar button and its popover */
+.app .update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: var(--height-lg);
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+  font-size: var(--text-md);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.app .update-btn:hover,
+.app .update-btn[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--control-soft) 80%, var(--control));
+}
+.app .update-btn:active {
+  transform: translateY(1px);
+}
+.update-btn .unsaved-dot {
+  margin: 0;
+}
+.update-popover {
+  width: 280px;
+  gap: 12px;
+}
+.update-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-md);
+  color: var(--muted);
+}
+.update-text strong {
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+.update-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

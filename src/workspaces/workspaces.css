@@ -1,0 +1,29 @@
+/* Sidebar tabs and the Files tab */
+.sidebar-tabs {
+  padding: 10px 12px 0;
+}
+.seg button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--height-xl);
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--chrome-2);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Above .app button, which resets the font */
+.app .secondary {
+  font-size: var(--text-lg);
+}
+.tree-slot {
+  flex: none;
+  width: 14px;
+}

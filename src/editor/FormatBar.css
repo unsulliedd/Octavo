@@ -1,0 +1,66 @@
+/* Formatting bar, a row under the toolbar while editing */
+.format-slot {
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.format-slot:empty {
+  display: none;
+}
+.format-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 2px 10px;
+}
+.format-tools {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+}
+/* Centred buttons stay centred in the window: the save buttons sit at the right edge, out of the flow. */
+.format-bar[data-align="center"] {
+  position: relative;
+}
+.format-bar[data-align="center"] .format-tools {
+  justify-content: center;
+  padding: 0 240px;
+}
+.format-bar[data-align="center"] .format-end {
+  position: absolute;
+  right: 10px;
+}
+@media (max-width: 1100px) {
+  .format-bar[data-align="center"] .format-tools {
+    padding: 0;
+  }
+  .format-bar[data-align="center"] .format-end {
+    position: static;
+  }
+}
+.format-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.format-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.format-group + .format-group {
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.format-bar .icon-btn[aria-pressed="true"] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+}
+.format-bar .icon-btn:disabled {
+  opacity: 0.35;
+}

@@ -1,0 +1,4 @@
+/* Source mode: the editor is as tall as its text, so the reading area scrolls it. */
+.source-input {
+  min-height: 60vh;
+}

@@ -1,0 +1,223 @@
+/* Shortcuts: one bordered list per group, a row per action */
+.settings-section.shortcuts {
+  gap: 18px;
+}
+.settings-section.shortcuts > .setting-hint {
+  margin: 0;
+}
+.shortcut-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcut-group h3 {
+  margin: 0;
+}
+.shortcut-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
+  font-size: var(--text-md);
+}
+.shortcut-row + .shortcut-row {
+  border-top: 1px solid var(--line);
+}
+.shortcut-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.shortcut-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-sm);
+}
+.shortcut-note svg {
+  color: var(--brand-accent-ink);
+}
+.shortcut-note.muted {
+  color: var(--muted);
+}
+/* A shortcut's row: its name, its keys in one column, Reset, and any message below. */
+.shortcut-row.key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 272px var(--height-md);
+  column-gap: 8px;
+  box-sizing: border-box;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.key-row .shortcut-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.key-row mark {
+  border-radius: 2px;
+  background: var(--find-match);
+  color: var(--ink);
+}
+.key-row > .shortcut-note,
+.shortcut-notes {
+  grid-column: 1 / -1;
+  margin: 6px 0 2px;
+}
+.shortcut-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.key-row .shortcut-note {
+  gap: 6px;
+  color: var(--ink);
+}
+.key-row .shortcut-note.muted {
+  color: var(--muted);
+}
+.shortcut-note .text-btn {
+  margin-left: 4px;
+}
+/* The keys: no border until the pointer is over them, a pencil on hover and keyboard focus. */
+.shortcut-keys {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.shortcut-keys:hover {
+  border-color: var(--line-strong);
+  background: var(--doc);
+}
+.shortcut-keys > svg {
+  margin-left: auto;
+  color: var(--muted);
+  visibility: hidden;
+}
+.shortcut-keys:hover > svg,
+.shortcut-keys:focus-visible > svg {
+  visibility: visible;
+}
+.shortcut-keys:not([data-recording]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.shortcut-keys[data-recording] {
+  background: var(--doc);
+  color: var(--control-soft-ink);
+  font-weight: 600;
+}
+.shortcut-keys.fixed {
+  cursor: default;
+}
+.shortcut-keys.fixed:hover {
+  border-color: transparent;
+}
+.shortcut-rec {
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--control);
+}
+.shortcut-none {
+  color: var(--muted);
+}
+.shortcut-or {
+  margin: 0 3px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 21px;
+  box-sizing: border-box;
+  padding: 0 6px;
+  border-bottom-width: 2px;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Changed keys in the selected-row colors, keys shared with something else edged in the accent color. */
+.key-row[data-changed] kbd {
+  border-color: color-mix(in srgb, var(--control) 40%, var(--doc));
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+}
+.key-row[data-conflict] kbd {
+  border-color: var(--brand-accent-ink);
+}
+.shortcut-keys kbd[data-hit] {
+  background: var(--find-match);
+  color: var(--ink);
+}
+/* Find a shortcut, at the top of the list while it scrolls. */
+.color-band-bar.shortcut-find {
+  align-items: flex-end;
+}
+.shortcut-find-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcut-find-box {
+  position: relative;
+  width: 300px;
+}
+.shortcut-find-box > svg {
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.shortcut-find-box input {
+  display: block;
+  width: 100%;
+  padding: 0 30px;
+}
+.shortcut-find-box input::placeholder {
+  color: var(--muted);
+}
+.shortcut-find-box .icon-btn {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+}
+.shortcut-find > .setting-hint {
+  margin: 0 0 6px;
+}
+.shortcut-row .icon-btn {
+  flex: none;
+  width: var(--height-md);
+  height: var(--height-md);
+}
+/* An unchanged action keeps the reset button's place, so the keys line up. */
+.shortcut-row .icon-btn[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+}

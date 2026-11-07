@@ -1,0 +1,187 @@
+import { expect, test } from "vitest";
+import {
+  clashText,
+  comboOf,
+  conflicts,
+  editorShortcut,
+  findShortcuts,
+  FIXED,
+  fixedReason,
+  isAssignable,
+  keyLabel,
+  recordKey,
+  removeKeys,
+  resetGroup,
+  sanitizeBindings,
+  setKeys,
+  shortcut,
+  SHORTCUT_GROUPS,
+  withKeys,
+} from "@/app/shortcuts";
+
+const idle = { focusMode: false, findOpen: false, settingsOpen: false };
+type Mods = Partial<Record<"ctrlKey" | "metaKey" | "shiftKey" | "altKey", boolean>> & { code?: string };
+const key = (k: string, mods: Mods = {}) => ({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods });
+
+test("key presses read as combos", () => {
+  expect(comboOf(key("s", { ctrlKey: true }))).toBe("Ctrl+S");
+  expect(comboOf(key("S", { ctrlKey: true }))).toBe("Ctrl+S"); // Caps Lock
+  expect(comboOf(key("P", { metaKey: true, shiftKey: true }))).toBe("Ctrl+Shift+P");
+  expect(comboOf(key("ArrowLeft", { altKey: true }))).toBe("Alt+Left");
+  expect(comboOf(key("!", { ctrlKey: true, shiftKey: true, code: "Digit1" }))).toBe("Ctrl+Shift+1");
+  expect(comboOf(key("&", { ctrlKey: true, altKey: true, code: "Digit1" }))).toBe("Ctrl+Alt+1"); // AZERTY
+  expect(comboOf(key("ы", { ctrlKey: true, code: "KeyS" }))).toBe("Ctrl+S"); // Russian layout
+  expect(comboOf(key("ź", { ctrlKey: true, altKey: true, code: "KeyX" }))).toBe("Ctrl+Alt+Ź"); // AltGr types a letter
+  expect(comboOf(key(" ", { ctrlKey: true }))).toBe("Ctrl+Space");
+  expect(comboOf(key("Enter", { shiftKey: true }))).toBe("Shift+Enter");
+  expect(comboOf(key("Control", { ctrlKey: true }))).toBeUndefined();
+  expect(comboOf(key("Shift", { shiftKey: true }))).toBeUndefined();
+});
+
+test("only keys that don't type text can be shortcuts", () => {
+  expect(isAssignable("Ctrl+P")).toBe(true);
+  expect(isAssignable("Alt+Left")).toBe(true);
+  expect(isAssignable("F11")).toBe(true);
+  expect(isAssignable("Shift+F5")).toBe(true);
+  expect(isAssignable("Shift+Enter")).toBe(true);
+  expect(isAssignable("P")).toBe(false);
+  expect(isAssignable("Shift+P")).toBe(false);
+  expect(isAssignable("Enter")).toBe(false);
+  expect(isAssignable("Tab")).toBe(false);
+});
+
+test("window shortcuts with the default keys", () => {
+  expect(shortcut(key("o", { ctrlKey: true }), {}, idle)).toBe("open");
+  expect(shortcut(key("O", { ctrlKey: true }), {}, idle)).toBe("open");
+  expect(shortcut(key("f", { ctrlKey: true }), {}, idle)).toBe("find");
+  expect(shortcut(key("p", { ctrlKey: true }), {}, idle)).toBe("quickOpen");
+  expect(shortcut(key("\\", { ctrlKey: true }), {}, idle)).toBe("toggleFiles");
+  expect(shortcut(key("b", { ctrlKey: true }), {}, idle)).not.toBe("toggleFiles");
+  expect(shortcut(key("p", { ctrlKey: true }), { quickOpen: ["Ctrl+Alt+P"] }, idle)).toBeUndefined();
+  expect(shortcut(key("p", { ctrlKey: true, altKey: true }), { quickOpen: ["Ctrl+Alt+P"] }, idle)).toBe("quickOpen");
+  expect(shortcut(key("F", { ctrlKey: true, shiftKey: true }), {}, idle)).toBeUndefined();
+  expect(shortcut(key("w", { metaKey: true }), {}, idle)).toBe("closeTab");
+  expect(shortcut(key("e", { ctrlKey: true }), {}, idle)).toBe("toggleEdit");
+  expect(shortcut(key("P", { ctrlKey: true, shiftKey: true }), {}, idle)).toBe("preview");
+  expect(shortcut(key("M", { ctrlKey: true, shiftKey: true }), {}, idle)).toBe("source");
+  expect(shortcut(key("E", { ctrlKey: true, shiftKey: true }), {}, idle)).toBeUndefined(); // the editor's inline code
+  expect(shortcut(key("s", { ctrlKey: true }), {}, idle)).toBe("save");
+  expect(shortcut(key("S", { ctrlKey: true, shiftKey: true }), {}, idle)).toBe("saveAs");
+  expect(shortcut(key("Tab", { ctrlKey: true }), {}, idle)).toBe("nextTab");
+  expect(shortcut(key("Tab", { ctrlKey: true, shiftKey: true }), {}, idle)).toBe("previousTab");
+  expect(shortcut(key("PageDown", { ctrlKey: true }), {}, idle)).toBe("nextTab");
+  expect(shortcut(key("PageUp", { ctrlKey: true }), {}, idle)).toBe("previousTab");
+  expect(shortcut(key("ArrowLeft", { altKey: true }), {}, idle)).toBe("back");
+  expect(shortcut(key("ArrowRight", { altKey: true }), {}, idle)).toBe("forward");
+  expect(shortcut(key("F11"), {}, idle)).toBe("toggleFocus");
+  expect(shortcut(key("f"), {}, idle)).toBeUndefined();
+  expect(shortcut(key("o", { ctrlKey: true, altKey: true }), {}, idle)).toBeUndefined(); // AltGr on some layouts
+  expect(shortcut(key("b", { ctrlKey: true }), {}, idle)).toBeUndefined(); // the editor's bold
+});
+
+test("changed keys replace the defaults", () => {
+  const bindings = { preview: ["Ctrl+L"], save: [] };
+  expect(shortcut(key("l", { ctrlKey: true }), bindings, idle)).toBe("preview");
+  expect(shortcut(key("L", { ctrlKey: true, shiftKey: true }), bindings, idle)).toBeUndefined();
+  expect(shortcut(key("s", { ctrlKey: true }), bindings, idle)).toBeUndefined();
+});
+
+test("Escape leaves distraction-free mode only when nothing else is open", () => {
+  expect(shortcut(key("Escape"), {}, idle)).toBeUndefined();
+  expect(shortcut(key("Escape"), {}, { ...idle, focusMode: true })).toBe("exitFocus");
+  expect(shortcut(key("Escape"), {}, { ...idle, focusMode: true, findOpen: true })).toBeUndefined();
+  expect(shortcut(key("Escape"), {}, { ...idle, focusMode: true, settingsOpen: true })).toBeUndefined();
+});
+
+test("editor shortcuts", () => {
+  expect(editorShortcut(key("b", { ctrlKey: true }), {})).toBe("bold");
+  expect(editorShortcut(key("E", { ctrlKey: true, shiftKey: true }), {})).toBe("code");
+  expect(editorShortcut(key("4", { ctrlKey: true, altKey: true, code: "Digit4" }), {})).toBe("h4");
+  expect(editorShortcut(key("0", { ctrlKey: true, altKey: true, code: "Digit0" }), {})).toBe("paragraph");
+  expect(editorShortcut(key("Z", { ctrlKey: true, shiftKey: true }), {})).toBe("redo");
+  expect(editorShortcut(key("Enter", { shiftKey: true }), {})).toBe("lineBreak");
+  expect(editorShortcut(key("k", { ctrlKey: true }), {})).toBe("link");
+  expect(editorShortcut(key("s", { ctrlKey: true }), {})).toBeUndefined(); // the window's Save
+  expect(editorShortcut(key("t", { ctrlKey: true, altKey: true }), { table: ["Ctrl+Alt+T"] })).toBe("table");
+  expect(editorShortcut(key("b", { ctrlKey: true }), { bold: [] })).toBeUndefined();
+});
+
+test("tooltips show the current keys", () => {
+  expect(keyLabel({}, "save")).toBe("Ctrl+S");
+  expect(keyLabel({}, "nextTab")).toBe("Ctrl+Tab");
+  expect(keyLabel({}, "taskList")).toBeUndefined();
+  expect(withKeys("Preview", { preview: ["Ctrl+P"] }, "preview")).toBe("Preview (Ctrl+P)");
+  expect(withKeys("Save", { save: [] }, "save")).toBe("Save");
+});
+
+test("keys equal to the defaults drop the change", () => {
+  expect(setKeys({}, "preview", ["Ctrl+P"])).toEqual({ preview: ["Ctrl+P"] });
+  expect(setKeys({ preview: ["Ctrl+P"] }, "preview", ["Ctrl+Shift+P"])).toEqual({});
+  expect(setKeys({ preview: ["Ctrl+P"] }, "redo", ["Ctrl+Y", "Ctrl+Shift+Z"])).toEqual({ preview: ["Ctrl+P"] });
+  expect(setKeys({}, "save", [])).toEqual({ save: [] });
+});
+
+test("conflicts name everything else on the same keys", () => {
+  expect(conflicts({})).toEqual({});
+  expect(conflicts({ code: ["Ctrl+B"] })).toEqual({ bold: [{ keys: "Ctrl+B", other: "code" }], code: [{ keys: "Ctrl+B", other: "bold" }] });
+  expect(conflicts({ preview: ["Ctrl+S"], bold: ["Ctrl+S"] })).toEqual({
+    save: [{ keys: "Ctrl+S", other: "preview" }, { keys: "Ctrl+S", other: "bold" }],
+    preview: [{ keys: "Ctrl+S", other: "save" }, { keys: "Ctrl+S", other: "bold" }],
+    bold: [{ keys: "Ctrl+S", other: "preview" }, { keys: "Ctrl+S", other: "save" }],
+  });
+  expect(conflicts({ bold: ["Ctrl+C"] })).toEqual({ bold: [{ keys: "Ctrl+C" }] });
+  expect(conflicts({ save: [] })).toEqual({});
+  expect(clashText({ keys: "Ctrl+K", other: "link" })).toBe("Link also uses Ctrl+K.");
+  expect(clashText({ keys: "Ctrl+C" })).toBe("Ctrl+C copies and can't be changed.");
+});
+
+test("Remove from … takes the shared keys off the other action only", () => {
+  const bindings = { table: ["Ctrl+K"] };
+  expect(removeKeys(bindings, "link", "Ctrl+K")).toEqual({ table: ["Ctrl+K"], link: [] });
+  expect(conflicts(removeKeys(bindings, "link", "Ctrl+K"))).toEqual({});
+  expect(removeKeys({ code: ["Ctrl+Tab"] }, "nextTab", "Ctrl+Tab")).toEqual({ code: ["Ctrl+Tab"], nextTab: ["Ctrl+PageDown"] });
+});
+
+test("recording: Escape cancels, Backspace and Delete remove the shortcut, fixed and plain keys are refused", () => {
+  expect(recordKey({}, "save", "Escape")).toEqual({ cancel: true });
+  expect(recordKey({}, "save", "Backspace")).toEqual({ bindings: { save: [] } });
+  expect(recordKey({ save: ["Ctrl+L"] }, "save", "Delete")).toEqual({ bindings: { save: [] } });
+  expect(recordKey({}, "bold", "Ctrl+C")).toEqual({ refused: "Ctrl+C copies and can't be changed." });
+  expect(recordKey({}, "bold", "F3")).toEqual({ refused: "F3 goes to the next match and can't be changed." });
+  expect(recordKey({}, "bold", "Shift+B")).toEqual({ refused: "Use Ctrl or Alt with a key, or a function key." });
+  expect(recordKey({}, "bold", "Ctrl+Alt+B")).toEqual({ bindings: { bold: ["Ctrl+Alt+B"] } });
+  expect(recordKey({ bold: ["Ctrl+Alt+B"] }, "bold", "Ctrl+B")).toEqual({ bindings: {} });
+  for (const { keys } of FIXED) expect(fixedReason(keys)).toMatch(/ and can't be changed\.$/);
+  expect(fixedReason("Ctrl+B")).toBeUndefined();
+});
+
+test("Reset group puts only that group's actions back", () => {
+  const ids = SHORTCUT_GROUPS.find((g) => g.title === "Reading")!.items.map((i) => i.id);
+  expect(resetGroup({ find: ["Ctrl+Alt+F"], toggleFocus: [], save: ["Ctrl+L"] }, ids)).toEqual({ save: ["Ctrl+L"] });
+});
+
+test("Find a shortcut matches names and keys, counts the rows and leaves out empty groups", () => {
+  const all = findShortcuts("", {});
+  expect(all.count).toBe(SHORTCUT_GROUPS.reduce((n, g) => n + g.items.length, 0) + FIXED.length);
+  expect(all.groups[all.groups.length - 1]).toMatchObject({ title: "Keys that don't change", fixed: true });
+
+  const tab = findShortcuts("Tab", {});
+  expect(tab.groups.map((g) => g.title)).toEqual(["Files and tabs", "Insert", "Keys that don't change"]);
+  expect(tab.groups.flatMap((g) => g.rows.map((r) => r.label))).toEqual(["Close tab", "Reopen closed tab", "Next tab", "Previous tab", "Table", "Indent (lists and tables)", "Outdent (lists and tables)", "Leave the table"]);
+  expect(tab.count).toBe(8);
+  expect(tab.groups[0].rows.find((r) => r.id === "nextTab")).toMatchObject({ at: 5, caps: ["tab"] });
+  expect(tab.groups[0].rows.find((r) => r.id === "closeTab")).toMatchObject({ at: 6, caps: [] });
+
+  const link = findShortcuts(" ctrl+k ", {});
+  expect(link.groups.flatMap((g) => g.rows.map((r) => r.id))).toEqual(["link"]);
+  expect(link.groups[0].rows[0]).toMatchObject({ at: -1, caps: ["ctrl", "k"] });
+  // Changed keys are found, the defaults they replaced are not.
+  expect(findShortcuts("ctrl+k", { table: ["Ctrl+K"], link: [] }).groups.flatMap((g) => g.rows.map((r) => r.id))).toEqual(["table"]);
+  expect(findShortcuts("nothing like this", {})).toEqual({ groups: [], count: 0 });
+});
+
+test("stored bindings are checked", () => {
+  expect(sanitizeBindings(null)).toEqual({});
+  expect(sanitizeBindings([])).toEqual({});
+  expect(sanitizeBindings({ save: ["Ctrl+Alt+S", "S", 4], nope: ["Ctrl+Q"], open: "Ctrl+O", bold: [] })).toEqual({ save: ["Ctrl+Alt+S"], bold: [] });
+});

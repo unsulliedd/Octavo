@@ -1,0 +1,34 @@
+.sidebar {
+  flex: none;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+}
+/* A docked panel takes focus when the keyboard docks it; that needs no ring. */
+.sidebar:focus {
+  outline: none;
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 8px 18px;
+}
+.count {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.sidebar-handle {
+  position: relative;
+  z-index: 6;
+  flex: none;
+  width: 7px;
+  margin: 0 -4px 0 -3px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.sidebar-handle:hover,
+.sidebar-handle:active,
+.sidebar-handle:focus-visible {
+  background: linear-gradient(var(--link), var(--link)) center / 2px 100% no-repeat;
+  outline: none;
+}

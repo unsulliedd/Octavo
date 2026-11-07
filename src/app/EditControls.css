@@ -1,0 +1,85 @@
+/* Reading: Edit is a quiet button, the same weight as the icons beside it. */
+.app .edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--height-lg);
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--chrome-2);
+  color: var(--ink);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+.app .edit-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--chrome-2) 80%, var(--ink));
+}
+.app .edit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Editing: Edit and Preview as a two-way switch, then Done. Shaped like the segmented controls below. */
+.mode-switch {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  height: var(--height-lg);
+  margin: 0 4px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  background: var(--chrome-2);
+}
+.app .mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+.app .mode-switch button:hover {
+  color: var(--ink);
+}
+.app .mode-switch button[aria-pressed="true"] {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.app .mode-switch button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.app .mode-switch button:disabled:hover {
+  color: var(--muted);
+}
+.app .done-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--height-lg);
+  margin: 0 2px;
+  padding: 0 12px;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-md);
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+.app .done-btn:hover {
+  background: color-mix(in srgb, var(--control-soft) 80%, var(--control));
+}
+.toolbar-status {
+  margin-left: 6px;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}

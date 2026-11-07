@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# round-trip harness output, and your own test documents
+fidelity/out
+fidelity/private
+
+# base version of the render pipeline loaded by npm run perf:render
+src/reading/render.base.tmp.ts
+
+# screenshots saved in the repository root, and the app screenshots media/render.ps1 reads
+/*.png
+media/shots
+
+# written by npx tauri icon, not used by the Windows build
+src-tauri/icons/android
+src-tauri/icons/ios
+src-tauri/icons/64x64.png

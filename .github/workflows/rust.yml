@@ -1,0 +1,41 @@
+name: Rust
+
+# The Rust tests, on Linux and Windows, for pull requests that change the Rust side or this workflow.
+on:
+  pull_request:
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/rust.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Rust tests on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tauri system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      # The Rust build embeds the frontend from dist/; the tests don't use it, so a placeholder page does.
+      - name: Placeholder frontend
+        shell: bash
+        run: mkdir -p dist && echo '<!doctype html><title>Octavo</title>' > dist/index.html
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo test --locked
+        working-directory: src-tauri

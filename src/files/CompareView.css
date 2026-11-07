@@ -1,0 +1,99 @@
+/* Compare a file on disk with unsaved edits */
+.compare-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  padding: 24px;
+  background: color-mix(in srgb, var(--chrome) 70%, transparent);
+}
+.compare {
+  flex: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--doc);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.compare-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.compare-title .muted,
+.compare-foot .muted {
+  font-size: var(--text-sm);
+}
+.compare-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+}
+.compare-foot .muted {
+  flex: 1 1 240px;
+}
+.compare-legend {
+  display: flex;
+  gap: 10px;
+  font-size: var(--text-sm);
+}
+.compare-legend span {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+.compare-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 0;
+  font-family: var(--mono);
+  font-size: var(--text-md);
+  line-height: 1.55;
+}
+.compare-body > p {
+  margin: 8px 16px;
+}
+.diff-line {
+  padding: 0 16px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff-mark {
+  display: inline-block;
+  width: 28px;
+  text-align: center;
+  color: var(--muted);
+  user-select: none;
+}
+.diff-del {
+  background: color-mix(in srgb, var(--danger) 14%, var(--doc));
+}
+.diff-add {
+  background: color-mix(in srgb, var(--link) 16%, var(--doc));
+}
+.diff-skip {
+  margin: 4px 0;
+  padding: 2px 28px;
+  color: var(--muted);
+  background: var(--chrome);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}

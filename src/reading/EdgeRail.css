@@ -1,0 +1,72 @@
+/* The dashes of a hidden outline, and the outline floating from them */
+.edge {
+  display: contents;
+}
+/* Beside the text, or against the document's edge when there is no room there. */
+.edge-place {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  width: 22px;
+}
+.edge-rail {
+  padding: 8px 0;
+}
+.dash-row {
+  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 5px;
+  cursor: pointer;
+}
+.edge-place[data-side="right"]:not([data-margin]) .dash-row,
+.edge-place[data-side="left"][data-margin] .dash-row {
+  justify-content: flex-end;
+}
+/* The one button that stands for the dashes; the dashes take the pointer. */
+.edge-key {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  pointer-events: none;
+}
+.edge-key:focus-visible {
+  outline-offset: -2px;
+}
+.dash {
+  display: block;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--outline-mark);
+  opacity: 0.7;
+}
+.dash-row:hover .dash {
+  opacity: 1;
+}
+.dash[data-active] {
+  background: var(--outline-mark-active);
+  opacity: 1;
+}
+/* Above the document, below the reading settings, menus, dialogs and the large view. */
+.sidebar[data-floating] {
+  position: absolute;
+  z-index: 9;
+  top: 8px;
+  max-height: calc(100% - 16px);
+  box-sizing: border-box;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+.sidebar[data-floating="left"] {
+  left: var(--panel-left, 28px);
+  max-width: calc(100% - 16px);
+}
+.sidebar[data-floating="right"] {
+  right: var(--panel-right, 28px);
+  max-width: calc(100% - 16px);
+}

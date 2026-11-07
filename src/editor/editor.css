@@ -1,0 +1,64 @@
+/* The source of the selected formula, under it, with a live preview */
+.math-editor {
+  position: absolute;
+  z-index: 8;
+  width: min(460px, 90%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--doc);
+  box-shadow: var(--shadow-md);
+  font-family: var(--ui);
+  font-size: var(--text-md);
+}
+.math-editor textarea {
+  height: auto;
+  min-height: 56px;
+  padding: 8px 10px;
+  background: var(--code-bg);
+  font-family: var(--mono);
+  line-height: 1.5;
+  resize: vertical;
+}
+.image-editor {
+  width: min(360px, 90%);
+}
+.image-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.image-editor .math-editor-foot .muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.math-preview {
+  min-height: 28px;
+  padding: 6px 4px;
+  overflow-x: auto;
+  color: var(--ink);
+  font-size: var(--text-xl);
+}
+.math-preview:empty::before {
+  content: "Preview";
+  color: var(--muted);
+  font-size: var(--text-md);
+}
+.math-editor-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.math-editor-foot .muted {
+  flex: 1;
+  font-size: var(--text-sm);
+}
+.icon-btn.danger:hover:not(:disabled),
+.table-bar .icon-btn.danger:hover:not(:disabled) {
+  color: var(--danger) !important;
+}

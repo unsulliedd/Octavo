@@ -1,0 +1,67 @@
+/* Table actions, above the document while the cursor is in a table */
+.editor-pane {
+  position: relative;
+}
+.editor-pane:not([data-shown]) {
+  height: 0;
+  overflow: hidden;
+}
+.table-bar-anchor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  height: 0;
+}
+.table-bar {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--doc);
+  box-shadow: var(--shadow-md);
+}
+.table-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.table-bar-group + .table-bar-group {
+  padding-left: 4px;
+  border-left: 1px solid var(--line);
+}
+.table-bar .icon-btn {
+  width: var(--height-md);
+  height: var(--height-md);
+}
+.table-bar .icon-btn[aria-pressed="true"] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+}
+/* Down the table's left side: the anchor is as tall as the table, and the bar sticks to the top of the view inside it. */
+.table-bar-anchor[data-side] {
+  right: auto;
+  width: 36px;
+  margin-left: -46px;
+}
+.table-bar-anchor[data-side] .table-bar {
+  position: sticky;
+  top: 8px;
+  bottom: auto;
+  left: auto;
+  flex-direction: column;
+}
+.table-bar-anchor[data-side] .table-bar-group {
+  flex-direction: column;
+}
+.table-bar-anchor[data-side] .table-bar-group + .table-bar-group {
+  padding: 4px 0 0;
+  border-left: 0;
+  border-top: 1px solid var(--line);
+}

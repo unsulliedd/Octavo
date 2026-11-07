@@ -1,0 +1,26 @@
+/* A conflict with a change on disk stays in view while the document scrolls. */
+.banner.conflict {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 24px;
+  border-bottom-color: color-mix(in srgb, var(--brand-accent) 55%, var(--doc));
+  background: color-mix(in srgb, var(--brand-accent) 14%, var(--doc));
+  color: var(--ink);
+}
+.banner.conflict > .icon {
+  color: var(--brand-accent-ink);
+}
+.conflict-text {
+  flex: 1 1 320px;
+  line-height: 1.45;
+}
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

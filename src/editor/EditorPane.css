@@ -1,0 +1,116 @@
+/* The editor uses the reading view's document styles; these are what ProseMirror needs on top. */
+.doc.editor {
+  visibility: hidden;
+}
+.doc.editor[data-shown] {
+  visibility: visible;
+}
+.doc.editor .ProseMirror {
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-variant-ligatures: none;
+}
+/* Table cells and list items hold a paragraph in the editor; the reading view shows their text directly. */
+.doc.editor :is(td, th) > p {
+  margin: 0;
+}
+.doc.editor .ProseMirror > :first-child {
+  margin-top: 0;
+}
+/* A tight list's items hold a paragraph in the editor; the reading view shows them without its margins. */
+.doc.editor :is(ul, ol)[data-spread="false"]:not(:has(> li[data-spread="true"])) > li > p,
+.doc.editor :is(ul, ol)[data-spread="false"]:not(:has(> li[data-spread="true"])) > li > .task-content > p {
+  margin: 0;
+}
+/* A task item while editing: its checkbox, then its content. */
+.doc.editor li[data-item-type="task"] {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.doc.editor li[data-item-type="task"] > input {
+  flex: none;
+  margin: 0.4em 0 0;
+}
+.doc.editor .task-content {
+  flex: 1;
+  min-width: 0;
+}
+.doc.editor li[data-checked="true"] > .task-content {
+  color: var(--muted);
+}
+.doc.editor .ProseMirror-selectednode {
+  outline: 2px solid var(--link);
+}
+.doc.editor [data-type="math_inline"],
+.doc.editor [data-type="math_block"] {
+  cursor: pointer;
+  border-radius: 4px;
+}
+.doc.editor [data-type="math_inline"]:hover,
+.doc.editor [data-type="math_block"]:hover {
+  background: var(--chrome);
+}
+.doc.editor [data-type="math_block"] {
+  margin: 0 0 14px;
+  text-align: center;
+}
+.doc.editor [data-type^="math_"][data-empty] {
+  padding: 0 6px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.86em;
+}
+
+/* The frontmatter as a properties panel */
+.doc.editor .properties {
+  margin: 0 0 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  font-family: var(--ui);
+  font-size: var(--text-md);
+  line-height: 1.4;
+}
+.properties-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.properties-head .setting-label {
+  flex: 1;
+}
+.properties-head .setting-hint {
+  margin: 0;
+}
+.properties-rows {
+  padding: 4px 0;
+}
+.properties-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 170px) 1fr 24px;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 4px;
+}
+.properties input.key {
+  color: var(--muted);
+  font-weight: 600;
+}
+.properties textarea {
+  display: block;
+  width: calc(100% - 12px);
+  height: auto;
+  margin: 6px;
+  padding: 8px;
+  font-family: var(--mono);
+  resize: vertical;
+}
+.properties-foot {
+  padding: 0 6px 6px;
+}

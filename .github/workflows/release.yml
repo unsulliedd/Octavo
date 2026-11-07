@@ -1,0 +1,59 @@
+name: Release
+
+# Pushed by `npm version …` + `git push --follow-tags`. Builds the Windows installers, signs the update
+# files with the updater key and opens a draft GitHub release with the CHANGELOG section as its notes and
+# the updater's latest.json. Publishing the draft is manual; once published, installed apps find the update.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installers
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+
+      - name: Tag matches package.json
+        shell: bash
+        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+      - run: npm test
+
+      - name: Release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          {
+            echo 'body<<NOTES_EOF'
+            awk -v v="$version" 'index($0, "## [" v "]") == 1 { on = 1; next } /^## \[/ { on = 0 } on' CHANGELOG.md
+            echo 'NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Octavo ${{ github.ref_name }}
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: true
+          # The updater reads releases/latest, which skips pre-releases.
+          prerelease: false
+          # Each install updates with its own installer type; one of unknown type gets the .exe.
+          updaterJsonPreferNsis: true

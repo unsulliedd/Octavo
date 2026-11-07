@@ -1,0 +1,75 @@
+.tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab {
+  flex: 0 1 auto;
+  min-width: 104px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  max-width: 220px;
+  padding: 0 4px 0 0;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+}
+/* The tab shown keeps its width while the others shrink */
+.tab[aria-current="page"] {
+  flex-shrink: 0;
+}
+.tabs > .icon-btn {
+  flex: none;
+}
+.tab:hover {
+  background: var(--chrome-2);
+}
+.tab[aria-current="page"] {
+  background: var(--doc);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+/* The tab a menu is open for */
+.tab[data-menu] {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+/* Dragged to a new place: lifted above the others, which make room for it. */
+.tab[data-dragging] {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px var(--control),
+    var(--shadow-md);
+}
+.tab[data-dragging],
+.tab[data-dragging] .tab-open {
+  cursor: grabbing;
+}
+.tabs:has(.tab[data-dragging]) {
+  user-select: none;
+}
+.tab-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px 0 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+.tab-open span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

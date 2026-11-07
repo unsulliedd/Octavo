@@ -1,0 +1,254 @@
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.setting-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+.setting-value {
+  font-weight: 400;
+}
+.setting input[type="range"] {
+  width: 100%;
+  accent-color: var(--control);
+}
+.setting-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-md);
+}
+.setting-toggle.plain {
+  padding-top: 0;
+  border-top: 0;
+}
+.setting-toggle kbd {
+  margin-left: 4px;
+}
+.setting-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Settings: everything that isn't about reading */
+.dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--backdrop);
+}
+/* As wide as the section list and a 640 px section with its padding and scrollbar, so no empty column is left beside it;
+   the height follows the window. */
+.settings {
+  width: min(920px, 100%);
+  height: min(clamp(520px, 75vh, 900px), 100%);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--chrome);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 12px 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-xl);
+}
+.settings-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+/* The section list: a tab per section with its icon, and the version and updates at its foot. */
+.settings-nav {
+  flex: none;
+  width: 200px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  border-right: 1px solid var(--line);
+}
+.settings-nav [role="tablist"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-nav [role="tab"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+.settings-nav [role="tab"]:hover {
+  background: var(--chrome-2);
+  color: var(--ink);
+}
+.settings-nav [role="tab"][aria-selected="true"] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+  font-weight: 600;
+}
+.settings-nav-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 4px 2px;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-md);
+}
+.settings-nav-foot strong {
+  font-weight: 600;
+}
+.settings-nav-foot .setting-hint {
+  margin: 0;
+}
+.settings-nav-foot .setting-hint:empty {
+  display: none;
+}
+/* When the window can't fit the dialog's full 920 px, the list is a rail of icons; each names its section in a tooltip. As RAIL in Settings.tsx. */
+@media (max-width: 967px) {
+  .settings-nav {
+    width: 52px;
+  }
+  .settings-nav [role="tab"] {
+    justify-content: center;
+    width: 36px;
+    padding: 0;
+  }
+  .settings-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .settings-nav-foot {
+    display: none;
+  }
+}
+.settings-body {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 22px 32px 28px;
+  background: var(--doc);
+}
+.settings-title-row {
+  max-width: 640px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.settings-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* The result of a theme import, under the Colors heading. */
+.color-notice {
+  max-width: 640px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--chrome);
+  color: var(--ink);
+}
+.color-notice > span {
+  flex: 1;
+}
+.color-notice > svg {
+  color: var(--control);
+}
+.color-notice.bad {
+  border-color: var(--danger);
+}
+.color-notice.bad > svg {
+  color: var(--danger);
+}
+.color-notice strong {
+  font-weight: 600;
+}
+.settings-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+.settings-section {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: var(--text-md);
+}
+/* About: the mark and version, links, then the updates below a line */
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.about-head strong {
+  font-size: var(--text-xl);
+}
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.setting-hint .link-btn {
+  font-size: inherit;
+}
+.about-updates {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.text-btn.small {
+  height: var(--height-sm);
+  padding: 0 8px;
+  font-size: var(--text-sm);
+}

@@ -1,0 +1,24 @@
+/* Find bar */
+.find {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 12px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  color: var(--muted);
+}
+.find input {
+  width: 200px;
+}
+.find-count {
+  padding: 0 6px;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}

@@ -1,0 +1,38 @@
+/* Reading settings popover */
+.popover {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 10;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+/* Scrolls when the zoomed drawing is bigger than the preview; centred when it is smaller. */
+.mermaid-canvas,
+.large-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 16px;
+  overflow: auto;
+}
+.mermaid-canvas > *,
+.large-body > * {
+  margin: auto;
+}
+.mermaid-canvas[data-pannable],
+.large-body[data-pannable] {
+  cursor: grab;
+}
+.mermaid-canvas[data-dragging],
+.large-body[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}

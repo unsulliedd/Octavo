@@ -1,0 +1,47 @@
+/* Windows high contrast: the system palette replaces every color, so a state shown only by a background or a shadow
+   needs a system color of its own. */
+@media (forced-colors: active) {
+  :where(button, a, input, select, textarea, summary, [tabindex="0"]):focus-visible,
+  .sidebar-handle:focus-visible,
+  .edge-key:focus-visible {
+    outline: 2px solid Highlight;
+  }
+  input[type="checkbox"]:checked {
+    border-color: Highlight;
+    background: Highlight;
+  }
+  input[type="checkbox"]::before {
+    background: HighlightText;
+  }
+  .tab[aria-current="page"],
+  .tree-row[aria-current],
+  .settings-nav [role="tab"][aria-selected="true"],
+  .quick-row[aria-selected="true"],
+  .seg button[aria-pressed="true"],
+  .mode-switch button[aria-pressed="true"],
+  .icon-btn[aria-pressed="true"],
+  .floating-menu button[aria-checked="true"],
+  .code-lang-list button[data-active],
+  .code-lang-list button[aria-selected="true"],
+  .outline a[aria-current],
+  .seg.color-set label:has(input:checked) {
+    background: Highlight;
+    color: HighlightText;
+  }
+  .tab[aria-current="page"]:focus-visible,
+  .tree-row[aria-current]:focus-visible,
+  .settings-nav [role="tab"][aria-selected="true"]:focus-visible,
+  .seg button[aria-pressed="true"]:focus-visible {
+    outline-color: HighlightText;
+  }
+  .dash {
+    background: CanvasText;
+  }
+  .dash[data-active] {
+    background: Highlight;
+  }
+  .color-swatch,
+  .color-swatch span {
+    forced-color-adjust: none;
+  }
+}

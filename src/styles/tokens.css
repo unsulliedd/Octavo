@@ -1,0 +1,112 @@
+/* Base colors: primary #5A0E27, secondary #75B7E5, accent #D39D3F. Every role derives from these three, and
+   Settings › Colors changes them with inline properties on the root. They sit on the root, so the page behind the
+   app follows the theme too.
+   So that any base color stays readable, roles keep an OKLCH lightness bound: text and marks drawn from a base color
+   at most 0.58 in light and at least 0.70 in dark, pale fills behind text at least 0.88 in light and at most 0.45 in
+   dark, and text on a base-color fill turns from white to the dark ink once the fill's lightness passes 0.6.
+   A .color-scope element carries a whole set of its own, light or dark by its data-theme, so a sample in Settings ›
+   Colors can draw the set being edited. */
+:root,
+.color-scope {
+  --brand-primary: #5a0e27;
+  --brand-secondary: #75b7e5;
+  --brand-accent: #d39d3f;
+  --chrome: #f3f4f6;
+  --chrome-2: #e8eaee;
+  --line: #dde1e6;
+  --ink: #1b1f24;
+  --muted: #57606a;
+  --doc: #ffffff;
+  --code-bg: #f6f8fa;
+  /* Syntax colors tuned to the identity: keywords red, names blue, types brown */
+  --code-kw: #a3204a;
+  --code-str: #0b7a55;
+  --code-num: #a04e00;
+  --code-com: #6a737d;
+  --code-fn: #1f5f99;
+  --code-type: #7a4e0c;
+  --code-attr: #0e6e78;
+  /* Inline code: accent text on a pale accent chip, apart from the body text and from code blocks */
+  --code-inline-ink: oklch(from color-mix(in srgb, var(--brand-accent) 55%, black) min(l, 0.58) c h);
+  --code-inline-bg: oklch(from color-mix(in srgb, var(--brand-accent) 20%, var(--doc)) max(l, 0.88) c h);
+  --code-inline-line: color-mix(in srgb, var(--brand-accent) 30%, var(--doc));
+  --control: oklch(from var(--brand-primary) min(l, 0.58) c h); /* checkboxes, sliders, focus borders, spinner */
+  --control-fill: var(--brand-primary); /* primary buttons */
+  /* White on a dark fill, the dark ink (#1b1f24, as OKLCH) on a light one; the same for the current find match. */
+  --control-ink: oklch(from var(--control-fill) clamp(0.237347, (0.6 - l) * 1000, 1) calc(0.011318 * clamp(0, (l - 0.6) * 1000, 1)) 254.056);
+  --control-soft: oklch(from color-mix(in srgb, var(--brand-primary) 9%, var(--doc)) max(l, 0.88) c h); /* selected rows, pressed buttons */
+  --control-soft-ink: var(--control);
+  --link: oklch(from color-mix(in srgb, var(--brand-secondary) 40%, #003a70) min(l, 0.58) c h); /* the secondary color is too light for text on white */
+  --brand-accent-ink: oklch(from color-mix(in srgb, var(--brand-accent) 72%, black) min(l, 0.565) c h); /* a little darker than the other text colors: pins and notices read as text at 4.5:1 on the page */
+  --select: oklch(from color-mix(in srgb, var(--brand-secondary) 35%, white) max(l, 0.88) c h);
+  --find-match: oklch(from color-mix(in srgb, var(--brand-accent) 38%, white) max(l, 0.88) c h);
+  --find-current: var(--brand-accent);
+  --find-current-ink: oklch(from var(--find-current) clamp(0.237347, (0.6 - l) * 1000, 1) calc(0.011318 * clamp(0, (l - 0.6) * 1000, 1)) 254.056);
+  --drop-soft: oklch(from color-mix(in srgb, var(--brand-secondary) 18%, var(--doc)) max(l, 0.88) c h);
+  --scroll-thumb: color-mix(in srgb, var(--muted) 70%, transparent);
+  --scroll-thumb-hover: var(--muted);
+  --outline-mark: var(--muted); /* the outline's dashes */
+  --outline-mark-active: var(--ink); /* the dash of the heading in view */
+  --danger: #c4302b;
+  --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--doc)); /* a danger button under the pointer */
+  --line-strong: color-mix(in srgb, var(--muted) 75%, var(--doc)); /* field borders, at least 3:1 on every surface */
+  --focus: var(--link); /* the keyboard focus ring */
+  --file-markdown: var(--control); /* the folded corner of a Markdown document's icon; every document type adds its own --file-<type> */
+  --mark-page-2: color-mix(in srgb, var(--brand-secondary) 22%, var(--control-ink)); /* the right page of the Octavo mark */
+  --tip: var(--ink); /* tooltips: the text color as their background */
+  --tip-ink: var(--chrome);
+  --backdrop: rgb(10 12 16 / 0.38); /* dims the window behind dialogs, Ctrl+P and the large view */
+  /* The app's scales. The document's own type follows the reading settings instead. */
+  --text-xs: 11px; /* section labels, keys */
+  --text-sm: 12px; /* hints, meta, the status bar */
+  --text-md: 13px; /* everything else in the app */
+  --text-lg: 14px; /* large buttons, Home rows, Ctrl+P */
+  --text-xl: 16px; /* dialog titles */
+  --text-xxl: 26px; /* the Home title */
+  --height-sm: 24px; /* small icon buttons */
+  --height-md: 28px; /* buttons and fields in bars, popovers and dialogs */
+  --height-lg: 32px; /* the toolbar */
+  --height-xl: 36px; /* large buttons on Home */
+  --radius-sm: 4px; /* keys, chips, the parts inside a segmented control */
+  --radius-md: 6px; /* buttons, fields and rows */
+  --radius-lg: 10px; /* menus, popovers and panels */
+  --radius-xl: 12px; /* dialogs */
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.12); /* raised inside a control */
+  --shadow-md: 0 6px 20px rgb(0 0 0 / 0.16); /* menus, popovers, floating bars */
+  --shadow-lg: 0 24px 64px rgb(0 0 0 / 0.3); /* dialogs, Ctrl+P, the large view */
+  --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --doc-font: var(--ui);
+  --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+:root:has(.app[data-theme="dark"]),
+.color-scope[data-theme="dark"] {
+  --chrome: #1b1e22;
+  --chrome-2: #262a30;
+  --line: #30353c;
+  --ink: #e6e8eb;
+  --muted: #9ba3ad;
+  --doc: #131518;
+  --code-bg: #1b1e22;
+  --code-kw: #f28baa;
+  --code-str: #8fd6a6;
+  --code-num: #f2b77a;
+  --code-com: #8b939d;
+  --code-fn: #8ec8f0;
+  --code-type: #e6c079;
+  --code-attr: #7fd6d0;
+  --code-inline-ink: oklch(from color-mix(in srgb, var(--brand-accent) 80%, white) max(l, 0.7) c h);
+  --code-inline-bg: oklch(from color-mix(in srgb, var(--brand-accent) 15%, var(--doc)) min(l, 0.45) c h);
+  --control: oklch(from var(--brand-primary) 0.74 c calc(h - 6)); /* primary lifted so controls read on dark */
+  --control-fill: color-mix(in srgb, var(--brand-primary) 78%, white); /* primary lifted so buttons read on dark */
+  --control-soft: oklch(from color-mix(in srgb, var(--brand-primary) 55%, var(--doc)) min(l, 0.45) c h);
+  --control-soft-ink: color-mix(in srgb, var(--control) 30%, white);
+  --link: oklch(from var(--brand-secondary) max(l, 0.7) c h);
+  --brand-accent-ink: oklch(from var(--brand-accent) max(l, 0.7) c h);
+  --select: oklch(from color-mix(in srgb, var(--brand-secondary) 35%, var(--doc)) min(l, 0.45) c h);
+  --find-match: oklch(from color-mix(in srgb, var(--brand-accent) 40%, var(--doc)) min(l, 0.45) c h);
+  --drop-soft: oklch(from color-mix(in srgb, var(--brand-secondary) 16%, var(--doc)) min(l, 0.45) c h);
+  --danger: #ff7b72;
+  color-scheme: dark;
+}
