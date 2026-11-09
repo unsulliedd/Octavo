@@ -40,6 +40,8 @@ export function domHtml(html: string) {
     if (inTable || betweenBlocks) ignored.push(node);
   }
   ignored.forEach((node) => node.parentNode?.removeChild(node));
+  // Where a task box is in the file moves with any edit before it, and is never shown.
+  template.content.querySelectorAll("[data-task-offset]").forEach((box) => box.removeAttribute("data-task-offset"));
   sortMarks(template.content);
   return template.innerHTML;
 }

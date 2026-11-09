@@ -11,6 +11,7 @@ import { addOpenButtons, largeContent, type LargeContent } from "./largeView";
 import { renderMermaid } from "./renderDoc";
 import { anchorAt, scrollTopFor, type Anchor } from "./scrollAnchor";
 import { outlineDashes } from "./sidePanels";
+import { enableTaskBoxes } from "./taskBoxes";
 import { linkTarget } from "./svgLinks";
 import { addResizeHandles, applyWidths, headersOf } from "./tableResize";
 import { savedWidths, withWidths, type Widths } from "./tableWidths";
@@ -39,6 +40,10 @@ type Options = {
   keepScroll: RefObject<number | undefined>;
   saveScrollSoon: () => void;
   openPath: (path: string, from?: number) => unknown;
+  /** The task boxes can be ticked: the option is on and nothing else writes the document. */
+  tickable: boolean;
+  /** Ticks or unticks the task box at `offset` of `file` and saves it; resolves to an error message when nothing was written. */
+  tickTask: (file: string, offset: number) => Promise<string | undefined>;
 };
 
 /**
@@ -46,7 +51,7 @@ type Options = {
  * table widths, and the scroll position across tabs and views.
  */
 export function useReadingView(o: Options) {
-  const { article, scroller, tabStrip, sourceEditor, sourceHeadingStarts, prefs, dark, tab, path, doc, shownHtml, editing, source, editorReady, editorShown, keepScroll } = o;
+  const { article, scroller, tabStrip, sourceEditor, sourceHeadingStarts, prefs, dark, tab, path, doc, shownHtml, editing, source, editorReady, editorShown, keepScroll, tickable } = o;
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeId, setActiveId] = useState<string>();
   const [words, setWords] = useState(0);
@@ -58,6 +63,10 @@ export function useReadingView(o: Options) {
   // Column widths set by hand in the reading view, by file and table.
   const tableWidths = useRef(loadTableWidths());
   const pendingAnchor = useRef<Anchor>(undefined);
+  // The task box that had the focus when it was ticked, by its offset; it gets the focus back in the new render.
+  const refocus = useRef<number>(undefined);
+  // A tick is being written and not yet shown; the boxes wait for it, so the next tick starts from the text it wrote.
+  const ticking = useRef(false);
 
   /** Where the view is, relative to the headings of what it shows (reading view, editor or source). */
   function headingTops() {
@@ -141,6 +150,16 @@ export function useReadingView(o: Options) {
     return addOpenButtons(root, prefs.openLarge !== "click");
   }, [shownHtml, editing, rendered, prefs.openLarge]);
 
+  // Task boxes take clicks and the keyboard while they can be ticked; otherwise they stay read-only.
+  useLayoutEffect(() => {
+    const root = article.current;
+    ticking.current = false;
+    if (!root || editing || !tickable || shownHtml === undefined) return;
+    const undo = enableTaskBoxes(root, refocus.current);
+    refocus.current = undefined;
+    return undo;
+  }, [shownHtml, editing, dark, doc?.path, tickable]);
+
   // Back in a tab, or switching tabs, returns to where that document was scrolled to.
   const entryKey = tab && doc ? `${tab.id}:${tab.index}:${doc.path}` : undefined;
   useLayoutEffect(() => {
@@ -216,6 +235,10 @@ export function useReadingView(o: Options) {
   // opens its table, diagram or image large; so does a click on a diagram or an image that isn't a link, when the
   // reading settings say so.
   function onDocClick(e: React.MouseEvent) {
+    const box = (e.target as Element).closest?.<HTMLInputElement>("input[data-task-offset]");
+    if (box && ticking.current) e.preventDefault();
+    else if (box) void tick(box);
+    if (box) return;
     const copy = (e.target as HTMLElement).closest<HTMLButtonElement>(".code-copy");
     if (copy) {
       const code = copy.closest(".code-block")?.querySelector("pre")?.textContent ?? "";
@@ -240,6 +263,18 @@ export function useReadingView(o: Options) {
     if (href === undefined || !doc) return;
     e.preventDefault();
     if (href) followLink(href);
+  }
+
+  /** A task box was ticked or unticked by the click; the file follows, or the box goes back when nothing was written. */
+  async function tick(box: HTMLInputElement) {
+    if (!doc || box.disabled) return;
+    const offset = Number(box.dataset.taskOffset);
+    if (document.activeElement === box) refocus.current = offset;
+    ticking.current = true;
+    const failed = await o.tickTask(doc.path, offset);
+    if (!failed) return;
+    ticking.current = false;
+    if (box.isConnected) box.checked = !box.checked;
   }
 
   /** Fragments scroll, URLs go to the browser, .md links open here. */

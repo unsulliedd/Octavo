@@ -12,6 +12,7 @@ import type { Element, Root } from "hast";
 import { protectDrivePath, resolveLocal, resolveSrcset, safeDecode } from "@/lib/paths";
 import { languageName } from "./languages";
 import { displayValue, parseProperties } from "./properties";
+import { markTaskBoxes, taskOffsets } from "./taskBoxes";
 
 /** rehype-sanitize prefixes ids and names from the document with this to prevent DOM clobbering. */
 const ID_PREFIX = "user-content-";
@@ -287,7 +288,8 @@ function localImages(dir: string, toUrl: (path: string) => string) {
 export async function render(md: string, dir: string, toUrl: (path: string) => string) {
   const { md: source, tree } = parseMarkdown(md);
   // Slug after sanitize so heading ids stay "my-heading" and match GitHub-style #my-heading links.
-  const rehype: PluggableList = [driveImages(), [rehypeSanitize, schema], rasterDataOnly(), rehypeSlug, fragmentLinks, tableCells, breakPoints];
+  const tasks = markTaskBoxes(taskOffsets(source, tree, md));
+  const rehype: PluggableList = [driveImages(), [rehypeSanitize, schema], rasterDataOnly(), tasks, rehypeSlug, fragmentLinks, tableCells, breakPoints];
   // Raw HTML needs a "<", so documents without one skip rehype-raw.
   if (source.includes("<")) rehype.unshift(rehypeRaw);
   // Limitation: "$" sniff decides whether to load KaTeX; a false positive only costs one lazy chunk

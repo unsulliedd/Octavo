@@ -25,3 +25,9 @@ test("visible differences count", () => {
   expect(sameRendering("<p>a</p>", "<p>a</p><p>b</p>")).toBe(false);
   expect(domHtml("<p>x</p>\n<details><summary>s</summary>t</details>")).toBe("<p>x</p><details><summary>s</summary>t</details>");
 });
+
+test("where a task box is in the file doesn't count", () => {
+  const box = (at: number, checked = "") => `<ul><li class="task-list-item"><input type="checkbox" disabled${checked} data-task-offset="${at}"> a</li></ul>`;
+  expect(sameRendering(box(2), box(9))).toBe(true);
+  expect(sameRendering(box(2), box(2, " checked"))).toBe(false);
+});

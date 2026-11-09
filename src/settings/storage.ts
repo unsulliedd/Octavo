@@ -36,6 +36,8 @@ export type Prefs = {
   wideBlocks: boolean;
   /** How diagrams and images open large; tables always open from their button. */
   openLarge: OpenLarge;
+  /** A click on a task box in the reading view ticks or unticks it and saves the file at once. */
+  tickTasks: boolean;
   /** Where the formatting buttons sit in their row while editing. */
   formatBarAlign: "left" | "center";
   /** The formatting bar: a row under the toolbar, floating over selected text, both, or none. */
@@ -61,7 +63,7 @@ export type Prefs = {
 };
 export type RecentFile = { path: string; at: number };
 
-export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, showOutline: true, outlineAt: "sidebar", properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR, colors: DEFAULT_COLORS };
+export const DEFAULT_PREFS: Prefs = { theme: "system", font: "sans", size: 16, width: "default", outline: true, showOutline: true, outlineAt: "sidebar", properties: true, autosave: true, backups: true, wideBlocks: false, openLarge: "both", tickTasks: true, formatBarAlign: "left", formatBar: "toolbar", tableBar: "above", linkDetails: "bar", saveButtons: "bar", saveStatus: "status", shortcuts: {}, checkUpdates: true, showHidden: false, sidebarWidth: DEFAULT_SIDEBAR, colors: DEFAULT_COLORS };
 
 function load<T>(key: string, fallback: T): T {
   try {
