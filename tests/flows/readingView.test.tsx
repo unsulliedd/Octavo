@@ -87,9 +87,6 @@ test("the large view closes when another tab is shown", async () => {
 });
 
 test("an outline link scrolls to its heading in reading, editing and Source", async () => {
-  // Without the code block, whose editor view is still loading when the editor closes this quickly.
-  const note = "# Title\n\nText.\n\n## Section\n\nMore.\n";
-  flow.disk.set(FILE, note);
   await launch(flow);
   let targets = scrolled();
   await click(flow.host.querySelectorAll(".outline a")[1]);
@@ -106,5 +103,5 @@ test("an outline link scrolls to its heading in reading, editing and Source", as
   await click(flow.host.querySelectorAll(".outline a")[1]);
   const view = EditorView.findFromDOM(q(".cm-editor")!)!;
   await act(async () => {});
-  expect(view.state.selection.main.head).toBe(note.indexOf("## Section"));
+  expect(view.state.selection.main.head).toBe(NOTE.indexOf("## Section"));
 });
