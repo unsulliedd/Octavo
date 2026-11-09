@@ -252,6 +252,13 @@ export function Settings({ prefs, dark, onChange, onClose, version, update, onCh
                 />
                 <label className="setting-row">
                   <span>
+                    Tick task boxes while reading
+                    <span className="setting-hint">A click on a task box, or Space, ticks or unticks it and saves the file at once. Not while the document is being edited or has unsaved edits.</span>
+                  </span>
+                  <input type="checkbox" checked={prefs.tickTasks} onChange={(e) => set({ tickTasks: e.target.checked })} />
+                </label>
+                <label className="setting-row">
+                  <span>
                     Show hidden folders
                     <span className="setting-hint">Workspaces also list folders whose names start with a dot, such as .github.</span>
                   </span>

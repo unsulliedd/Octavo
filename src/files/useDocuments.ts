@@ -121,6 +121,8 @@ export function useDocuments({ tabs, setTabs, changeTabs, path, scroller, onRelo
   // A document changed on disk is read again after its writes settle. The shown one keeps its scroll position.
   const reloadTimers = useRef(new Map<string, number>());
   const keepScroll = useRef<number>(undefined);
+  /** Keeps the reading view where it is scrolled to through the next render of the shown document. */
+  const holdScroll = () => (keepScroll.current = scroller.current?.scrollTop);
   function reloadSoon(changed: string) {
     const shown = Object.keys(docs).find((p) => samePath(p, changed));
     if (!shown) return;
@@ -129,7 +131,7 @@ export function useDocuments({ tabs, setTabs, changeTabs, path, scroller, onRelo
       shown,
       window.setTimeout(() => {
         reloadTimers.current.delete(shown);
-        if (shown === shownPath.current) keepScroll.current = scroller.current?.scrollTop;
+        if (shown === shownPath.current) holdScroll();
         load(shown).then(
           (d) => onReloaded(shown, d.text),
           (e) => {
@@ -157,5 +159,5 @@ export function useDocuments({ tabs, setTabs, changeTabs, path, scroller, onRelo
     invoke("watch_docs", { paths: watched ? watched.split("\n") : [] }).catch(() => {});
   }, [watched]);
 
-  return { recent, docs, setDocs, loadErrors, setLoadErrors, error, setError, opening, verified, keepScroll, load, openPath, addRecent, pick, openWhatsNew, openLicenses, reloadSoon };
+  return { recent, docs, setDocs, loadErrors, setLoadErrors, error, setError, opening, verified, keepScroll, holdScroll, load, openPath, addRecent, pick, openWhatsNew, openLicenses, reloadSoon };
 }

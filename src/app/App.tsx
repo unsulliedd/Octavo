@@ -49,6 +49,8 @@ const WIDTHS: Record<LineWidth, string> = { narrow: "600px", medium: "720px", de
 /** What the window listeners and the workspace callbacks call: the handlers of the latest render. */
 type Latest = WindowHandlers & {
   writeDoc: (file: string, target?: string) => Promise<string | undefined>;
+  writeTick: (file: string, offset: number) => Promise<string | undefined>;
+  tickTask: (file: string, offset: number) => Promise<string | undefined>;
   confirmSwitch: () => Promise<boolean>;
   showTabSet: (id?: string, carry?: string) => void;
   changedOnDisk: (file: string, disk: string) => void;
@@ -118,6 +120,8 @@ export default function App() {
     keepScroll: documents.keepScroll,
     saveScrollSoon,
     openPath,
+    tickable: !!path && prefs.tickTasks && edit.canTick(path),
+    tickTask: (file, offset) => latest.current.tickTask(file, offset),
   });
   const { headings, activeId, find, setFind, large, setLarge, goToHeading } = reading;
 
@@ -144,6 +148,8 @@ export default function App() {
     pendingAnchor: reading.pendingAnchor,
     restoreAnchor: reading.restoreAnchor,
     showSourceHeadings: reading.showSourceHeadings,
+    reloadSoon: documents.reloadSoon,
+    holdScroll: documents.holdScroll,
     latest,
   });
   const { saveDoc, closeTabById, unsavedAt, docActions } = actions;
@@ -209,6 +215,8 @@ export default function App() {
     openWhatsNew,
     reloadSoon: documents.reloadSoon,
     writeDoc: actions.writeDoc,
+    writeTick: actions.writeTick,
+    tickTask: actions.tickTask,
     confirmWindowClose: actions.confirmWindowClose,
     confirmSwitch: actions.confirmSwitch,
     showTabSet,

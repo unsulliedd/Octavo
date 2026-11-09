@@ -14,6 +14,7 @@ import { closeTab, currentEntry, replaceCurrent, samePath, tabFor, type Tab, typ
 import { ask, choose, message } from "@/ui/dialog";
 import { diskChange } from "./conflict";
 import { canRevert, revertText } from "./editSession";
+import { toggleTask } from "@/reading/taskBoxes";
 import { editedText, editorText, textToSave } from "./fileText";
 import { IMAGE_TYPES, pastedName } from "./images";
 import type { Doc } from "./useDocuments";
@@ -75,8 +76,15 @@ type Context = {
   pendingAnchor: RefObject<Anchor | undefined>;
   restoreAnchor: () => void;
   showSourceHeadings: () => void;
-  /** The latest render's writeDoc, which the save queue calls. */
-  latest: RefObject<{ writeDoc: (file: string, target?: string) => Promise<string | undefined> }>;
+  /** Reads a document again after a change on disk. */
+  reloadSoon: (file: string) => void;
+  /** Keeps the reading view where it is scrolled to through the next render of the shown document. */
+  holdScroll: () => void;
+  /** The latest render's writeDoc and writeTick, which the save queue calls. */
+  latest: RefObject<{
+    writeDoc: (file: string, target?: string) => Promise<string | undefined>;
+    writeTick: (file: string, offset: number) => Promise<string | undefined>;
+  }>;
 };
 
 /**
@@ -275,6 +283,41 @@ export function editActions(c: Context) {
     } catch (e) {
       setError(String(e));
     }
+    return undefined;
+  }
+
+  /**
+   * Ticks or unticks the task box that starts at `offset` in `file` and writes the file at once, after any
+   * save already running. Resolves to an error message when nothing was written.
+   */
+  function tickTask(file: string, offset: number): Promise<string | undefined> {
+    const run = saveQueue.current.then(() => c.latest.current.writeTick(file, offset));
+    saveQueue.current = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * Writes `file` with one task box ticked or unticked: one character changes. Nothing is written while the file
+   * has an edit session or unsaved edits. When the text at `offset` is no task box, or the file no longer holds
+   * the text shown, nothing is written and the file is read again.
+   */
+  async function writeTick(file: string, offset: number): Promise<string | undefined> {
+    const doc = docs[file];
+    if (!doc || !edit.canTick(file)) return "the document has an edit session or unsaved edits.";
+    const text = toggleTask(doc.text, offset);
+    try {
+      if (text === undefined) throw "the document changed since it was shown. It was read again.";
+      await invoke<boolean>("save_doc", { path: file, text, expected: doc.text, backup: prefs.backups });
+    } catch (e) {
+      setError(`Couldn't save ${basename(file)}: ${e}`);
+      c.reloadSoon(file);
+      return String(e);
+    }
+    const { html } = await renderDoc(text, dirname(file), convertFileSrc(""));
+    verified.current.delete(file);
+    setError(undefined);
+    if (file === path) c.holdScroll();
+    setDocs((all) => (file in all ? { ...all, [file]: { path: file, text, html } } : all));
     return undefined;
   }
 
@@ -529,8 +572,7 @@ export function editActions(c: Context) {
     return true;
   }
 
-  const unsavedAt = (p: string) =>
-    !!edit.drafts[p] || edit.conflicts[p] !== undefined || edit.saveStates[p]?.state === "unsaved" || edit.saveStates[p]?.state === "error";
+  const { unsavedAt } = edit;
   const docActions: DocActions | undefined = path
     ? {
         unsaved: unsavedAt(path),
@@ -626,6 +668,8 @@ export function editActions(c: Context) {
     saveDoc,
     saveAs,
     writeDoc,
+    tickTask,
+    writeTick,
     unsavedAt,
     docActions,
     changedOnDisk,

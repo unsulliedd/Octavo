@@ -79,6 +79,12 @@ export function useEditState() {
     setConflicts(conflictsRef.current);
   }
 
+  /** Whether `file` has edits not written to it: a draft, a conflict, or a save to come or that failed. */
+  const unsavedAt = (file: string) =>
+    !!drafts[file] || conflicts[file] !== undefined || saveStates[file]?.state === "unsaved" || saveStates[file]?.state === "error";
+  /** Whether the reading view may write `file`'s task boxes: it has no edit session and nothing unsaved, so nothing else writes it. */
+  const canTick = (file: string) => originals[file] === undefined && !unsavedAt(file);
+
   return {
     switching,
     editingTabs,
@@ -115,5 +121,7 @@ export function useEditState() {
     updateOriginals,
     endSession,
     updateConflicts,
+    unsavedAt,
+    canTick,
   };
 }
