@@ -156,8 +156,13 @@ export function useReadingView(o: Options) {
   // The editor replaces the reading view once it has loaded, at the same place.
   useLayoutEffect(() => {
     if (!editorReady || !editorShown) return;
-    article.current = editorShown.root;
+    const root = editorShown.root;
+    article.current = root;
     restoreAnchor();
+    // The closed editor's DOM must not stay as the reading view's: the effects above would change it while the editor is being destroyed.
+    return () => {
+      if (article.current === root) article.current = null;
+    };
   }, [editorReady, editorShown]);
 
   // A reloaded document stays where it was scrolled to, also after its diagrams are drawn again.
