@@ -4,6 +4,8 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-10
+
 ### Added
 - Task boxes can be ticked in the reading view: a click or Space ticks or unticks a box and saves the file at once, changing only that character. Turn it off with Tick task boxes while reading in Settings › Reading
 
