@@ -57,6 +57,15 @@
   margin: 0 0 14px;
   text-align: center;
 }
+.doc.editor [data-pending]::before {
+  content: attr(data-pending);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.86em;
+}
+.doc.editor [data-type="math_block"][data-pending] {
+  min-height: 2.4em;
+}
 .doc.editor [data-type^="math_"][data-empty] {
   padding: 0 6px;
   border: 1px dashed var(--line);

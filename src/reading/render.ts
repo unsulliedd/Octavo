@@ -77,10 +77,25 @@ function strayDollars(md: string, root: Mdast) {
  * A paragraph chaining 50+ bad spans keeps the rest.
  */
 export function parseMarkdown(md: string) {
-  let tree = parser.parse(md);
+  const tree = parser.parse(md);
   if (!md.includes("$")) return { md, tree };
-  // Limitation: one full parse per pass, which adds up for a long document full of prices; re-parse
-  // only the affected blocks if that shows up in profiles.
+  const bad = strayDollars(md, tree as Mdast);
+  if (!bad.length) return { md, tree };
+  // How `$` pair up never crosses a top-level block, so only the blocks with a bad opener go through the passes,
+  // each parsed on its own. One parse of the result confirms it; if anything is left, the whole document does.
+  let escaped = md;
+  for (const block of [...((tree as Mdast).children ?? [])].reverse()) {
+    const s = block.position?.start.offset;
+    const e = block.position?.end.offset;
+    if (s === undefined || e === undefined || !bad.some((b) => b >= s && b < e)) continue;
+    escaped = escaped.slice(0, s) + escapePasses(md.slice(s, e)).md + escaped.slice(e);
+  }
+  const confirmed = parser.parse(escaped);
+  return strayDollars(escaped, confirmed as Mdast).length ? escapePasses(md, tree) : { md: escaped, tree: confirmed };
+}
+
+/** The escape passes over the whole of `md`, whose parse is `tree`; see parseMarkdown. */
+export function escapePasses(md: string, tree = parser.parse(md)) {
   for (let pass = 0; pass < 50; pass++) {
     const bad = strayDollars(md, tree as Mdast);
     if (!bad.length) break;

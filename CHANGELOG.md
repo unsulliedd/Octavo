@@ -7,6 +7,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 ### Added
 - Task boxes can be ticked in the reading view: a click or Space ticks or unticks a box and saves the file at once, changing only that character. Turn it off with Tick task boxes while reading in Settings › Reading
 
+### Changed
+- Edit opens faster on long documents: the editor no longer lays out the document while it loads, draws formulas as they come into view, and skips its check of a file it has already checked, also after a restart. Documents with many `$` prices also open faster for reading
+
 ## [0.5.0] - 2026-11-07
 
 The first release of Octavo, a Markdown reader and editor for Windows. Free and open source under the MIT license.

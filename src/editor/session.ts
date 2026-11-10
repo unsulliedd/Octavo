@@ -236,16 +236,56 @@ const listItemView = $view(listItemSchema.node, () => (initial, view, getPos) =>
 /** A formula as KaTeX HTML; errors show in red instead of throwing. */
 const mathHtml = (value: string, block: boolean) => katex.renderToString(value, { displayMode: block, throwOnError: false });
 
-/** Formulas show rendered, as in the reading view; the source is edited in a popover when one is selected. */
-const mathView = (schema: typeof mathInlineSchema, block: boolean) =>
+/**
+ * Runs `draw` once `el` comes near the visible part of `scroller`, or at once where that can't be observed.
+ * Returns a function that stops watching.
+ */
+export function drawNearView(scroller: Element | null) {
+  if (typeof IntersectionObserver === "undefined") return (_el: Element, draw: () => void) => (draw(), () => {});
+  const pending = new Map<Element, () => void>();
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        observer.unobserve(entry.target);
+        pending.get(entry.target)?.();
+        pending.delete(entry.target);
+      }
+    },
+    { root: scroller, rootMargin: "50% 0px" },
+  );
+  return (el: Element, draw: () => void) => {
+    pending.set(el, draw);
+    observer.observe(el);
+    return () => {
+      observer.unobserve(el);
+      pending.delete(el);
+    };
+  };
+}
+
+/**
+ * Formulas show rendered, as in the reading view; the source is edited in a popover when one is selected.
+ * Each formula is drawn when it comes near the window, so opening a long document doesn't lay them all out at once;
+ * until then it shows its source (from CSS, so it isn't part of the text).
+ * Limitation: Find while editing doesn't match the text of formulas that haven't been drawn yet.
+ */
+const mathView = (schema: typeof mathInlineSchema, block: boolean, later: ReturnType<typeof drawNearView>) =>
   $view(schema.node, () => (node: ProseNode) => {
     const dom = document.createElement(block ? "div" : "span");
     dom.dataset.type = node.type.name;
     const value = String(node.attrs.value ?? "");
-    if (value.trim()) dom.innerHTML = mathHtml(value, block);
-    else dom.textContent = "Formula";
     dom.toggleAttribute("data-empty", !value.trim());
-    return { dom };
+    if (!value.trim()) {
+      dom.textContent = "Formula";
+      return { dom };
+    }
+    dom.dataset.pending = value;
+    const stop = later(dom, () => {
+      delete dom.dataset.pending;
+      dom.innerHTML = mathHtml(value, block);
+    });
+    return { dom, destroy: stop };
   });
 
 /**
@@ -375,6 +415,8 @@ function withoutFormatKeys(ctx: Ctx) {
 /** Creates an editor in `root` for `markdown`. Stray `$` are escaped first, as the reader does, so prices stay text. */
 export async function createEditor(root: HTMLElement, markdown: string, { imageUrl, onChange, onSelection, onKey, onPasteImages }: Options): Promise<EditorSession> {
   const { md: escaped, tree } = parseMarkdown(markdown);
+  // The reading area scrolls the editor; formulas are drawn as they come near its visible part.
+  const later = drawNearView(root.closest(".reader"));
   const editor = await Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root);
@@ -390,8 +432,8 @@ export async function createEditor(root: HTMLElement, markdown: string, { imageU
     .use(history)
     .use(listener)
     .use(imageView(imageUrl))
-    .use(mathView(mathInlineSchema, false))
-    .use(mathView(mathBlockSchema, true))
+    .use(mathView(mathInlineSchema, false, later))
+    .use(mathView(mathBlockSchema, true, later))
     .use(listItemView)
     .use(propertiesView)
     .use(codeBlockView)

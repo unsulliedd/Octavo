@@ -146,3 +146,44 @@ test("Mermaid diagrams are drawn while editing and selected whole; other code bl
   expect(s.markdown()).toBe("```mermaid\nflowchart LR\n  A --> C\n```\n\n```js\nlet a = 1;\n```\n");
   await s.destroy();
 });
+
+test("formulas are drawn once they come near the view, and show their source until then", async () => {
+  const watched = new Map<Element, IntersectionObserver>();
+  let fire = (_el: Element) => {};
+  class FakeObserver {
+    constructor(private callback: IntersectionObserverCallback) {
+      fire = (el) => this.callback([{ target: el, isIntersecting: true } as IntersectionObserverEntry], this as never);
+    }
+    observe(el: Element) {
+      watched.set(el, this as never);
+    }
+    unobserve(el: Element) {
+      watched.delete(el);
+    }
+    disconnect() {}
+  }
+  vi.stubGlobal("IntersectionObserver", FakeObserver);
+  const root = document.createElement("div");
+  const s = await createEditor(root, "Energy $E = mc^2$ here.\n\n$$\na^2\n$$\n", { imageUrl: String, onChange: () => {} });
+  const [inline, block] = root.querySelectorAll<HTMLElement>("[data-type^='math_']");
+  expect(inline.dataset.pending).toBe("E = mc^2");
+  expect(inline.querySelector(".katex")).toBeNull();
+  expect(inline.textContent).toBe("");
+  expect(watched.size).toBe(2);
+  fire(inline);
+  expect(inline.dataset.pending).toBeUndefined();
+  expect(inline.querySelector(".katex")).not.toBeNull();
+  expect(watched.has(inline)).toBe(false);
+  expect(block.querySelector(".katex")).toBeNull();
+  expect(s.markdown()).toBe("Energy $E = mc^2$ here.\n\n$$\na^2\n$$\n");
+  await s.destroy();
+  expect(watched.size).toBe(0);
+  vi.unstubAllGlobals();
+});
+
+test("without IntersectionObserver every formula is drawn at once", async () => {
+  const root = document.createElement("div");
+  const s = await createEditor(root, "Energy $E = mc^2$ here.\n", { imageUrl: String, onChange: () => {} });
+  expect(root.querySelector("[data-type='math_inline'] .katex")).not.toBeNull();
+  await s.destroy();
+});

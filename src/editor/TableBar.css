@@ -2,9 +2,11 @@
 .editor-pane {
   position: relative;
 }
+/* While the editor builds, its content is kept out of layout, so building never lays out the whole document. */
 .editor-pane:not([data-shown]) {
   height: 0;
   overflow: hidden;
+  content-visibility: hidden;
 }
 .table-bar-anchor {
   position: absolute;
