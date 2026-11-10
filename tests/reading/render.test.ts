@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import gfm from "../../fidelity/fixtures/gfm.md?raw";
-import { escapeStrayDollars, joinPath, parseMarkdown, render, resolveLocal } from "@/reading/render";
+import { escapePasses, escapeStrayDollars, joinPath, parseMarkdown, render, resolveLocal } from "@/reading/render";
+import { longDocs } from "../support/longDocs";
 
 const toUrl = (p: string) => `asset:${p}`;
 
@@ -244,4 +245,31 @@ test("an image on another server stays blocked through a <source srcset>", async
   );
   expect(html).toContain('srcset="//other/share/a.png 1x, asset:\\\\server\\share\\b.png 2x"');
   expect(asked).toEqual(["\\\\server\\share\\b.png", "\\\\server\\share\\docs\\x.png"]);
+});
+
+// parseMarkdown escapes block by block; escapePasses runs the same passes over the whole document.
+const sameAsWholePasses = (md: string) => {
+  const fast = parseMarkdown(md);
+  const whole = escapePasses(md);
+  expect(fast.md).toBe(whole.md);
+  expect(JSON.stringify(fast.tree)).toBe(JSON.stringify(whole.tree));
+};
+
+test.each(Object.keys(longDocs))("parseMarkdown escapes the long %s document as the whole-document passes do", (name) => {
+  sameAsWholePasses(longDocs[name]);
+});
+
+test.each([
+  ["a price before real math", "$5 for $x^2$ and $3 more.\n\nNext $y$ here.\n"],
+  ["prices in list items, quotes and nested lists", "- $5 and $6\n  - $7, $8 and $9\n\n> $1 or $2 or $3\n> > $4 $5\n"],
+  ["prices in table cells", "| a | b |\n|---|---|\n| $3.50 | $4 and $5 |\n| $x$ | $1 $2 $3 |\n"],
+  ["a setext heading and a footnote", "Costs $5 and $6\n===\n\nSee[^1].\n\n[^1]: $7 and $8 then $z$\n"],
+  ["reference links defined elsewhere", '[$5 and $6][ref] then $7 and $8\n\n[ref]: https://example.com "$9 $10"\n'],
+  ["code, display math and HTML", "`$5 $6` and $7 $8\n\n$$\na $5\n$$\n\n<div>$1 and $2</div>\n\n```\n$3 $4\n```\n"],
+  ["frontmatter", "---\nprice: $5 and $6\n---\n\n$1 and $2 and $x$\n"],
+  ["Windows line endings", "Costs $5 and $6\r\n\r\n| a |\r\n|---|\r\n| $1 $2 |\r\n"],
+  ["escaped and doubled dollars", "\\$5 and $$ and $6 $ 7$ and $a$1\n"],
+  ["more bad spans in one paragraph than the passes cover", Array.from({ length: 60 }, (_, i) => `$${i}`).join(" ") + "\n\nThen $5 and $6.\n"],
+])("parseMarkdown escapes %s as the whole-document passes do", (_, md) => {
+  sameAsWholePasses(md);
 });

@@ -74,7 +74,7 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
-type Key = "prefs" | "recent" | "pinned" | "tabs" | `tabs:${string}` | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy";
+type Key = "prefs" | "recent" | "pinned" | "tabs" | `tabs:${string}` | "tableWidths" | "lastVersion" | "workspace" | "workspaceCopy" | "editChecks";
 
 export function save(key: Key, value: unknown) {
   try {
@@ -116,6 +116,11 @@ export const loadLastVersion = () => {
 const loadString = (key: string) => {
   const v = load<unknown>(key, undefined);
   return typeof v === "string" ? v : undefined;
+};
+/** The keys of the editor checks files passed, newest first (see editChecks). */
+export const loadEditChecks = () => {
+  const stored = load<unknown>("editChecks", []);
+  return Array.isArray(stored) ? stored.filter((k): k is string => typeof k === "string") : [];
 };
 /** The id of the workspace that was open. */
 export const loadOpenWorkspace = () => loadString("workspace");

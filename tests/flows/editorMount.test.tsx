@@ -17,6 +17,19 @@ vi.mock("@/editor/session", async (original) => {
   };
 });
 
+// Renders of the reader, counted: each open renders the file once, and the check before a first edit once more.
+const renders = vi.hoisted(() => ({ count: 0 }));
+vi.mock("@/reading/renderDoc", async (original) => {
+  const real = await original<typeof import("@/reading/renderDoc")>();
+  return {
+    ...real,
+    renderDoc: (...args: Parameters<typeof real.renderDoc>) => {
+      renders.count++;
+      return real.renderDoc(...args);
+    },
+  };
+});
+
 // The window's drag-and-drop handler, called directly by the tests.
 const drop = vi.hoisted(() => ({ handler: undefined as undefined | ((e: { payload: { type: string; paths?: string[] } }) => void) }));
 vi.mock("@tauri-apps/api/webview", () => ({
@@ -62,6 +75,25 @@ test("Edit, Preview and Edit again keep the edits and open one editor per Edit",
   await press("P", { ctrlKey: true, shiftKey: true });
   await until(() => q(".ProseMirror p")?.textContent === "Changed text.", "the editor with the edits");
   expect(editors.created).toBe(2);
+});
+
+test("a passed check is kept between launches for the same text only", async () => {
+  const relaunch = async (text: string, version = "0.0.0") => {
+    const kept = localStorage.getItem("editChecks");
+    await tearDownFlow();
+    flow = setUpFlow({ [FILE]: text, [OTHER]: "# Other\n\nMore.\n" });
+    flow.version = version;
+    if (kept) localStorage.setItem("editChecks", kept);
+    renders.count = 0;
+    await launch(flow);
+    await startEditing();
+    return renders.count;
+  };
+  // Opening renders once; the first Edit checks with one more render.
+  expect(await relaunch("# Title\n\nOriginal text.\n")).toBe(2);
+  expect(await relaunch("# Title\n\nOriginal text.\n")).toBe(1);
+  expect(await relaunch("# Title\n\nChanged text.\n")).toBe(2);
+  expect(await relaunch("# Title\n\nChanged text.\n", "9.9.9")).toBe(2);
 });
 
 test("a theme change while editing keeps the editor", async () => {

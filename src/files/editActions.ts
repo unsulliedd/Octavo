@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import type { DocActions } from "@/editor/FormatBar";
@@ -13,6 +14,7 @@ import type { SourceSession, SourceSnapshot } from "@/source/sourceSession";
 import { closeTab, currentEntry, replaceCurrent, samePath, tabFor, type Tab, type Tabs } from "@/tabs/tabs";
 import { ask, choose, message } from "@/ui/dialog";
 import { diskChange } from "./conflict";
+import { checkKey, passedBefore, rememberPassed } from "./editChecks";
 import { canRevert, revertText } from "./editSession";
 import { toggleTask } from "@/reading/taskBoxes";
 import { editedText, editorText, textToSave } from "./fileText";
@@ -547,13 +549,18 @@ export function editActions(c: Context) {
 
   /**
    * Before the first edit of a loaded file: the editor's Markdown for it must render like the file. With `remember`,
-   * the check is of the file's own text, so it isn't repeated until the file changes.
+   * the check is of the file's own text, so it isn't repeated until the file changes, and a pass is kept between
+   * launches for that exact text.
    */
   const verifyEditable =
     (file: string, original: Doc, remember = true) =>
     async (markdown: string) => {
-      const { html } = await renderDoc(markdown, dirname(file), convertFileSrc(""));
-      if (!sameRendering(original.html, html)) return EDIT_BLOCKED;
+      const key = remember ? await checkKey(await getVersion(), file, original.text) : undefined;
+      if (!key || !passedBefore(key)) {
+        const { html } = await renderDoc(markdown, dirname(file), convertFileSrc(""));
+        if (!sameRendering(original.html, html)) return EDIT_BLOCKED;
+        if (key) rememberPassed(key);
+      }
       if (remember) verified.current.add(file);
       return undefined;
     };
