@@ -2,7 +2,7 @@
 // before they are drawn; they are painted as decorations and replaced in one transaction, one undo step.
 
 import { closeHistory } from "@milkdown/kit/prose/history";
-import type { Node as ProseNode } from "@milkdown/kit/prose/model";
+import type { Mark, Node as ProseNode } from "@milkdown/kit/prose/model";
 import { Plugin, PluginKey, type EditorState } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet, type EditorView } from "@milkdown/kit/prose/view";
 import { bringIntoView, findInBlocks, type FindTarget, type Found, type Query } from "@/reading/find";
@@ -15,12 +15,18 @@ export type EditFound = Found & { to: number; atom?: number };
 
 type Block = { text: string; start: number; atom?: boolean };
 
+/**
+ * A hard line break as searched text: a line separator, which `\s`, `^` and `$` treat as a line end but which
+ * differs from the "\n" of a soft line break, so a replacement can bring the hard break back.
+ */
+export const HARD_BREAK = "\u2028";
+
 /** Nodes whose text is their `value` attribute: formulas and the frontmatter. */
 const hasSource = (node: ProseNode) => node.isAtom && typeof node.attrs.value === "string";
 
 /**
- * The searchable blocks of `doc` in document order: the runs of text in each textblock (a line break counts as
- * "\n"; an image or a formula ends a run), and the source of each formula and of the frontmatter.
+ * The searchable blocks of `doc` in document order: the runs of text in each textblock (a soft line break counts as
+ * "\n" and a hard one as HARD_BREAK; an image or a formula ends a run), and the source of each formula and of the frontmatter.
  */
 export function docBlocks(doc: ProseNode): Block[] {
   const blocks: Block[] = [];
@@ -35,7 +41,7 @@ export function docBlocks(doc: ProseNode): Block[] {
       const at = pos + 1 + offset;
       if (child.isText || child.type.name === "hardbreak") {
         if (!run) blocks.push((run = { text: "", start: at }));
-        run.text += child.isText ? child.text! : "\n";
+        run.text += child.isText ? child.text! : child.attrs.isInline ? "\n" : HARD_BREAK;
       } else {
         run = undefined;
         if (hasSource(child)) blocks.push({ text: child.attrs.value, start: at, atom: true });
@@ -61,6 +67,19 @@ export function findInDoc(doc: ProseNode, query: Query, limit = Infinity): EditF
 }
 
 /**
+ * The nodes for replacement `text` in `parent`: outside code, "\n" becomes a soft line break and HARD_BREAK a hard
+ * one, the nodes the editor holds them as, so `$&` and groups keep the line breaks they matched.
+ */
+function replacementNodes(state: EditorState, parent: ProseNode, text: string, marks?: readonly Mark[]) {
+  const hardbreak = state.schema.nodes.hardbreak;
+  if (parent.type.spec.code || !hardbreak) return state.schema.text(text.split(HARD_BREAK).join("\n"), marks);
+  return text
+    .split(new RegExp(`(\n|${HARD_BREAK})`))
+    .filter(Boolean)
+    .map((part) => (part === "\n" || part === HARD_BREAK ? hardbreak.create({ isInline: part === "\n" }) : state.schema.text(part, marks)));
+}
+
+/**
  * One transaction that replaces each match with its text: text takes the marks of the text it replaces, a formula or
  * the frontmatter gets its new source. It starts an undo step of its own.
  */
@@ -74,7 +93,7 @@ export function replaceFound(state: EditorState, found: EditFound[], texts: stri
       const node = tr.doc.nodeAt(atom)!;
       const value = String(node.attrs.value);
       tr.setNodeMarkup(atom, undefined, { ...node.attrs, value: value.slice(0, match.index) + texts[i] + value.slice(match.index + match[0].length) });
-    } else if (texts[i]) tr.replaceWith(from, to, state.schema.text(texts[i], tr.doc.nodeAt(from)?.marks));
+    } else if (texts[i]) tr.replaceWith(from, to, replacementNodes(state, tr.doc.resolve(from).parent, texts[i], tr.doc.nodeAt(from)?.marks));
     else tr.delete(from, to);
   }
   return tr;
