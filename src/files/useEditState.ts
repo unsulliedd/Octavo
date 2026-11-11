@@ -85,6 +85,10 @@ export function useEditState() {
   /** Whether the reading view may write `file`'s task boxes: it has no edit session and nothing unsaved, so nothing else writes it. */
   const canTick = (file: string) => originals[file] === undefined && !unsavedAt(file);
 
+  /** What the find bar searches while editing: the Source view, or the editor once it shows; nothing while reading. */
+  const findTarget = (source: boolean, editorReady: boolean) =>
+    source ? sourceEditor.current?.find : editorReady && session.current && "find" in session.current ? session.current.find : undefined;
+
   return {
     switching,
     editingTabs,
@@ -113,6 +117,7 @@ export function useEditState() {
     setEditBlocked,
     session,
     sourceEditor,
+    findTarget,
     sourceHeadingStarts,
     sourceOutline,
     editBase,

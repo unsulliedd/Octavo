@@ -8,6 +8,8 @@ import type { SourceEditor } from "@/source/sourceEditor";
 import { currentEntry, type Tab } from "@/tabs/tabs";
 import { widenBlocks } from "./breakout";
 import { addOpenButtons, largeContent, type LargeContent } from "./largeView";
+import { NO_OPTIONS } from "./find";
+import type { FindState } from "./FindBar";
 import { renderMermaid } from "./renderDoc";
 import { anchorAt, scrollTopFor, type Anchor } from "./scrollAnchor";
 import { outlineDashes } from "./sidePanels";
@@ -57,7 +59,7 @@ export function useReadingView(o: Options) {
   const [words, setWords] = useState(0);
   // The diagram, image or table open large over the window.
   const [large, setLarge] = useState<LargeContent>();
-  const [find, setFind] = useState({ open: false, query: "", focusKey: 0 });
+  const [find, setFind] = useState<FindState>({ open: false, query: "", options: NO_OPTIONS, replace: "", replaceOpen: false, focusKey: 0 });
   // Counts finished renders of the document (after diagrams), so find searches the final DOM.
   const [rendered, setRendered] = useState(0);
   // Column widths set by hand in the reading view, by file and table.
@@ -93,12 +95,12 @@ export function useReadingView(o: Options) {
     pendingAnchor.current = undefined;
   }
 
-  /** Opens the find bar, or focuses it again; a one-line selection becomes the query. */
-  function openFind() {
+  /** Opens the find bar, or focuses it again, with Replace shown for `replace`; a one-line selection becomes the query. */
+  function openFind(replace = false) {
     if (!doc) return;
     const selected = getSelection()?.toString().trim() ?? "";
     const seed = selected && !selected.includes("\n") && selected.length <= 200 ? selected : undefined;
-    setFind((f) => ({ open: true, query: seed ?? f.query, focusKey: f.focusKey + 1 }));
+    setFind((f) => ({ ...f, open: true, query: seed ?? f.query, replaceOpen: replace || f.replaceOpen, focusKey: f.focusKey + 1 }));
   }
 
   const closeFind = useCallback(() => setFind((f) => ({ ...f, open: false })), []);

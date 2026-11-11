@@ -4,6 +4,15 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 
 ## [Unreleased]
 
+### Added
+- Find has Match case (Alt+C), Whole word (Alt+W) and Regular expression (Alt+R) in the reading view, Edit and Source; they stay set until the app closes. Regular expressions use JavaScript syntax, and an invalid one shows its error in the find bar
+- Find and replace while editing (Ctrl+H, or the arrow beside the find field): Replace changes the current match and goes to the next, Replace all changes every match in one undo step. With a regular expression, `$1`, `$<name>`, `$&` and `$$` work in the replacement. Replaced text keeps its formatting, and the save still rewrites only the blocks that changed
+
+### Changed
+- Source mode uses the same find bar as the reading view and Edit, in place of its own
+- Find while editing matches formulas by their source, also before they are drawn, and replaces text inside them
+- The match count stops at 1000+ on very long documents
+
 ## [0.6.0] - 2026-11-10
 
 ### Added

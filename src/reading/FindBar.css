@@ -5,7 +5,7 @@
   right: 24px;
   z-index: 9;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   padding: 6px 6px 6px 12px;
   background: var(--chrome);
@@ -14,11 +14,64 @@
   box-shadow: var(--shadow-md);
   color: var(--muted);
 }
+.find:has(.find-expand) {
+  padding-left: 6px;
+}
+.find-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.find-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .find input {
   width: 200px;
+}
+.find input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+/* The replace field lines up under the find field, past the search icon. */
+.find-gap {
+  width: 16px;
+  flex: none;
+}
+.find-expand .icon {
+  transform: rotate(-90deg);
+}
+.find-expand[aria-expanded="true"] .icon {
+  transform: none;
+}
+.find-option {
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+}
+.find-option[aria-pressed="true"] {
+  background: var(--control-soft);
+  color: var(--control-soft-ink);
+}
+.find-option[data-option="wholeWord"] span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .find-count {
   padding: 0 6px;
   font-size: var(--text-sm);
   white-space: nowrap;
+}
+.find-error {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--danger);
+}
+/* Matches in the editor, painted as the reading view paints them. */
+.doc.editor .find-match {
+  background-color: var(--find-match);
+}
+.doc.editor .find-current {
+  background-color: var(--find-current);
+  color: var(--find-current-ink);
 }

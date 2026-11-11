@@ -3,12 +3,14 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { ensureSyntaxTree, HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
-import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
+import { gotoLine, highlightSelectionMatches, search, selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { EditorState } from "@codemirror/state";
 import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 import { Frontmatter, headingsOf, type SourceHeading } from "./sourceMarkdown";
 import { sourceSession, type SourceSession } from "./sourceSession";
+import { findMatches, sourceFind, type SourceFound } from "./sourceFind";
+import type { FindTarget } from "@/reading/find";
 
 export type SourceEditor = {
   session: SourceSession;
@@ -17,6 +19,8 @@ export type SourceEditor = {
   headingTops(): number[];
   /** Puts the cursor at `from` and scrolls its line to the top. */
   reveal(from: number): void;
+  /** What the find bar searches and replaces in. */
+  find: FindTarget<SourceFound>;
   destroy(): void;
 };
 
@@ -46,18 +50,19 @@ const theme = EditorView.theme({
   ".cm-searchMatch-selected": { backgroundColor: "var(--find-current)" },
   ".cm-panels": { backgroundColor: "var(--chrome)", color: "var(--ink)", fontFamily: "var(--ui)", fontSize: "var(--text-md)" },
   ".cm-panels-top": { borderBottom: "1px solid var(--line)" },
-  // The search field and buttons match the app's own fields and text buttons.
+  // The go-to-line field and button match the app's own fields and text buttons.
   ".cm-textfield, .cm-button": { height: "var(--height-md)", boxSizing: "border-box", padding: "0 8px", borderRadius: "var(--radius-md)", backgroundColor: "var(--doc)", backgroundImage: "none", color: "var(--ink)", font: "inherit", verticalAlign: "middle" },
   ".cm-textfield": { border: "1px solid var(--line-strong)" },
   ".cm-button": { border: "1px solid var(--line)", padding: "0 10px", cursor: "pointer" },
   ".cm-button:hover": { backgroundColor: "var(--chrome-2)" },
   ".cm-textfield:focus": { outline: "none", borderColor: "var(--control)", boxShadow: "0 0 0 1px var(--control)" },
-  ".cm-search label": { fontSize: "var(--text-md)", color: "var(--muted)" },
-  ".cm-panel button[name=close]": { color: "var(--muted)" },
+  ".cm-gotoLine label": { fontSize: "var(--text-md)", color: "var(--muted)" },
 });
 
 /** Opens the Markdown `text` in `parent`; `onChange` runs on every edit. */
 export function createSourceEditor(parent: HTMLElement, text: string, onChange: () => void): SourceEditor {
+  const findListeners = new Set<() => void>();
+  let destroyed = false;
   const view = new EditorView({
     parent,
     state: EditorState.create({
@@ -70,11 +75,24 @@ export function createSourceEditor(parent: HTMLElement, text: string, onChange: 
         EditorView.lineWrapping,
         markdown({ base: markdownLanguage, extensions: [Frontmatter] }),
         syntaxHighlighting(highlight),
+        // Find and replace is the app's find bar; CodeMirror keeps its other search keys, and Go to line opens at the top.
         search({ top: true }),
+        findMatches,
         highlightSelectionMatches(),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+        keymap.of([
+          ...defaultKeymap,
+          ...historyKeymap,
+          { key: "Mod-Shift-l", run: selectSelectionMatches },
+          { key: "Mod-Alt-g", run: gotoLine },
+          { key: "Mod-d", run: selectNextOccurrence, preventDefault: true },
+          indentWithTab,
+        ]),
         EditorView.contentAttributes.of({ "aria-label": "Markdown source", spellcheck: "false" }),
-        EditorView.updateListener.of((u) => u.docChanged && onChange()),
+        EditorView.updateListener.of((u) => {
+          if (!u.docChanged) return;
+          onChange();
+          findListeners.forEach((f) => f());
+        }),
         theme,
       ],
     }),
@@ -93,6 +111,10 @@ export function createSourceEditor(parent: HTMLElement, text: string, onChange: 
       view.dispatch({ selection: { anchor: from }, effects: EditorView.scrollIntoView(from, { y: "start", yMargin: 16 }) });
       view.focus();
     },
-    destroy: () => view.destroy(),
+    find: sourceFind(() => (destroyed ? undefined : view), findListeners),
+    destroy: () => {
+      destroyed = true;
+      view.destroy();
+    },
   };
 }
