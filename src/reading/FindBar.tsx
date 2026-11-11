@@ -1,81 +1,44 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
-import { findRanges, firstVisible, matchLabel, stepIndex } from "./find";
+import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
+import { comboOf } from "@/app/shortcuts";
+import type { FindOptions, FindTarget } from "./find";
+import { useFind } from "./useFind";
 import { Icon } from "@/ui/icons";
 
+/** What the find bar holds for the session: the search, its options, the replacement and whether Replace shows. */
+export type FindState = { open: boolean; query: string; options: FindOptions; replace: string; replaceOpen: boolean; focusKey: number };
+
 type Props = {
-  query: string;
-  onQuery: (query: string) => void;
+  find: FindState;
+  onChange: (change: Partial<FindState>) => void;
+  /** The editor's or the Source view's target; without one the bar searches the reading view and only finds. */
+  target: FindTarget | undefined;
   /** The rendered document to search. */
   root: RefObject<HTMLElement | null>;
   /** The scrolling reading area, to bring the current match into view. */
   scroller: RefObject<HTMLElement | null>;
   /** Changes whenever the document's DOM is replaced, so matches are found again. */
   content: unknown;
-  /** Changes on every Find shortcut, to focus and select the input again. */
-  focusKey: number;
   onClose: () => void;
 };
 
-const highlights = typeof CSS !== "undefined" && "highlights" in CSS ? CSS.highlights : undefined;
+/** The options, their keys while the bar has the focus, and what each button shows. */
+const OPTIONS: { key: keyof FindOptions; label: string; keys: string; glyph: string }[] = [
+  { key: "matchCase", label: "Match case", keys: "Alt+C", glyph: "Aa" },
+  { key: "wholeWord", label: "Whole word", keys: "Alt+W", glyph: "ab" },
+  { key: "regex", label: "Regular expression", keys: "Alt+R", glyph: ".*" },
+];
 
-/** Scrolls `scroller` (and a horizontally scrolling code block) so `range` is visible. */
-function reveal(range: Range, scroller: HTMLElement) {
-  const pre = range.startContainer.parentElement?.closest("pre");
-  if (pre && pre.scrollWidth > pre.clientWidth) {
-    const r = range.getBoundingClientRect();
-    const box = pre.getBoundingClientRect();
-    if (r.left < box.left || r.right > box.right) pre.scrollLeft += r.left - box.left - box.width / 3;
-  }
-  const r = range.getBoundingClientRect();
-  const box = scroller.getBoundingClientRect();
-  if (r.top < box.top + 8 || r.bottom > box.bottom - 8) scroller.scrollBy({ top: r.top - box.top - box.height / 3 });
-}
-
-/** The find bar: matches are painted with the CSS Custom Highlight API, the document's DOM is not changed. */
-export function FindBar({ query, onQuery, root, scroller, content, focusKey, onClose }: Props) {
+/** The find bar: Find with its options everywhere, and Replace while editing. */
+export function FindBar({ find, onChange, target, root, scroller, content, onClose }: Props) {
   const input = useRef<HTMLInputElement>(null);
-  const [ranges, setRanges] = useState<Range[]>([]);
-  const [index, setIndex] = useState(-1);
-  const lastQuery = useRef<string>(undefined);
+  const { options, query } = find;
+  const { count, error, label, step, canReplace, replaceOne, replaceAll } = useFind({ target, root, scroller, content, query, options });
+  const replaceShown = canReplace && find.replaceOpen;
 
   useEffect(() => {
     input.current?.focus();
     input.current?.select();
-  }, [focusKey]);
-
-  // Search again when the query or the document changes. A new query starts at the first match in view.
-  useEffect(() => {
-    const found = root.current ? findRanges(root.current, query) : [];
-    setRanges(found);
-    highlights?.set("find", new Highlight(...found));
-    if (lastQuery.current !== query || !found.length) {
-      const top = scroller.current?.getBoundingClientRect().top ?? 0;
-      setIndex(firstVisible(found.map((r) => r.getBoundingClientRect().top), top));
-    } else {
-      setIndex((i) => Math.min(i, found.length - 1));
-    }
-    lastQuery.current = query;
-  }, [query, content, root, scroller]);
-
-  useEffect(() => {
-    const current = ranges[index];
-    if (!current) {
-      highlights?.delete("find-current");
-      return;
-    }
-    highlights?.set("find-current", new Highlight(current));
-    if (scroller.current) reveal(current, scroller.current);
-  }, [ranges, index, scroller]);
-
-  useEffect(
-    () => () => {
-      highlights?.delete("find");
-      highlights?.delete("find-current");
-    },
-    [],
-  );
-
-  const step = (n: number) => setIndex((i) => stepIndex(i, n, ranges.length));
+  }, [find.focusKey]);
 
   // Escape and F3 work while the focus is in the document too.
   const keys = useRef({ step, onClose });
@@ -92,40 +55,88 @@ export function FindBar({ query, onQuery, root, scroller, content, focusKey, onC
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const label = matchLabel(index, ranges.length, query);
+  function onBarKey(e: ReactKeyboardEvent) {
+    const option = OPTIONS.find((o) => o.keys === comboOf(e));
+    if (!option) return;
+    e.preventDefault();
+    onChange({ options: { ...options, [option.key]: !options[option.key] } });
+  }
 
   return (
-    <div className="find" role="search">
-      <Icon name="search" />
-      <label htmlFor="find-input" className="visually-hidden">
-        Find in document
-      </label>
-      <input
-        id="find-input"
-        ref={input}
-        value={query}
-        spellCheck={false}
-        autoComplete="off"
-        onChange={(e) => onQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            step(e.shiftKey ? -1 : 1);
-          }
-        }}
-      />
-      <span className="find-count" aria-live="polite">
-        {label}
-      </span>
-      <button className="icon-btn" aria-label="Previous match (Shift+Enter)" disabled={!ranges.length} onClick={() => step(-1)}>
-        <Icon name="up" />
-      </button>
-      <button className="icon-btn" aria-label="Next match (Enter)" disabled={!ranges.length} onClick={() => step(1)}>
-        <Icon name="down" />
-      </button>
-      <button className="icon-btn" aria-label="Close find (Escape)" onClick={onClose}>
-        <Icon name="close" />
-      </button>
+    <div className="find" role="search" onKeyDown={onBarKey}>
+      {canReplace && (
+        <button className="icon-btn find-expand" aria-label="Replace" aria-expanded={replaceShown} onClick={() => onChange({ replaceOpen: !find.replaceOpen })}>
+          <Icon name="down" />
+        </button>
+      )}
+      <div className="find-rows">
+        <div className="find-row">
+          <Icon name="search" />
+          <label htmlFor="find-input" className="visually-hidden">
+            Find in document
+          </label>
+          <input
+            id="find-input"
+            ref={input}
+            value={query}
+            spellCheck={false}
+            autoComplete="off"
+            aria-invalid={!!error}
+            onChange={(e) => onChange({ query: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                step(e.shiftKey ? -1 : 1);
+              }
+            }}
+          />
+          {OPTIONS.map((o) => (
+            <button key={o.key} className="icon-btn find-option" data-option={o.key} aria-label={`${o.label} (${o.keys})`} aria-pressed={options[o.key]} onClick={() => onChange({ options: { ...options, [o.key]: !options[o.key] } })}>
+              <span aria-hidden="true">{o.glyph}</span>
+            </button>
+          ))}
+          <span className={error ? "find-count find-error" : "find-count"} aria-live="polite">
+            {label}
+          </span>
+          <button className="icon-btn" aria-label="Previous match (Shift+Enter)" disabled={!count} onClick={() => step(-1)}>
+            <Icon name="up" />
+          </button>
+          <button className="icon-btn" aria-label="Next match (Enter)" disabled={!count} onClick={() => step(1)}>
+            <Icon name="down" />
+          </button>
+          <button className="icon-btn" aria-label="Close find (Escape)" onClick={onClose}>
+            <Icon name="close" />
+          </button>
+        </div>
+        {replaceShown && (
+          <div className="find-row">
+            <span className="find-gap" aria-hidden="true" />
+            <label htmlFor="replace-input" className="visually-hidden">
+              Replace with
+            </label>
+            <input
+              id="replace-input"
+              value={find.replace}
+              placeholder="Replace with"
+              spellCheck={false}
+              autoComplete="off"
+              onChange={(e) => onChange({ replace: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  replaceOne(find.replace);
+                }
+              }}
+            />
+            <button className="text-btn" disabled={!count} onClick={() => replaceOne(find.replace)}>
+              Replace
+            </button>
+            <button className="text-btn" disabled={!count} onClick={() => replaceAll(find.replace)}>
+              Replace all
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

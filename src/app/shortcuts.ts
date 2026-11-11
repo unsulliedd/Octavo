@@ -1,6 +1,6 @@
 // Keyboard shortcuts: each action's keys by default, the keys the user changed, and which action a key press
 // runs. Keys are written as "Ctrl+Shift+P"; Ctrl also stands for Cmd on macOS. Keys handled by a focused control
-// (the find bar's Enter, a popover's Escape) are not listed here and can't be changed.
+// (the find bar's Enter and its Alt+C, Alt+W and Alt+R, a popover's Escape) are not listed here and can't be changed.
 
 import type { FormatAction } from "@/editor/formatInfo";
 
@@ -16,6 +16,7 @@ export type AppAction =
   | "back"
   | "forward"
   | "find"
+  | "replace"
   | "toggleFocus"
   | "toggleEdit"
   | "preview"
@@ -51,6 +52,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { id: ShortcutId; label: s
     title: "Reading",
     items: [
       { id: "find", label: "Find in document", keys: ["Ctrl+F"] },
+      { id: "replace", label: "Find and replace", keys: ["Ctrl+H"] },
       { id: "toggleFocus", label: "Distraction-free mode", keys: ["F11"] },
     ],
   },
@@ -106,7 +108,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { id: ShortcutId; label: s
 const ITEMS = SHORTCUT_GROUPS.flatMap((g) => g.items);
 const ITEM = new Map(ITEMS.map((i) => [i.id, i]));
 
-const APP_ACTIONS: AppAction[] = ["open", "quickOpen", "toggleFiles", "closeTab", "reopenTab", "nextTab", "previousTab", "back", "forward", "find", "toggleFocus", "toggleEdit", "preview", "source", "save", "saveAs"];
+const APP_ACTIONS: AppAction[] = ["open", "quickOpen", "toggleFiles", "closeTab", "reopenTab", "nextTab", "previousTab", "back", "forward", "find", "replace", "toggleFocus", "toggleEdit", "preview", "source", "save", "saveAs"];
 const isAppAction = (id: ShortcutId): id is AppAction => (APP_ACTIONS as string[]).includes(id);
 const EDITOR_ACTIONS = ITEMS.map((i) => i.id).filter((id): id is FormatAction => !isAppAction(id));
 

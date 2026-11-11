@@ -51,6 +51,8 @@ import {
 import type { FormatAction, FormatState } from "./formatInfo";
 import { runTableAction, tableAt, tablePos } from "./table";
 import type { TableAction, TableInfo } from "./tableInfo";
+import { editorFind, findPlugin, type EditFound } from "./find";
+import type { FindTarget } from "@/reading/find";
 
 /**
  * The editor's content at one moment, as Markdown. `exact` tells whether that Markdown loads back as
@@ -100,6 +102,8 @@ export type EditorSession = {
   renderMath(value: string, block: boolean): string;
   /** Links the selection to `href`, or removes the link at the cursor with null. */
   setLink(href: string | null): void;
+  /** What the find bar searches and replaces in. */
+  find: FindTarget<EditFound>;
   focus(): void;
   destroy(): Promise<void>;
 };
@@ -268,7 +272,6 @@ export function drawNearView(scroller: Element | null) {
  * Formulas show rendered, as in the reading view; the source is edited in a popover when one is selected.
  * Each formula is drawn when it comes near the window, so opening a long document doesn't lay them all out at once;
  * until then it shows its source (from CSS, so it isn't part of the text).
- * Limitation: Find while editing doesn't match the text of formulas that haven't been drawn yet.
  */
 const mathView = (schema: typeof mathInlineSchema, block: boolean, later: ReturnType<typeof drawNearView>) =>
   $view(schema.node, () => (node: ProseNode) => {
@@ -417,6 +420,8 @@ export async function createEditor(root: HTMLElement, markdown: string, { imageU
   const { md: escaped, tree } = parseMarkdown(markdown);
   // The reading area scrolls the editor; formulas are drawn as they come near its visible part.
   const later = drawNearView(root.closest(".reader"));
+  const findListeners = new Set<() => void>();
+  let destroyed = false;
   const editor = await Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root);
@@ -437,6 +442,7 @@ export async function createEditor(root: HTMLElement, markdown: string, { imageU
     .use(listItemView)
     .use(propertiesView)
     .use(codeBlockView)
+    .use($prose(() => findPlugin(() => findListeners.forEach((f) => f()))))
     .use(
       $prose(
         () =>
@@ -544,7 +550,11 @@ export async function createEditor(root: HTMLElement, markdown: string, { imageU
       setLink(view(), href);
       view().focus();
     },
+    find: editorFind(() => (destroyed ? undefined : view()), findListeners),
     focus: () => view().focus(),
-    destroy: async () => void (await editor.destroy()),
+    destroy: async () => {
+      destroyed = true;
+      await editor.destroy();
+    },
   };
 }

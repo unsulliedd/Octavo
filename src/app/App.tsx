@@ -185,7 +185,8 @@ export default function App() {
   function runShortcut(action: Action) {
     const run: Record<Action, () => void> = {
       open: pick,
-      find: reading.openFind,
+      find: () => reading.openFind(),
+      replace: () => reading.openFind(true),
       quickOpen: () => setQuickOpen(true),
       toggleFiles: () => (tab || workspaces.open) && changePrefs({ ...prefs, outline: !prefs.outline }),
       closeTab: () => tab && closeTabById(tab.id),
@@ -334,7 +335,7 @@ export default function App() {
         />
         {tab && <span className="toolbar-sep wide" />}
         {tab && (
-          <button className="icon-btn" aria-label={tip("Find in document", "find")} aria-expanded={find.open} onClick={reading.openFind}>
+          <button className="icon-btn" aria-label={tip("Find in document", "find")} aria-expanded={find.open} onClick={() => reading.openFind()}>
             <Icon name="search" />
           </button>
         )}
@@ -413,12 +414,12 @@ export default function App() {
             </main>
             {find.open && doc && (
               <FindBar
-                query={find.query}
-                onQuery={(query) => setFind((f) => ({ ...f, query }))}
+                find={find}
+                onChange={(change) => setFind((f) => ({ ...f, ...change }))}
+                target={edit.findTarget(source, editorReady)}
                 root={article}
                 scroller={scroller}
                 content={reading.rendered}
-                focusKey={find.focusKey}
                 onClose={reading.closeFind}
               />
             )}

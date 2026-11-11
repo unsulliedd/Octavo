@@ -37,7 +37,8 @@ Open a folder or gather documents into a workspace of your own, and come back to
 
 - **Edit in place:** Ctrl+E switches the open document between reading and editing at the same spot, with a formatting bar for headings, lists, quotes, links, code, tables and more.
 - **Tables, images and diagrams:** add and remove table rows and columns. Drop or paste an image and Octavo saves and links it for you, so the link still works after a commit. Click an image to change its alt text, or a Mermaid diagram to edit it beside a live preview.
-- **Source mode (Ctrl+Shift+M):** the document's Markdown in a text editor with colors, line numbers and find and replace, for when you want the raw text.
+- **Find and replace (Ctrl+H):** Replace or Replace all, in one undo step, with Match case, Whole word and regular expressions with `$1` groups in the replacement. Find (Ctrl+F) has the same options while reading.
+- **Source mode (Ctrl+Shift+M):** the document's Markdown in a text editor with colors and line numbers, for when you want the raw text.
 - **Preview:** see the reading view of your edits before you're done.
 
 ## Make it yours
