@@ -57,6 +57,14 @@ test("an empty replacement deletes the match, and a match across a line break jo
   await s.destroy();
 });
 
+test("a replacement that keeps a matched line break keeps its kind: hard stays hard, soft stays soft", async () => {
+  const { s } = await open("keep this\\\nand that\n\nsoft one\nsoft two\n");
+  expect(replaceAll(s, q("this\\s+and", { regex: true }), "($&)", true)).toBe(1);
+  expect(replaceAll(s, q("one\\s+soft", { regex: true }), "($&)", true)).toBe(1);
+  expect(s.markdown()).toBe("keep (this\\\nand) that\n\nsoft (one\nsoft) two\n");
+  await s.destroy();
+});
+
 test("Replace returns where the new text ends, so a match the new text makes is not the next one", async () => {
   const { s } = await open("cat cat\n");
   const [first] = s.find.find(q("cat"), Infinity);
