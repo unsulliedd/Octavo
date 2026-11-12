@@ -13,6 +13,9 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 - Find while editing matches formulas by their source, also before they are drawn, and replaces text inside them
 - The match count stops at 1000+ on very long documents
 
+### Fixed
+- Windows' list of installed apps shows the right publisher for Octavo instead of "github"
+
 ## [0.6.0] - 2026-11-10
 
 ### Added
