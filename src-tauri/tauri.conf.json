@@ -28,6 +28,8 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "unsulliedd",
+    "copyright": "Copyright (c) 2026 unsulliedd",
     "targets": "all",
     "createUpdaterArtifacts": true,
     "shortDescription": "Open Markdown as a document. Edit it when you need to.",
