@@ -15,6 +15,8 @@ export type AppAction =
   | "previousTab"
   | "back"
   | "forward"
+  | "exportHtml"
+  | "exportPdf"
   | "find"
   | "replace"
   | "toggleFocus"
@@ -46,6 +48,8 @@ export const SHORTCUT_GROUPS: { title: string; items: { id: ShortcutId; label: s
       { id: "previousTab", label: "Previous tab", keys: ["Ctrl+Shift+Tab", "Ctrl+PageUp"] },
       { id: "back", label: "Back", keys: ["Alt+Left"] },
       { id: "forward", label: "Forward", keys: ["Alt+Right"] },
+      { id: "exportHtml", label: "Export as HTML", keys: [] },
+      { id: "exportPdf", label: "Export as PDF", keys: [] },
     ],
   },
   {
@@ -108,7 +112,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { id: ShortcutId; label: s
 const ITEMS = SHORTCUT_GROUPS.flatMap((g) => g.items);
 const ITEM = new Map(ITEMS.map((i) => [i.id, i]));
 
-const APP_ACTIONS: AppAction[] = ["open", "quickOpen", "toggleFiles", "closeTab", "reopenTab", "nextTab", "previousTab", "back", "forward", "find", "replace", "toggleFocus", "toggleEdit", "preview", "source", "save", "saveAs"];
+const APP_ACTIONS: AppAction[] = ["open", "quickOpen", "toggleFiles", "closeTab", "reopenTab", "nextTab", "previousTab", "back", "forward", "exportHtml", "exportPdf", "find", "replace", "toggleFocus", "toggleEdit", "preview", "source", "save", "saveAs"];
 const isAppAction = (id: ShortcutId): id is AppAction => (APP_ACTIONS as string[]).includes(id);
 const EDITOR_ACTIONS = ITEMS.map((i) => i.id).filter((id): id is FormatAction => !isAppAction(id));
 

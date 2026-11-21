@@ -5,6 +5,7 @@ All notable changes to Octavo. The format follows [Keep a Changelog](https://kee
 ## [Unreleased]
 
 ### Added
+- Export to HTML and PDF, from the Export button in the toolbar, Export › in a tab's menu, or shortcuts you set in Settings › Shortcuts. The export shows the document as its tab does, unsaved edits included, always in the light theme, under its title (its top heading, or else its file name), its properties and a Contents list of its headings. The HTML file holds its local images, formulas and diagrams, so it opens anywhere on its own; the PDF is A4 with page numbers, and keeps code blocks, tables, images and diagrams on one page where they fit
 - Find has Match case (Alt+C), Whole word (Alt+W) and Regular expression (Alt+R) in the reading view, Edit and Source; they stay set until the app closes. Regular expressions use JavaScript syntax, and an invalid one shows its error in the find bar
 - Find and replace while editing (Ctrl+H, or the arrow beside the find field): Replace changes the current match and goes to the next, Replace all changes every match in one undo step. With a regular expression, `$1`, `$<name>`, `$&` and `$$` work in the replacement. Replaced text keeps its formatting, and the save still rewrites only the blocks that changed
 

@@ -1,0 +1,9 @@
+/* The rendered document being exported, drawn out of sight so its diagrams can measure their text. */
+.export-stage {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 720px;
+  visibility: hidden;
+  pointer-events: none;
+}

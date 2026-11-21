@@ -11,7 +11,7 @@ const three = [A, B, C].reduce((s, p) => openTab(s, p), NO_TABS);
 const workspaces = { workspaces: [], addTo: vi.fn(), createWorkspace: vi.fn() } as unknown as Workspaces;
 
 function items(tabs: Tabs, id: number, bindings = {}) {
-  const calls = { closeTab: vi.fn(async () => true), closeTabs: vi.fn(async () => {}), changeTabs: vi.fn(), onError: vi.fn() };
+  const calls = { closeTab: vi.fn(async () => true), closeTabs: vi.fn(async () => {}), changeTabs: vi.fn(), exportAs: vi.fn(), onError: vi.fn() };
   const list = tabMenuItems(tabs, id, { bindings, workspaces, ...calls });
   const named = (label: string) => list.find((i): i is Extract<TabMenuItem, { run: () => void }> => i !== "separator" && i.label === label && "run" in i)!;
   return { list, named, ...calls };
@@ -24,6 +24,7 @@ describe("tabMenuItems", () => {
       "Open containing folder",
       "Copy path",
       "Add to",
+      "Export",
       "-",
       "Close",
       "Close others",
@@ -62,6 +63,17 @@ describe("tabMenuItems", () => {
   test("the keys shown follow the bindings", () => {
     expect(items(three, 1).named("Close").keys).toBe("Ctrl+W");
     expect(items(three, 1, { closeTab: ["Ctrl+Alt+W"] }).named("Close").keys).toBe("Ctrl+Alt+W");
+  });
+
+  test("Export › exports the tab's document as HTML or PDF, with the keys set for them", () => {
+    const { list, exportAs } = items(three, 2, { exportPdf: ["Ctrl+Alt+P"] });
+    const sub = list.find((i) => i !== "separator" && i.label === "Export");
+    const runs = (sub !== "separator" && sub?.submenu ? sub.submenu : []).filter((i): i is Extract<TabMenuItem, { run: () => void }> => i !== "separator" && "run" in i);
+    const [html, pdf] = runs;
+    expect([html.label, html.keys, pdf.label, pdf.keys]).toEqual(["HTML…", undefined, "PDF…", "Ctrl+Alt+P"]);
+    html.run();
+    pdf.run();
+    expect(exportAs.mock.calls).toEqual([["html", B], ["pdf", B]]);
   });
 
   test("an unknown tab has no items", () => {

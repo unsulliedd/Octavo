@@ -1,0 +1,102 @@
+/* The exported page's own rules, after the app's tokens and reading styles: the document column on white in the
+   light theme, the title, properties and contents above it, and the PDF's pages. Not part of the app's styles. */
+:root {
+  --doc-size: 16px;
+  --doc-width: 720px;
+}
+body {
+  margin: 0;
+  background: var(--doc);
+  color: var(--ink);
+}
+/* The app's keyboard focus ring, for the page's links. */
+a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.doc-contents ol {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.doc-contents li {
+  margin: 2px 0;
+}
+.doc-contents li[data-level="3"] {
+  padding-left: 20px;
+}
+.doc-contents li[data-level="4"] {
+  padding-left: 40px;
+}
+.doc-contents a {
+  text-decoration: none;
+}
+.doc .doc-contents h2 {
+  margin-top: 0;
+}
+/* Task boxes, drawn with borders only so they print as they show. */
+.doc .task-list-item {
+  list-style: none;
+}
+.doc .task-box {
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-right: 0.5em;
+  vertical-align: -2px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+.doc .task-box[data-checked] {
+  border-color: var(--control);
+}
+.doc .task-box[data-checked]::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--control);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* A4 with 20 mm margins and the page number centered at the foot of each page. A page rule can't read the
+   tokens, so its colors and font are written out. */
+@page {
+  size: A4;
+  margin: 20mm;
+  @bottom-center {
+    content: counter(page);
+    color: #57606a;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 8pt;
+  }
+}
+@media print {
+  .doc-column {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* Nothing scrolls on paper: long code lines wrap, wide tables and formulas show whole. */
+  .doc .table-scroll,
+  .doc .katex-display,
+  .doc pre {
+    overflow: visible;
+  }
+  .doc pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  /* A block that fits on a page moves to the next one whole; a longer one still splits. */
+  .doc :is(.code-block, pre, .table-scroll, tr, img, figure, .mermaid, .katex-display) {
+    break-inside: avoid;
+  }
+  .doc :is(h1, h2, h3, h4, h5, h6) {
+    break-after: avoid;
+  }
+}
