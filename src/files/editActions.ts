@@ -395,6 +395,12 @@ export function editActions(c: Context) {
     void saveDoc(file);
   }
 
+  /** The Markdown a tab of `file` shows now: the editor's edits, a draft's, or the file's text if it is loaded. */
+  function currentText(file: string) {
+    const s = sessionFor(file);
+    return (s?.edited() ? s.snapshot(baseFor(file)).markdown : undefined) ?? draftsRef.current[file]?.text ?? docs[file]?.text;
+  }
+
   function openCompare(file: string) {
     const disk = conflictsRef.current[file];
     const mine = sessionFor(file)?.snapshot(baseFor(file)).markdown ?? draftsRef.current[file]?.text;
@@ -683,6 +689,7 @@ export function editActions(c: Context) {
     reloadFromDisk,
     keepMine,
     openCompare,
+    currentText,
     confirmWindowClose,
     confirmSwitch,
     closeTabById,

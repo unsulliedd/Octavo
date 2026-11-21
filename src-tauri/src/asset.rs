@@ -35,6 +35,11 @@ impl Allowed {
         images::is_image_file(path) && path.ancestors().any(|p| allowed.contains(&key(p)))
     }
 
+    /// Whether the image at `path` may be read: it is allowed, and no symbolic link leads to it.
+    pub fn readable(&self, path: &Path) -> bool {
+        self.allows(path) && !self.through_link(path)
+    }
+
     /// Whether a symbolic link leads to the allowed `path`. The entries below its allowed folder are looked at from
     /// the top down, so each is read without following a link above it.
     fn through_link(&self, path: &Path) -> bool {
@@ -59,7 +64,7 @@ pub fn respond(allowed: &Allowed, uri_path: &str) -> Response<Vec<u8>> {
         .strip_prefix('/')
         .and_then(|p| percent_decode_str(p).decode_utf8().ok());
     let path = path.as_deref().map(Path::new);
-    let Some(path) = path.filter(|p| allowed.allows(p) && !allowed.through_link(p)) else {
+    let Some(path) = path.filter(|p| allowed.readable(p)) else {
         return failure(StatusCode::FORBIDDEN);
     };
     match std::fs::read(path) {

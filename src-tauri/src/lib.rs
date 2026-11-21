@@ -1,6 +1,7 @@
 mod asset;
 mod backup;
 mod covers;
+mod export;
 mod gate;
 mod images;
 mod notes;
@@ -140,6 +141,26 @@ fn open_backups(
     app.opener()
         .open_path(backups.dir.to_string_lossy(), None::<&str>)
         .map_err(|e| e.to_string())
+}
+
+/// A local image of the document being exported, as a `data:` URI. Only images the webview may load are read.
+#[tauri::command]
+fn export_image(allowed: tauri::State<asset::Allowed>, path: String) -> Result<String, String> {
+    export::image_data(&allowed, Path::new(&path))
+}
+
+/// Writes an exported page to the `.html` file at `path`.
+#[tauri::command]
+fn export_html(path: String, html: String) -> Result<(), String> {
+    let path = std::path::absolute(&path).map_err(|e| e.to_string())?;
+    export::write_html(&path, &html)
+}
+
+/// Prints an exported page to the `.pdf` file at `path`: A4, with the page numbers the page itself draws.
+#[tauri::command]
+async fn export_pdf(app: tauri::AppHandle, path: String, html: String) -> Result<(), String> {
+    let path = std::path::absolute(&path).map_err(|e| e.to_string())?;
+    export::write_pdf(&app, &path, &html).await
 }
 
 /// Writes `version`'s release notes to the What's new folder in the app's data folder; returns the file's path.
@@ -293,6 +314,8 @@ pub fn run() {
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(window_state_flags())
+                // The hidden windows that print a PDF keep no state.
+                .with_filter(|label| label == "main")
                 .build(),
         )
         .manage(watch::DocWatcher::default())
@@ -332,6 +355,9 @@ pub fn run() {
             save_doc,
             read_theme,
             write_theme,
+            export_image,
+            export_html,
+            export_pdf,
             open_backups,
             write_notes,
             write_licenses,

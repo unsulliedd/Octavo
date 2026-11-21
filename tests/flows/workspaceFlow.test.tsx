@@ -853,7 +853,7 @@ test("a tab's menu has Add to third, with Pinned and never the open folder's wor
   await until(() => openTabs().length, "the tab");
   await until(() => rows().includes("guide.md"), "the tree");
   await rightClick(host.querySelector(".tab"));
-  expect(menuItems().slice(0, 4)).toEqual(["Open containing folder", "Copy path", "Add to", "-"]);
+  expect(menuItems().slice(0, 5)).toEqual(["Open containing folder", "Copy path", "Add to", "Export", "-"]);
   expect(byText(".menu button", "Add to")!.getAttribute("aria-haspopup")).toBe("menu");
   await openAddTo();
   expect(subItems()).toEqual(["Pinned", "-", "New workspace…"]);

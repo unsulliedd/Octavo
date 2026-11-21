@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { editorLayout } from "@/editor/layout";
+import { exportDocument } from "@/export/exportDoc";
+import { ExportButton } from "@/export/ExportButton";
+import type { ExportKind } from "@/export/exportPage";
 import { CompareView } from "@/files/CompareView";
 import { ConflictBanner } from "@/files/ConflictBanner";
 import { editActions } from "@/files/editActions";
@@ -182,6 +185,9 @@ export default function App() {
     if (on) setShowSettings(false);
   }
 
+  /** Exports `file` as its tab shows it now. */
+  const exportAs = (kind: ExportKind, file: string) => void exportDocument(kind, file, actions.currentText(file));
+
   function runShortcut(action: Action) {
     const run: Record<Action, () => void> = {
       open: pick,
@@ -195,6 +201,8 @@ export default function App() {
       previousTab: () => changeTabs((s) => cycle(s, -1)),
       back: () => go(-1),
       forward: () => go(1),
+      exportHtml: () => path && exportAs("html", path),
+      exportPdf: () => path && exportAs("pdf", path),
       toggleEdit: () => void actions.toggleEdit(),
       preview: () => void actions.togglePreview(),
       source: () => void actions.toggleSource(),
@@ -339,6 +347,7 @@ export default function App() {
             <Icon name="search" />
           </button>
         )}
+        {path && <ExportButton bindings={bindings} onExport={(kind) => exportAs(kind, path)} />}
         {updates.offered && (
           <button className="update-btn" data-update-toggle aria-expanded={showUpdate} onClick={() => setShowUpdate((s) => !s)}>
             <span className="unsaved-dot" />
@@ -501,6 +510,7 @@ export default function App() {
               closeTab: closeTabById,
               closeTabs: actions.closeTabsById,
               changeTabs,
+              exportAs,
               onError: (e) => setError(String(e)),
             })}
             onClose={strip.closeTabMenu}

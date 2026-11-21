@@ -1,4 +1,6 @@
 import { keyLabel, type Bindings } from "@/app/shortcuts";
+import { exportItem } from "@/export/ExportButton";
+import type { ExportKind } from "@/export/exportPage";
 import { pathItems, type TabMenuItem } from "@/ui/TabMenu";
 import { addToItem } from "@/workspaces/FilesPanel";
 import type { Workspaces } from "@/workspaces/useWorkspaces";
@@ -11,17 +13,20 @@ type Options = {
   closeTab: (id: number) => Promise<unknown>;
   closeTabs: (ids: number[]) => Promise<unknown>;
   changeTabs: (fn: (s: Tabs) => Tabs) => void;
+  /** Exports the document at `path` as HTML or PDF. */
+  exportAs: (kind: ExportKind, path: string) => void;
   onError: (e: unknown) => void;
 };
 
 /** The tab menu's items for tab `id`. */
-export function tabMenuItems(tabs: Tabs, id: number, { bindings, workspaces, closeTab, closeTabs, changeTabs, onError }: Options): TabMenuItem[] {
+export function tabMenuItems(tabs: Tabs, id: number, { bindings, workspaces, closeTab, closeTabs, changeTabs, exportAs, onError }: Options): TabMenuItem[] {
   const t = tabs.tabs.find((x) => x.id === id);
   if (!t) return [];
   const file = currentEntry(t).path;
   return [
     ...pathItems(file, onError),
     addToItem(workspaces, { kind: "document", path: file }),
+    exportItem(bindings, (kind) => exportAs(kind, file)),
     "separator",
     { label: "Close", keys: keyLabel(bindings, "closeTab"), run: () => void closeTab(id) },
     { label: "Close others", disabled: !otherTabIds(tabs, id).length, run: () => void closeTabs(otherTabIds(tabs, id)) },

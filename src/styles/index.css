@@ -27,6 +27,7 @@
 @import "../reading/FindBar.css";
 @import "../reading/LargeViewer.css";
 @import "../reading/EdgeRail.css";
+@import "../export/export.css";
 @import "../workspaces/workspaces.css";
 @import "../workspaces/FilesPanel.css";
 @import "../workspaces/QuickOpen.css";
